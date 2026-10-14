@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Dense → ReLU → Dense Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #0f0f13;
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+.app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  height: 100vh;
+}
+.sidebar {
+  background: #16161c;
+  padding: 20px;
+  overflow-y: auto;
+  border-right: 1px solid #2a2a35;
+}
+.sidebar h1 {
+  font-size: 1.1rem;
+  color: #a78bfa;
+  margin-bottom: 4px;
+}
+.sidebar .subtitle {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 16px;
+}
+.dim-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.dim-tab {
+  padding: 6px 12px;
+  background: #1e1e28;
+  border: 1px solid #2a2a35;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #aaa;
+  transition: all 0.15s;
+}
+.dim-tab.active {
+  background: #a78bfa22;
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+.dim-tab:hover { border-color: #a78bfa88; }
+.section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #1a1a24;
+  border-radius: 8px;
+  border: 1px solid #2a2a35;
+}
+.section-title {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.formula-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #ccc;
+}
+.formula-line .label {
+  color: #a78bfa;
+  min-width: 20px;
+}
+.formula-line .op {
+  color: #666;
+}
+.matrix-input {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0;
+}
+.matrix-input input {
+  width: 100%;
+  min-width: 44px;
+  padding: 4px 6px;
+  background: #0f0f13;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+.matrix-input input:focus {
+  outline: none;
+  border-color: #a78bfa;
+}
+.vector-input {
+  display: flex;
+  gap: 3px;
+  margin: 6px 0;
+}
+.vector-input input {
+  width: 50px;
+  padding: 4px 6px;
+  background: #0f0f13;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+}
+.vector-input input:focus {
+  outline: none;
+  border-color: #a78bfa;
+}
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.viz-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: #2a2a35;
+  padding: 1px;
+}
+.viz-panel {
+  background: #0f0f13;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.viz-panel .panel-title {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 2;
+}
+.viz-panel canvas {
+  width: 100%;
+  height: 100%;
+}
+.result-bar {
+  background: #16161c;
+  border-top: 1px solid #2a2a35;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  overflow-x: auto;
+}
+.result-bar .step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.result-bar .arrow {
+  color: #a78bfa;
+}
+.result-bar .val {
+  color: #4ade80;
+  background: #4ade8011;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.preset-btn {
+  padding: 4px 10px;
+  background: #1e1e28;
+  border: 1px solid #2a2a35;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  color: #aaa;
+  transition: all 0.15s;
+}
+.preset-btn:hover {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+.presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.x-input-section {
+  margin-top: 8px;
+}
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.slider-row label {
+  font-size: 0.75rem;
+  color: #888;
+  min-width: 20px;
+}
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: #a78bfa;
+}
+.slider-row .val-display {
+  font-size: 0.75rem;
+  color: #4ade80;
+  min-width: 40px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <h1>Dense → ReLU → Dense</h1>
+    <div class="subtitle">Interaktiver Explorer für affine Transformationen mit Nichtlinearität</div>
+    
+    <div class="dim-tabs" id="dimTabs"></div>
+    
+    <div class="section">
+      <div class="section-title">Eingabe x</div>
+      <div id="inputX"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Layer 1: y = A₁·x + b₁</div>
+      <div id="layer1Params"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">ReLU: z = max(0, y)</div>
+      <div style="font-size:0.75rem; color:#666;">Faltet den Raum — negative Werte → 0</div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Layer 2: out = A₂·z + b₂</div>
+      <div id="layer2Params"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Presets</div>
+      <div class="presets" id="presets"></div>
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="viz-area" id="vizArea"></div>
+    <div class="result-bar" id="resultBar"></div>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let dim = 1;
+let x = [1];
+let A1 = [[2]];
+let b1 = [0];
+let A2 = [[1]];
+let b2 = [0];
+
+const dims = [1, 2, 3, 4, 5];
+
+// ===== MATH =====
+function matVecMul(M, v) {
+  return M.map(row => row.reduce((s, m, i) => s + m * v[i], 0));
+}
+function vecAdd(a, b) { return a.map((v, i) => v + b[i]); }
+function relu(v) { return v.map(x => Math.max(0, x)); }
+function forward(x_in) {
+  const y = vecAdd(matVecMul(A1, x_in), b1);
+  const z = relu(y);
+  const out = vecAdd(matVecMul(A2, z), b2);
+  return { x: x_in, y, z, out };
+}
+
+// ===== DEFAULTS =====
+function getDefaults(d) {
+  const presets = {
+    1: { A1: [[2]], b1: [-1], A2: [[0.5]], b2: [0.5], x: [1] },
+    2: { A1: [[1.5, -0.5], [0.3, 1.2]], b1: [0, -0.5], A2: [[1, 0.5], [-0.3, 1]], b2: [0.2, 0], x: [1, 0.5] },
+    3: { A1: [[1,0,0.5],[0,1.5,-0.3],[0.2,0,1]], b1: [0,-0.5,0], A2: [[1,0,0],[0,1,0],[0.3,0,1]], b2: [0,0,0], x: [1,0.5,-0.3] },
+    4: { A1: eye(4,1.5), b1: zeros(4), A2: eye(4,0.8), b2: zeros(4), x: [1,0.5,-0.3,0.7] },
+    5: { A1: eye(5,1.2), b1: zeros(5), A2: eye(5,0.9), b2: zeros(5), x: [1,0.5,-0.3,0.7,-0.2] }
+  };
+  return presets[d];
+}
+function eye(n, s=1) { return Array.from({length:n}, (_,i) => Array.from({length:n}, (_,j) => i===j?s:0)); }
+function zeros(n) { return Array(n).fill(0); }
+
+// ===== UI BUILD =====
+function buildDimTabs() {
+  const el = document.getElementById('dimTabs');
+  el.innerHTML = dims.map(d => `<div class="dim-tab ${d===dim?'active':''}" data-d="${d}">${d}D</div>`).join('');
+  el.querySelectorAll('.dim-tab').forEach(tab => {
+    tab.onclick = () => { dim = +tab.dataset.d; loadDefaults(); rebuild(); };
+  });
+}
+
+function loadDefaults() {
+  const def = getDefaults(dim);
+  A1 = def.A1.map(r => [...r]);
+  b1 = [...def.b1];
+  A2 = def.A2.map(r => [...r]);
+  b2 = [...def.b2];
+  x = [...def.x];
+}
+
+function buildMatrixInput(container, matrix, onChange, label) {
+  const n = matrix.length;
+  const div = document.createElement('div');
+  div.innerHTML = `<div style="font-size:0.7rem;color:#666;margin-bottom:4px">${label} (${n}×${n})</div>`;
+  const grid = document.createElement('div');
+  grid.className = 'matrix-input';
+  grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.step = '0.1';
+      inp.value = matrix[i][j];
+      inp.oninput = () => { matrix[i][j] = parseFloat(inp.value) || 0; onChange(); };
+      grid.appendChild(inp);
+    }
+  }
+  div.appendChild(grid);
+  container.appendChild(div);
+}
+
+function buildVectorInput(container, vec, onChange, label) {
+  const div = document.createElement('div');
+  div.innerHTML = `<div style="font-size:0.7rem;color:#666;margin-bottom:4px">${label} (${vec.length})</div>`;
+  const row = document.createElement('div');
+  row.className = 'vector-input';
+  for (let i = 0; i < vec.length; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.step = '0.1';
+    inp.value = vec[i];
+    inp.oninput = () => { vec[i] = parseFloat(inp.value) || 0; onChange(); };
+    row.appendChild(inp);
+  }
+  div.appendChild(row);
+  container.appendChild(div);
+}
+
+function buildInputX() {
+  const el = document.getElementById('inputX');
+  el.innerHTML = '';
+  buildVectorInput(el, x, update, 'x');
+}
+
+function buildParams() {
+  const l1 = document.getElementById('layer1Params');
+  l1.innerHTML = '';
+  buildMatrixInput(l1, A1, update, 'A₁');
+  buildVectorInput(l1, b1, update, 'b₁');
+  
+  const l2 = document.getElementById('layer2Params');
+  l2.innerHTML = '';
+  buildMatrixInput(l2, A2, update, 'A₂');
+  buildVectorInput(l2, b2, update, 'b₂');
+}
+
+function buildPresets() {
+  const el = document.getElementById('presets');
+  const presetList = [
+    { name: 'Skalierung', fn: () => { A1 = eye(dim, 2); b1 = zeros(dim); A2 = eye(dim, 0.5); b2 = zeros(dim); } },
+    { name: 'Translation', fn: () => { A1 = eye(dim, 1); b1 = Array(dim).fill(1); A2 = eye(dim, 1); b2 = Array(dim).fill(-0.5); } },
+    { name: 'Faltung', fn: () => { A1 = eye(dim, 1); b1 = Array(dim).fill(-0.5); A2 = eye(dim, 2); b2 = zeros(dim); } },
+    { name: 'Scherung', fn: () => { const m = eye(dim,1); if(dim>=2) m[0][1]=0.8; A1=m; b1=zeros(dim); A2=eye(dim,1); b2=zeros(dim); } },
+    { name: 'Rotation~', fn: () => { const m=eye(dim,1); if(dim>=2){m[0][0]=0.7;m[0][1]=-0.7;m[1][0]=0.7;m[1][1]=0.7;} A1=m; b1=zeros(dim); A2=eye(dim,1); b2=zeros(dim); } },
+    { name: 'Reset', fn: () => loadDefaults() }
+  ];
+  el.innerHTML = presetList.map(p => `<div class="preset-btn" data-name="${p.name}">${p.name}</div>`).join('');
+  el.querySelectorAll('.preset-btn').forEach((btn, i) => {
+    btn.onclick = () => { presetList[i].fn(); rebuild(); };
+  });
+}
+
+// ===== VISUALIZATION =====
+function buildViz() {
+  const area = document.getElementById('vizArea');
+  area.innerHTML = '';
+  
+  const panels = ['Eingabe x', 'Nach A₁x+b₁', 'Nach ReLU', 'Ausgabe A₂z+b₂'];
+  if (dim <= 3) {
+    area.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    panels.forEach(title => {
+      const panel = document.createElement('div');
+      panel.className = 'viz-panel';
+      panel.innerHTML = `<div class="panel-title">${title}</div><canvas></canvas>`;
+      area.appendChild(panel);
+    });
+  } else {
+    area.style.gridTemplateColumns = '1fr';
+    const panel = document.createElement('div');
+    panel.className = 'viz-panel';
+    panel.innerHTML = `<div class="panel-title">${dim}D — Parallelkoordinaten</div><canvas></canvas>`;
+    area.appendChild(panel);
+  }
+}
+
+function drawViz() {
+  const result = forward(x);
+  const canvases = document.querySelectorAll('.viz-panel canvas');
+  
+  if (dim === 1) {
+    draw1D(canvases);
+  } else if (dim === 2) {
+    draw2D(canvases);
+  } else if (dim === 3) {
+    draw3D(canvases);
+  } else {
+    drawND(canvases[0]);
+  }
+  
+  drawResultBar(result);
+}
+
+function draw1D(canvases) {
+  // Show function plots for 1D
+  const steps = ['x', 'y', 'z', 'out'];
+  const range = 4;
+  const nPts = 200;
+  
+  canvases.forEach((canvas, idx) => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    // Draw axes
+    ctx.strokeStyle = '#2a2a35';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+    ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+    ctx.stroke();
+    
+    // Draw grid
+    ctx.strokeStyle = '#1a1a24';
+    for (let i = -range; i <= range; i++) {
+      const px = w/2 + (i/range) * w/2;
+      const py = h/2 - (i/range) * h/2;
+      ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(w, py); ctx.stroke();
+    }
+    
+    // Plot function
+    ctx.strokeStyle = ['#a78bfa', '#f59e0b', '#4ade80', '#60a5fa'][idx];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < nPts; i++) {
+      const xVal = (i / nPts) * range * 2 - range;
+      let yVal;
+      if (idx === 0) yVal = xVal;
+      else if (idx === 1) yVal = A1[0][0] * xVal + b1[0];
+      else if (idx === 2) yVal = Math.max(0, A1[0][0] * xVal + b1[0]);
+      else yVal = A2[0][0] * Math.max(0, A1[0][0] * xVal + b1[0]) + b2[0];
+      
+      const px = (xVal + range) / (2 * range) * w;
+      const py = h/2 - (yVal / range) * h/2;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    
+    // Mark current x
+    const xMark = x[0];
+    let yMark;
+    if (idx === 0) yMark = xMark;
+    else if (idx === 1) yMark = A1[0][0] * xMark + b1[0];
+    else if (idx === 2) yMark = Math.max(0, A1[0][0] * xMark + b1[0]);
+    else yMark = A2[0][0] * Math.max(0, A1[0][0] * xMark + b1[0]) + b2[0];
+    
+    const dotX = (xMark + range) / (2 * range) * w;
+    const dotY = h/2 - (yMark / range) * h/2;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Value label
+    ctx.fillStyle = '#888';
+    ctx.font = '11px JetBrains Mono, monospace';
+    ctx.fillText(`${yMark.toFixed(2)}`, dotX + 8, dotY - 4);
+  });
+}
+
+function draw2D(canvases) {
+  const range = 3;
+  const gridN = 8;
+  
+  // Generate grid points
+  const points = [];
+  for (let i = -gridN; i <= gridN; i++) {
+    for (let j = -gridN; j <= gridN; j++) {
+      points.push([i/gridN * range, j/gridN * range]);
+    }
+  }
+  // Also add lines
+  const lines = [];
+  for (let i = -gridN; i <= gridN; i++) {
+    const hLine = [], vLine = [];
+    for (let j = -gridN; j <= gridN; j++) {
+      hLine.push([i/gridN * range, j/gridN * range]);
+      vLine.push([j/gridN * range, i/gridN * range]);
+    }
+    lines.push(hLine);
+    lines.push(vLine);
+  }
+  
+  const transforms = [
+    pts => pts,
+    pts => pts.map(p => vecAdd(matVecMul(A1, p), b1)),
+    pts => pts.map(p => relu(vecAdd(matVecMul(A1, p), b1))),
+    pts => pts.map(p => { const z = relu(vecAdd(matVecMul(A1, p), b1)); return vecAdd(matVecMul(A2, z), b2); })
+  ];
+  
+  canvases.forEach((canvas, idx) => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    const toScreen = (p) => [w/2 + p[0]/range * w/3, h/2 - p[1]/range * h/3];
+    
+    // Draw axes
+    ctx.strokeStyle = '#2a2a35';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+    ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+    ctx.stroke();
+    
+    // Draw transformed grid lines
+    const tLines = lines.map(line => transforms[idx](line));
+    const colors = ['#a78bfa33', '#f59e0b33', '#4ade8033', '#60a5fa33'];
+    ctx.strokeStyle = colors[idx];
+    ctx.lineWidth = 1;
+    tLines.forEach(line => {
+      ctx.beginPath();
+      line.forEach((p, i) => {
+        const [sx, sy] = toScreen(p);
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+    });
+    
+    // Draw current point
+    const tX = transforms[idx]([x])[0];
+    const [sx, sy] = toScreen(tX);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#888';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillText(`[${tX.map(v=>v.toFixed(1)).join(',')}]`, sx + 8, sy - 4);
+  });
+}
+
+function draw3D(canvases) {
+  const range = 3;
+  const gridN = 5;
+  
+  // Simple isometric projection
+  const project3D = (p) => {
+    const ax = 0.7, ay = 0.4;
+    const px = p[0] * Math.cos(ax) + p[2] * Math.sin(ax);
+    const py = p[1] - (p[0] * Math.sin(ax) - p[2] * Math.cos(ax)) * Math.sin(ay);
+    return [px, py];
+  };
+  
+  const transforms = [
+    p => p,
+    p => vecAdd(matVecMul(A1, p), b1),
+    p => relu(vecAdd(matVecMul(A1, p), b1)),
+    p => { const z = relu(vecAdd(matVecMul(A1, p), b1)); return vecAdd(matVecMul(A2, z), b2); }
+  ];
+  
+  // Generate 3D grid edges
+  const edges = [];
+  for (let i = -gridN; i <= gridN; i += gridN) {
+    for (let j = -gridN; j <= gridN; j += gridN) {
+      const line = [];
+      for (let k = -gridN; k <= gridN; k++) {
+        line.push([i/gridN*range, j/gridN*range, k/gridN*range]);
+      }
+      edges.push(line);
+    }
+  }
+  for (let i = -gridN; i <= gridN; i += gridN) {
+    for (let k = -gridN; k <= gridN; k += gridN) {
+      const line = [];
+      for (let j = -gridN; j <= gridN; j++) {
+        line.push([i/gridN*range, j/gridN*range, k/gridN*range]);
+      }
+      edges.push(line);
+    }
+  }
+  for (let j = -gridN; j <= gridN; j += gridN) {
+    for (let k = -gridN; k <= gridN; k += gridN) {
+      const line = [];
+      for (let i = -gridN; i <= gridN; i++) {
+        line.push([i/gridN*range, j/gridN*range, k/gridN*range]);
+      }
+      edges.push(line);
+    }
+  }
+  
+  canvases.forEach((canvas, idx) => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    const toScreen = (p3) => {
+      const [px, py] = project3D(p3);
+      return [w/2 + px/range * w/4, h/2 - py/range * h/4];
+    };
+    
+    // Draw edges
+    const colors = ['#a78bfa44', '#f59e0b44', '#4ade8044', '#60a5fa44'];
+    ctx.strokeStyle = colors[idx];
+    ctx.lineWidth = 1;
+    edges.forEach(line => {
+      ctx.beginPath();
+      line.forEach((p, i) => {
+        const tp = transforms[idx](p);
+        const [sx, sy] = toScreen(tp);
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+    });
+    
+    // Current point
+    const tp = transforms[idx](x.slice(0, 3));
+    const [sx, sy] = toScreen(tp);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#888';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.fillText(`[${tp.map(v=>v.toFixed(1)).join(',')}]`, sx + 8, sy - 4);
+  });
+}
+
+function drawND(canvas) {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0, 0, w, h);
+  
+  const result = forward(x);
+  const stages = [result.x, result.y, result.z, result.out];
+  const labels = ['x', 'A₁x+b₁', 'ReLU', 'A₂z+b₂'];
+  const colors = ['#a78bfa', '#f59e0b', '#4ade80', '#60a5fa'];
+  
+  const margin = 60;
+  const stageW = (w - margin * 2) / (stages.length - 1);
+  const axisH = h - margin * 2;
+  const range = Math.max(...stages.flat().map(Math.abs), 1) * 1.2;
+  
+  // Draw axes
+  ctx.strokeStyle = '#2a2a35';
+  ctx.lineWidth = 1;
+  
+  // Parallel coordinates axes
+  for (let s = 0; s < stages.length; s++) {
+    const sx = margin + s * stageW;
+    ctx.beginPath();
+    ctx.moveTo(sx, margin);
+    ctx.lineTo(sx, h - margin);
+    ctx.stroke();
+    
+    // Label
+    ctx.fillStyle = colors[s];
+    ctx.font = '11px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[s], sx, margin - 10);
+    
+    // Tick marks
+    ctx.fillStyle = '#555';
+    ctx.font = '9px JetBrains Mono, monospace';
+    for (let t = -2; t <= 2; t++) {
+      const ty = h/2 - (t / range) * axisH/2;
+      ctx.fillText(t.toFixed(0), sx - 20, ty + 3);
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, ty);
+      ctx.lineTo(sx + 4, ty);
+      ctx.stroke();
+    }
+  }
+  
+  // Draw lines for each dimension
+  for (let d = 0; d < dim; d++) {
+    const hue = (d / dim) * 300;
+    ctx.strokeStyle = `hsl(${hue}, 70%, 60%)`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let s = 0; s < stages.length; s++) {
+      const sx = margin + s * stageW;
+      const sy = h/2 - (stages[s][d] / range) * axisH/2;
+      if (s === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+    
+    // Dots
+    for (let s = 0; s < stages.length; s++) {
+      const sx = margin + s * stageW;
+      const sy = h/2 - (stages[s][d] / range) * axisH/2;
+      ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Dimension label
+    ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    const lastX = margin + (stages.length - 1) * stageW;
+    const lastY = h/2 - (stages[stages.length-1][d] / range) * axisH/2;
+    ctx.fillText(`d${d}`, lastX + 10, lastY + 3);
+  }
+  
+  // Zero line
+  ctx.strokeStyle = '#4ade8033';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(margin, h/2);
+  ctx.lineTo(w - margin, h/2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawResultBar(result) {
+  const bar = document.getElementById('resultBar');
+  const fmt = v => `[${v.map(n => n.toFixed(2)).join(', ')}]`;
+  bar.innerHTML = `
+    <span class="step"><span style="color:#a78bfa">x</span> = <span class="val">${fmt(result.x)}</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span style="color:#f59e0b">Ax+b</span> = <span class="val">${fmt(result.y)}</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span style="color:#4ade80">ReLU</span> = <span class="val">${fmt(result.z)}</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span style="color:#60a5fa">out</span> = <span class="val">${fmt(result.out)}</span></span>
+  `;
+}
+
+// ===== UPDATE & REBUILD =====
+function update() {
+  drawViz();
+}
+
+function rebuild() {
+  buildDimTabs();
+  buildInputX();
+  buildParams();
+  buildPresets();
+  buildViz();
+  update();
+}
+
+// ===== INIT =====
+loadDefaults();
+rebuild();
+
+// Resize handler
+window.addEventListener('resize', () => {
+  buildViz();
+  update();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,725 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "selenium",
+#     "webdriver-manager",
+# ]
+# ///
+"""
+PHP Render Validator
+
+Spins up a local PHP development server on a free port, opens the site in
+headless Chromium/Chrome, waits up to 60 seconds for the page to finish loading,
+then checks for:
+  - JavaScript errors in the console → exit code 1
+  - Unrendered LaTeX strings (raw LaTeX source instead of rendered equations) → exit code 2
+  - Reading-column width overflow (layout_guardrail.js; margin notes & boxes
+    exempt) when --check-width is set → exit code 3
+  - Math-integrity violations (visible/mangled temml annotations, data-tex
+    vs annotation mismatch) when --check-math is set → exit code 4
+
+Usage:
+    uv run blog/tests/php_render_validator.py blog/
+    uv run blog/tests/php_render_validator.py blog/ --timeout 90 --port 0
+    # fail the suite if any lesson has content wider than the reading column:
+    uv run blog/tests/php_render_validator.py blog/ --all-lessons --check-width --width-only
+"""
+
+import sys
+import os
+import shutil
+import subprocess
+
+# =============================================================================
+# Auto-restart under `uv run` if invoked directly with python3
+# =============================================================================
+
+def _ensure_uv_run():
+    if os.environ.get("_UV_RUN_ACTIVE") == "1":
+        return
+
+    uv_path = shutil.which("uv")
+
+    if uv_path is None:
+        print("=" * 60)
+        print("ERROR: This script must be run with `uv run` but `uv` was")
+        print("not found on your system.")
+        print("=" * 60)
+        print()
+        print("To install uv, run one of the following:")
+        print()
+        print("  # On macOS/Linux:")
+        print("  curl -LsSf https://astral.sh/uv/install.sh | sh")
+        print()
+        print("  # On Windows:")
+        print('  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"')
+        print()
+        print("Once installed, run this script with:")
+        print(f"  uv run {os.path.basename(__file__)}")
+        print()
+        print("=" * 60)
+        sys.exit(1)
+
+    script_path = os.path.abspath(__file__)
+    extra_args = sys.argv[1:]
+    cmd = [uv_path, "run", script_path] + extra_args
+
+    print(f"[auto-restart] Detected direct invocation (python3 {os.path.basename(__file__)})")
+    print(f"[auto-restart] Re-launching with: {' '.join(cmd)}")
+    print()
+
+    env = os.environ.copy()
+    env["_UV_RUN_ACTIVE"] = "1"
+
+    if sys.platform == "win32":
+        result = subprocess.run(cmd, env=env)
+        sys.exit(result.returncode)
+    else:
+        os.execvpe(uv_path, cmd, env)
+
+
+_ensure_uv_run()
+
+# =============================================================================
+# Main script (runs under uv with dependencies available)
+# =============================================================================
+
+import argparse
+import socket
+import time
+import re
+from pathlib import Path
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.core.os_manager import ChromeType
+
+
+def find_free_port() -> int:
+    """Find a free TCP port on localhost."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
+def start_php_server(document_root: str, port: int) -> subprocess.Popen:
+    """Start a PHP built-in development server."""
+    cmd = [
+        "php", "-S", f"localhost:{port}",
+        "-t", document_root,
+    ]
+    print(f"[php-server] Starting: {' '.join(cmd)}")
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    # Give the server a moment to start
+    time.sleep(2)
+
+    if proc.poll() is not None:
+        stderr = proc.stderr.read().decode() if proc.stderr else ""
+        raise RuntimeError(f"PHP server failed to start: {stderr}")
+
+    print(f"[php-server] Running on http://localhost:{port}")
+    return proc
+
+def get_chrome_driver(headless: bool = True) -> webdriver.Chrome:
+    """Create a Chrome/Chromium WebDriver instance."""
+    options = Options()
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--remote-debugging-pipe")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-software-rasterizer")
+
+    # Enable browser logging to capture JS errors
+    options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+
+    # Try to find chromium or chrome
+    chrome_binary = (
+        shutil.which("chromium-browser")
+        or shutil.which("chromium")
+        or shutil.which("google-chrome")
+    )
+    if chrome_binary:
+        options.binary_location = chrome_binary
+
+    try:
+        service = Service(
+            ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
+        )
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception:
+        try:
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+        except Exception:
+            driver = webdriver.Chrome(options=options)
+
+    return driver
+
+def wait_for_page_load(driver: webdriver.Chrome, timeout: int) -> bool:
+    """
+    Wait for the page to finish loading. Returns True if loaded within timeout.
+    """
+    start_time = time.time()
+
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+    except Exception:
+        elapsed = time.time() - start_time
+        print(f"[warning] Page did not reach readyState='complete' within {elapsed:.1f}s")
+        return False
+
+    # Additional wait for MathJax/KaTeX rendering if present
+    remaining = timeout - (time.time() - start_time)
+    if remaining > 0:
+        try:
+            has_mathjax = driver.execute_script(
+                "return typeof MathJax !== 'undefined'"
+            )
+            if has_mathjax:
+                print("[info] MathJax detected, waiting for typesetting to complete...")
+                WebDriverWait(driver, min(remaining, 30)).until(
+                    lambda d: d.execute_script("""
+                        if (typeof MathJax !== 'undefined') {
+                            if (MathJax.startup && MathJax.startup.promise) {
+                                return MathJax.startup.promise.then(function() { return true; });
+                            }
+                            if (MathJax.Hub && MathJax.Hub.queue) {
+                                return MathJax.Hub.queue.running === 0 && MathJax.Hub.queue.pending === 0;
+                            }
+                        }
+                        return true;
+                    """)
+                )
+                time.sleep(2)
+        except Exception:
+            pass
+
+        try:
+            has_katex = driver.execute_script(
+                "return typeof katex !== 'undefined' || document.querySelector('.katex') !== null"
+            )
+            if has_katex:
+                print("[info] KaTeX detected, giving extra time for rendering...")
+                time.sleep(2)
+        except Exception:
+            pass
+
+    elapsed = time.time() - start_time
+    print(f"[info] Page loaded in {elapsed:.1f}s")
+    return True
+
+
+def check_js_errors(driver: webdriver.Chrome) -> list[str]:
+    """Check browser console for JavaScript errors."""
+    errors = []
+    try:
+        logs = driver.get_log("browser")
+        for entry in logs:
+            if entry["level"] == "SEVERE":
+                errors.append(entry["message"])
+    except Exception as e:
+        print(f"[warning] Could not retrieve browser logs: {e}")
+    return errors
+
+def check_unrendered_latex(driver: webdriver.Chrome) -> list[str]:
+    """
+    Check for unrendered LaTeX by detecting $$ ... $$ blocks that are NOT
+    wrapped in a <div> element. When LaTeX with underscores (like bla_1)
+    is not inside a div, markdown parsers can mangle it.
+
+    OK:     <div>$$ bla_1 $$</div>
+    NOT OK: $$ bla_1 $$ (bare, not inside a div)
+    """
+    found = []
+
+    issues = driver.execute_script(r"""
+    var issues = [];
+
+    // Walk all text nodes looking for $$ ... $$ patterns
+    // that are NOT inside a <div>, <math>, <script>, <style>, <code>, <pre>, or .katex element
+    var EXCLUDE_SELECTOR = 'math, script, style, code, pre, .katex-mathml, ' +
+                           '.MathJax_Preview, .MathJax_SVG, .MathJax_Display, ' +
+                           '.MathJax, [class*="katex"], annotation';
+
+    // Strategy: Find all elements that directly contain text with $$ delimiters
+    // and check if they are NOT wrapped in a <div>
+    var allElements = document.body.querySelectorAll('*');
+
+    for (var i = 0; i < allElements.length; i++) {
+        var el = allElements[i];
+
+        // Skip excluded elements
+        if (el.closest(EXCLUDE_SELECTOR)) continue;
+        if (el.matches(EXCLUDE_SELECTOR)) continue;
+
+        // Skip invisible elements
+        var style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') continue;
+
+        // Check direct child text nodes of this element for $$ blocks
+        var childNodes = el.childNodes;
+        for (var j = 0; j < childNodes.length; j++) {
+            var node = childNodes[j];
+            if (node.nodeType !== 3) continue; // text nodes only
+
+            var text = node.textContent;
+            // Look for $$ ... $$ patterns containing underscores or backslash commands
+            var ddMatches = text.match(/\$\$[^$]*[_\\][^$]*\$\$/g);
+            if (!ddMatches) continue;
+
+            for (var k = 0; k < ddMatches.length; k++) {
+                // Check if the parent chain includes a <div> before reaching <body>
+                var parent = el;
+                var insideDiv = false;
+                while (parent && parent !== document.body) {
+                    if (parent.tagName.toLowerCase() === 'div') {
+                        insideDiv = true;
+                        break;
+                    }
+                    parent = parent.parentElement;
+                }
+
+                if (!insideDiv) {
+                    var context = ddMatches[k].substring(0, 120).replace(/\n/g, ' ');
+                    issues.push({
+                        type: 'latex_not_in_div',
+                        tag: el.tagName.toLowerCase(),
+                        context: context,
+                        detail: '$$ block with special chars not wrapped in <div> (will break rendering)'
+                    });
+                }
+            }
+        }
+    }
+
+    return issues;
+    """)
+
+    if issues:
+        for issue in issues:
+            desc = (
+                f"[{issue['type']}] <{issue['tag']}> {issue['detail']}\n"
+                f"    Context: {issue['context']}"
+            )
+            found.append(desc)
+
+    return found
+
+def check_math(driver: webdriver.Chrome) -> list[str]:
+    """
+    Math-integrity check for temml-rendered equations.
+
+    temml renders with annotate:true, parking the raw LaTeX source in an
+    <annotation encoding="application/x-tex"> child of the <math>. That
+    source must stay pristine and invisible. Violations found:
+      - visible_annotation: the annotation is rendered on the page
+        (raw LaTeX leaks next to the equation — the Chromium leak bug)
+      - mangled_annotation: the annotation contains child markup, i.e. a
+        markdown re-parse fed the source through emphasis (<em> etc.)
+      - tex_mismatch: data-tex (stamped from the pristine source at render
+        time) disagrees with the annotation's text
+    """
+    # Equations render lazily (IntersectionObserver), so scroll to the bottom
+    # and back before inspecting — otherwise below-the-fold math is unchecked.
+    # execute_script awaits the returned Promise.
+    issues = driver.execute_script(r"""
+    return new Promise(function (resolve) {
+        function runChecks() {
+            var issues = [];
+            var maths = document.querySelectorAll('math');
+            for (var i = 0; i < maths.length; i++) {
+                var m = maths[i];
+                if (m.closest && m.closest('.lp-overlay')) continue; // popup preview clone
+                var ann = m.querySelector('annotation[encoding="application/x-tex"]');
+                if (!ann) continue;
+
+                var cs = window.getComputedStyle(ann);
+                var rect = ann.getBoundingClientRect();
+                if (cs.display !== 'none' && (rect.width > 0 || rect.height > 0)) {
+                    issues.push({type: 'visible_annotation',
+                                 tex: (ann.textContent || '').slice(0, 80)});
+                }
+                if (ann.querySelector('*')) {
+                    issues.push({type: 'mangled_annotation',
+                                 tex: (ann.textContent || '').slice(0, 80)});
+                }
+                var dt = m.getAttribute('data-tex');
+                if (dt !== null && dt !== (ann.textContent || '').trim()) {
+                    issues.push({type: 'tex_mismatch',
+                                 detail: 'data-tex and annotation disagree'});
+                }
+            }
+            resolve(issues);
+        }
+        window.scrollTo(0, document.body.scrollHeight);
+        setTimeout(function () {
+            window.scrollTo(0, 0);
+            setTimeout(runChecks, 1500);
+        }, 1500);
+    });
+    """)
+
+    found = []
+    for issue in issues or []:
+        found.append(f"[{issue['type']}] {issue.get('detail', issue.get('tex', ''))}")
+    return found
+
+
+def discover_lessons(document_root: str) -> list[str]:
+    """Lesson pages = .php files that carry a COURSE_METADATA block.
+
+    Every authored lesson is a single .php whose line-1 include is followed by
+    a <!-- COURSE_METADATA: ... --> block (see functions.php). Non-lesson
+    scripts (functions.php, search.php, …) have no such block and are skipped.
+    """
+    pages = []
+    for name in sorted(os.listdir(document_root)):
+        if not name.endswith(".php"):
+            continue
+        path = os.path.join(document_root, name)
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                head = f.read(4096)
+        except OSError:
+            continue
+        if "COURSE_METADATA" in head:
+            pages.append("/" + name)
+    return pages
+
+
+def check_width(driver: webdriver.Chrome, ready_timeout: int) -> dict:
+    """Force a synchronous layout-guardrail check and wait until the reading
+    column is measurable. Returns {ready, ok, mode, allowedPx, offenders}.
+
+    Reuses the production layout_guardrail.js (already running on the page);
+    this just drives it on demand so the result is deterministic for CI.
+    """
+    deadline = time.time() + ready_timeout
+    state = None
+    while time.time() < deadline:
+        state = driver.execute_script(r"""
+            if (typeof window.__layoutGuardrailCheck === 'function') {
+                return window.__layoutGuardrailCheck();
+            }
+            return null;
+        """)
+        if state and state.get("ready"):
+            break
+        time.sleep(0.3)
+
+    if not state or not state.get("ready"):
+        return {"ready": False, "ok": None, "mode": "?", "allowedPx": 0,
+                "offenders": [], "details": []}
+
+    return {
+        "ready": True,
+        "ok": bool(state.get("ok")),
+        "mode": state.get("mode", "?"),
+        "allowedPx": state.get("allowedPx", 0),
+        "offenders": state.get("offenders") or [],
+        "details": state.get("offenderDetails") or [],
+    }
+
+
+def find_php_pages(document_root: str) -> list[str]:
+    """Default to just /index.php when no pages are specified."""
+    return ["/index.php"]
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Validate PHP blog rendering: checks for JS errors and unrendered LaTeX"
+    )
+    parser.add_argument(
+        "document_root",
+        help="Path to the PHP document root (e.g., blog/)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=0,
+        help="Port to use for PHP server (0 = auto-find free port)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=60,
+        help="Maximum seconds to wait for page load (default: 60)",
+    )
+    parser.add_argument(
+        "--pages",
+        nargs="*",
+        default=None,
+        help="Specific pages to check (e.g., /index.php /about.php). Default: auto-discover.",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        default=True,
+        help="Run browser in headless mode (default: True)",
+    )
+    parser.add_argument(
+        "--no-headless",
+        action="store_true",
+        default=False,
+        help="Run browser with visible window (for debugging)",
+    )
+    parser.add_argument(
+        "--fail-on-js-errors",
+        action="store_true",
+        default=True,
+        help="Exit with code 1 if JS errors are found (default: True)",
+    )
+    parser.add_argument(
+        "--fail-on-latex",
+        action="store_true",
+        default=True,
+        help="Exit with code 2 if unrendered LaTeX is found (default: True)",
+    )
+    parser.add_argument(
+        "--check-width",
+        action="store_true",
+        default=False,
+        help="Check the reading-column width guardrail (layout_guardrail.js) on each page",
+    )
+    parser.add_argument(
+        "--fail-on-width",
+        action="store_true",
+        default=True,
+        help="Exit with code 3 if any element overflows the reading column (default: True)",
+    )
+    parser.add_argument(
+        "--width-timeout",
+        type=int,
+        default=25,
+        help="Max seconds per page to wait for the reading column to become measurable (default: 25)",
+    )
+    parser.add_argument(
+        "--check-math",
+        action="store_true",
+        default=False,
+        help="Check temml math integrity (annotation visible/mangled, data-tex mismatch)",
+    )
+    parser.add_argument(
+        "--fail-on-math",
+        action="store_true",
+        default=True,
+        help="Exit with code 4 if math-integrity violations are found (default: True)",
+    )
+    parser.add_argument(
+        "--all-lessons",
+        action="store_true",
+        default=False,
+        help="Check every lesson page (COURSE_METADATA .php files) instead of /index.php",
+    )
+    parser.add_argument(
+        "--width-only",
+        action="store_true",
+        default=False,
+        help="Skip the JS-error and LaTeX checks; only run the width check",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=False,
+        help="Verbose output",
+    )
+
+    args = parser.parse_args()
+
+    # Resolve document root
+    document_root = os.path.abspath(args.document_root)
+    if not os.path.isdir(document_root):
+        print(f"[error] Document root does not exist: {document_root}")
+        sys.exit(1)
+
+    # Check PHP is available
+    if not shutil.which("php"):
+        print("[error] PHP CLI not found. Install with: sudo apt-get install php-cli")
+        sys.exit(1)
+
+    headless = not args.no_headless
+
+    # Find a free port
+    port = args.port if args.port != 0 else find_free_port()
+
+    # Discover pages to check
+    if args.pages:
+        pages = args.pages
+    elif args.all_lessons:
+        pages = discover_lessons(document_root)
+        if not pages:
+            print("[error] --all-lessons: no lesson pages (COURSE_METADATA .php) found")
+            sys.exit(1)
+    else:
+        pages = find_php_pages(document_root)
+    print(f"[info] Document root: {document_root}")
+    print(f"[info] Pages to check: {len(pages)} ({', '.join(pages[:8])}"
+          f"{', …' if len(pages) > 8 else ''})")
+    print(f"[info] Timeout: {args.timeout}s | Headless: {headless} | "
+          f"Math: {'ON' if args.check_math else 'off'} | "
+          f"Width: {'ON' if args.check_width else 'off'} | Width-only: {args.width_only}")
+
+    # Start PHP server
+    php_proc = None
+    driver = None
+    exit_code = 0
+
+    try:
+        php_proc = start_php_server(document_root, port)
+
+        # Start browser
+        print("[browser] Starting Chrome/Chromium...")
+        driver = get_chrome_driver(headless=headless)
+        print("[browser] Ready")
+
+        all_js_errors = []
+        all_latex_issues = []
+        all_math_issues = []
+        all_width_issues = []
+
+        for page in pages:
+            url = f"http://localhost:{port}{page}"
+            print(f"\n{'='*60}")
+            print(f"[checking] {url}")
+            print(f"{'='*60}")
+
+            try:
+                driver.get(url)
+            except Exception as e:
+                print(f"[error] Failed to load {url}: {e}")
+                continue
+
+            # Wait for page to load
+            loaded = wait_for_page_load(driver, args.timeout)
+            if not loaded:
+                print(f"[warning] Page {page} did not fully load within {args.timeout}s")
+
+            page_ok = True
+
+            if not args.width_only:
+                # Check for JS errors
+                js_errors = check_js_errors(driver)
+                if js_errors:
+                    page_ok = False
+                    print(f"\n[JS ERRORS] Found {len(js_errors)} JavaScript error(s) on {page}:")
+                    for err in js_errors:
+                        print(f"  ✗ {err}")
+                    all_js_errors.extend([(page, err) for err in js_errors])
+
+                # Check for unrendered LaTeX
+                latex_issues = check_unrendered_latex(driver)
+                if latex_issues:
+                    page_ok = False
+                    print(f"\n[LATEX ISSUES] Found {len(latex_issues)} unrendered LaTeX issue(s) on {page}:")
+                    for issue in latex_issues:
+                        print(f"  ✗ {issue}")
+                    all_latex_issues.extend([(page, issue) for issue in latex_issues])
+
+                # Check math integrity (temml annotations / data-tex)
+                if args.check_math:
+                    math_issues = check_math(driver)
+                    if math_issues:
+                        page_ok = False
+                        print(f"\n[MATH ISSUES] Found {len(math_issues)} math-integrity issue(s) on {page}:")
+                        for issue in math_issues:
+                            print(f"  ✗ {issue}")
+                        all_math_issues.extend([(page, issue) for issue in math_issues])
+
+            # Check the reading-column width guardrail
+            if args.check_width:
+                wres = check_width(driver, args.width_timeout)
+                if not wres["ready"]:
+                    print(f"[warn] {page}: reading column not measurable in "
+                          f"{args.width_timeout}s — width check skipped")
+                elif not wres["ok"]:
+                    page_ok = False
+                    print(f"\n[WIDTH] {page}: {len(wres['offenders'])} element(s) wider than the "
+                          f"{wres['mode']} reading column ({wres['allowedPx']}px):")
+                    details = wres["details"] or [
+                        {"sel": s, "widthPx": None, "snippet": ""} for s in wres["offenders"]
+                    ]
+                    for d in details[:10]:
+                        width = f" ({d['widthPx']}px)" if d.get("widthPx") else ""
+                        snip = f"  [{d['snippet']}]" if d.get("snippet") else ""
+                        print(f"  ✗ {d['sel']}{width}{snip}")
+                    if len(details) > 10:
+                        print(f"  … and {len(details) - 10} more")
+                    all_width_issues.append((page, wres["offenders"], wres["mode"], wres["allowedPx"]))
+                else:
+                    print(f"[✓ width] {page} OK ({wres['mode']} column ≈ {wres['allowedPx']}px)")
+
+            if page_ok:
+                print(f"[✓] {page} - OK")
+
+        # Summary
+        print(f"\n{'='*60}")
+        print("[SUMMARY]")
+        print(f"{'='*60}")
+        print(f"  Pages checked: {len(pages)}")
+        print(f"  JS errors: {len(all_js_errors)}")
+        print(f"  Unrendered LaTeX: {len(all_latex_issues)}")
+        if args.check_math:
+            print(f"  Math integrity: {len(all_math_issues)}")
+        if args.check_width:
+            n_off = sum(len(off) for _, off, _, _ in all_width_issues)
+            print(f"  Width overflows: {n_off} across {len(all_width_issues)} page(s)")
+
+        # Determine exit code (newest gate reports first)
+        if all_math_issues and args.fail_on_math:
+            print(f"\n[FAIL] Math-integrity violations detected → exit code 4")
+            exit_code = 4
+        elif all_width_issues and args.fail_on_width:
+            print(f"\n[FAIL] Reading-column width overflow detected → exit code 3")
+            exit_code = 3
+        elif all_js_errors and args.fail_on_js_errors:
+            print(f"\n[FAIL] JavaScript errors detected → exit code 1")
+            exit_code = 1
+        elif all_latex_issues and args.fail_on_latex:
+            print(f"\n[FAIL] Unrendered LaTeX detected → exit code 2")
+            exit_code = 2
+        else:
+            print(f"\n[PASS] All checks passed!")
+            exit_code = 0
+
+    except KeyboardInterrupt:
+        print("\n[interrupted] Shutting down...")
+        exit_code = 130
+    except Exception as e:
+        print(f"\n[error] Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        exit_code = 1
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+        if php_proc:
+            try:
+                php_proc.terminate()
+                php_proc.wait(timeout=5)
+            except Exception:
+                php_proc.kill()
+
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

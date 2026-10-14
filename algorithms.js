@@ -1,0 +1,2631 @@
+/**
+ * Fourier Multiplication Algorithm - Interactive Step-by-Step Visualization
+ *
+ * Demonstrates how a 1-layer Transformer learns modular addition via
+ * Fourier features and constructive interference.
+ *
+ * Reference: Nanda et al. (2023) "Progress Measures for Grokking
+ * via Mechanistic Interpretability"
+ *
+ * @param {string|HTMLElement} container - Target div or its ID
+ * @param {object} [options]
+ * @param {number} [options.a=42]
+ * @param {number} [options.b=80]
+ * @param {number} [options.P=113]
+ */
+function renderFourierAlgorithm(container, options = {}) {
+    const root = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!root) { console.error('renderFourierAlgorithm: container not found'); return; }
+
+    let a = options.a ?? 42;
+    let b = options.b ?? 80;
+    let P = options.P ?? 113;
+    let correctAnswer = (a + b) % P;
+    const FREQS = [14, 35, 41, 42, 52];
+
+    // Precompute
+    let tokens = Array.from({ length: P }, (_, i) => i);
+
+    function computeSignals(aa, bb, pp, freqs) {
+        const toks = Array.from({ length: pp }, (_, i) => i);
+        const sigs = freqs.map(k => {
+            const wk = 2 * Math.PI * k / pp;
+            return toks.map(c => Math.cos(wk * (aa + bb) - wk * c));
+        });
+        const total = toks.map((_, i) => sigs.reduce((s, sig) => s + sig[i], 0));
+        return { sigs, total, toks };
+    }
+
+    let computed = computeSignals(a, b, P, FREQS);
+    let allSignals = computed.sigs;
+    let totalSignal = computed.total;
+
+    function getSoftmax(signal) {
+        const maxV = Math.max(...signal);
+        const exps = signal.map(v => Math.exp(v - maxV));
+        const sum = exps.reduce((s, v) => s + v, 0);
+        return exps.map(v => v / sum);
+    }
+    let softmaxSignal = getSoftmax(totalSignal);
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    function cite(text, key) {
+        const entry = (typeof window.bibData !== 'undefined' && window.bibData[key]);
+        if (entry && entry.url) {
+            return `<a href="${entry.url}" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline dotted; text-underline-offset:2px;" title="${entry.title} (${entry.author}, ${entry.year})">${text}</a>`;
+        }
+        return text;
+    }
+
+    function mathBlock(tex) {
+        return `<div class="math-block" data-tex="${tex.replace(/"/g, '&quot;')}" style="text-align:center; margin:18px 0; font-size:1.15em; overflow-x:auto;"></div>`;
+    }
+
+    function mathInline(tex) {
+        return `<span class="math-inline" data-tex="${tex.replace(/"/g, '&quot;')}"></span>`;
+    }
+
+    function renderMath() {
+        if (typeof temml !== 'undefined') {
+            root.querySelectorAll('.math-block').forEach(el => {
+                try { temml.render(el.getAttribute('data-tex'), el, { displayMode: true }); }
+                catch (e) { el.textContent = el.getAttribute('data-tex'); console.warn('temml error:', e.message); }
+            });
+            root.querySelectorAll('.math-inline').forEach(el => {
+                try { temml.render(el.getAttribute('data-tex'), el, { displayMode: false }); }
+                catch (e) { el.textContent = el.getAttribute('data-tex'); }
+            });
+        }
+    }
+
+    function card(title, body, color = '#3b82f6') {
+        return `<div style="background:#fff; border-radius:10px; border-left:4px solid ${color}; padding:18px 22px; margin:14px 0; box-shadow:0 1px 6px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 8px 0; color:${color}; font-size:1.05em;">${title}</h3>
+            <div style="color:#334155; line-height:1.75; font-size:0.97em;">${body}</div>
+        </div>`;
+    }
+
+    function plotDiv(id, height = '340px') {
+        return `<div id="${id}" style="width:100%; height:${height}; margin:12px 0; border-radius:6px;"></div>`;
+    }
+
+    // ─── Build UI Shell ──────────────────────────────────────────────────────
+    root.innerHTML = '';
+    root.style.fontFamily = "'Segoe UI', system-ui, -apple-system, sans-serif";
+    root.style.maxWidth = '900px';
+    root.style.margin = '0 auto';
+
+    // Global config bar
+    const configBar = document.createElement('div');
+    configBar.style.cssText = `display:flex; align-items:center; gap:12px; padding:10px 16px; background:${themeColor('#f8fafc')}; border:1px solid ${themeColor('#e2e8f0')}; border-radius:10px; margin-bottom:12px; flex-wrap:wrap;`;
+    configBar.innerHTML = `
+        <label style="font-size:0.85em; font-weight:600;">a: <input type="number" id="cfg-a" min="0" max="200" value="${a}" style="width:50px; padding:3px 6px; border:1px solid #cbd5e1; border-radius:4px;"></label>
+        <label style="font-size:0.85em; font-weight:600;">b: <input type="number" id="cfg-b" min="0" max="200" value="${b}" style="width:50px; padding:3px 6px; border:1px solid #cbd5e1; border-radius:4px;"></label>
+        <label style="font-size:0.85em; font-weight:600;">P: <input type="number" id="cfg-P" min="2" max="500" value="${P}" style="width:55px; padding:3px 6px; border:1px solid #cbd5e1; border-radius:4px;"></label>
+        <button id="cfg-apply" style="padding:5px 14px; border:none; border-radius:5px; background:#3b82f6; color:#fff; font-size:0.85em; cursor:pointer; font-weight:600;">Apply</button>
+        <span id="cfg-result" style="font-size:0.85em; color:#059669; font-weight:600;">(${a}+${b}) mod ${P} = ${correctAnswer}</span>
+    `;
+    root.appendChild(configBar);
+
+    // Navigation bar
+    const nav = document.createElement('div');
+    nav.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 18px; background:#1e293b; border-radius:10px; margin-bottom:18px; position:sticky; top:0; z-index:100;';
+
+    const btnPrev = document.createElement('button');
+    btnPrev.textContent = '\u2190 Back';
+    btnPrev.style.cssText = 'padding:7px 16px; border:none; border-radius:5px; background:#475569; color:#fff; font-size:13px; cursor:pointer;';
+
+    const stepLabel = document.createElement('span');
+    stepLabel.style.cssText = 'color:#fff; font-size:13px; font-weight:600;';
+
+    const btnNext = document.createElement('button');
+    btnNext.textContent = 'Next \u2192';
+    btnNext.style.cssText = 'padding:7px 16px; border:none; border-radius:5px; background:#22c55e; color:#fff; font-size:13px; cursor:pointer; font-weight:600;';
+
+    nav.append(btnPrev, stepLabel, btnNext);
+    root.appendChild(nav);
+
+    const content = document.createElement('div');
+    content.style.cssText = 'min-height:500px;';
+    root.appendChild(content);
+
+    const dotsEl = document.createElement('div');
+    dotsEl.style.cssText = 'display:flex; justify-content:center; gap:7px; margin-top:16px; padding:12px;';
+    root.appendChild(dotsEl);
+
+    // Config apply handler
+    document.getElementById('cfg-apply').addEventListener('click', () => {
+        const newA = parseInt(document.getElementById('cfg-a').value) || 0;
+        const newB = parseInt(document.getElementById('cfg-b').value) || 0;
+        const newP = parseInt(document.getElementById('cfg-P').value) || 113;
+        if (newP < 2) return;
+        a = newA % newP;
+        b = newB % newP;
+        P = newP;
+        correctAnswer = (a + b) % P;
+        tokens = Array.from({ length: P }, (_, i) => i);
+        computed = computeSignals(a, b, P, FREQS);
+        allSignals = computed.sigs;
+        totalSignal = computed.total;
+        softmaxSignal = getSoftmax(totalSignal);
+        document.getElementById('cfg-a').value = a;
+        document.getElementById('cfg-b').value = b;
+        document.getElementById('cfg-result').textContent = `(${a}+${b}) mod ${P} = ${correctAnswer}`;
+        goToStep(currentStep);
+    });
+
+    // ─── Steps ───────────────────────────────────────────────────────────────
+    const steps = [];
+
+    // ── STEP 0: The Problem ──
+    steps.push({ title: 'The Problem', render() {
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">The Problem</h2>
+            <p style="text-align:center; color:#64748b;">What does the network need to compute?</p>
+
+            ${card('The Task', `
+                <div style="text-align:center; font-size:1.4em; padding:14px; background:#f0f9ff; border-radius:8px;">
+                    ${mathBlock(`\\underbrace{${a}}_{\\text{first input token}} + \\underbrace{${b}}_{\\text{second input token}} \\mod \\underbrace{${P}}_{\\text{prime modulus}} = \\;?`)}
+                </div>
+                <p>A tiny Transformer receives two number-tokens and must output the correct answer from ${P} possible tokens.</p>
+                <p>Correct answer: <span style="color:#16a34a; font-weight:bold; font-size:1.2em;">${correctAnswer}</span></p>
+            `)}
+
+            ${card('The Architecture', `
+                <ul style="margin:0; padding-left:20px;">
+                    <li>1 Attention layer (4 heads, dimension 128)</li>
+                    <li>1 MLP layer (512 neurons, ReLU activation)</li>
+                    <li>Vocabulary: ${P} tokens (the numbers 0 to ${P - 1})</li>
+                    <li>No positional encoding needed (only 3 positions: a, b, =)</li>
+                </ul>
+                <p>Despite its tiny size, this network achieves <strong>100% accuracy</strong> after "grokking" ${cite('(Power et al., 2022)', 'grokking')}.</p>
+            `, '#8b5cf6')}
+
+            ${card('The Discovered Algorithm (Overview)', `
+                <p>The network independently discovers a Fourier-based algorithm ${cite('(Nanda et al., 2023)', 'nanda2023grokking')}:</p>
+                <ol style="padding-left:20px;">
+                    <li><strong>Numbers to Angles:</strong> Each number becomes a point on a circle</li>
+                    <li><strong>Addition to Rotation:</strong> Adding numbers = adding angles</li>
+                    <li><strong>Interference to Selection:</strong> Multiple waves combine so only the correct answer survives</li>
+                </ol>
+            `, '#059669')}
+        `;
+        renderMath();
+    }});
+
+    // ── STEP 1: What is a frequency? ──
+    steps.push({ title: 'What is a Frequency k?', render() {
+        const k = FREQS[0];
+        const wk = 2 * Math.PI * k / P;
+        const baseAngle = 2 * Math.PI / P;
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">What is a Frequency ${mathInline('k')}?</h2>
+            <p style="text-align:center; color:#64748b;">The fundamental idea: represent numbers as angles on a circle</p>
+
+            ${card('The Core Formula', `
+                ${mathBlock(`\\omega_k = \\underbrace{\\frac{2\\pi}{P}}_{\\text{base angle} = \\frac{2\\pi}{${P}} = ${baseAngle.toFixed(6)}} \\cdot \\underbrace{k}_{\\text{frequency index}}`)}
+                <p style="text-align:center;">For ${mathInline(`k = ${k}`)}, ${mathInline(`P = ${P}`)}:</p>
+                ${mathBlock(`\\omega_{${k}} = \\frac{2\\pi}{${P}} \\cdot ${k} = ${baseAngle.toFixed(6)} \\cdot ${k} = ${wk.toFixed(6)} \\text{ rad}`)}
+            `)}
+
+            ${card('From 0.055603... to radians: step by step', `
+                <p>The value ${mathInline(`${baseAngle.toFixed(6)}`)} <strong>is already in radians</strong>. Here's why:</p>
+                <ol style="padding-left:20px;">
+                    <li><strong>Start:</strong> ${mathInline(`2\\pi = 6.283185\\ldots`)} radians (one full circle)</li>
+                    <li><strong>Divide by P:</strong> ${mathInline(`\\frac{6.283185\\ldots}{${P}} = ${baseAngle.toFixed(6)}`)} rad — this is the <em>angular step per number</em></li>
+                    <li><strong>Multiply by k:</strong> ${mathInline(`${baseAngle.toFixed(6)} \\times ${k} = ${wk.toFixed(6)}`)} rad — this is the <em>angular velocity</em> at frequency ${k}</li>
+                </ol>
+                <p>The unit is <strong>radians throughout</strong>. The multiplication by ${mathInline('k')} simply scales how far around the circle each number advances.</p>
+                <div style="background:#f0f9ff; border-radius:8px; padding:12px; margin-top:10px;">
+                    ${mathBlock(`\\underbrace{\\frac{2\\pi}{${P}}}_{\\substack{= ${baseAngle.toFixed(6)} \\text{ rad}\\\\\\text{(base step size)}}} \\;\\times\\; \\underbrace{${k}}_{\\text{frequency index}} \\;=\\; \\underbrace{${wk.toFixed(6)} \\text{ rad}}_{\\substack{\\text{angular velocity } \\omega_{${k}}\\\\\\text{(rad per number)}}}`)}
+                </div>
+            `, '#f59e0b')}
+
+            ${card('What does this mean?', `
+                <p>${mathInline('\\omega_k')} is the <strong>angular velocity</strong>. It determines how fast a point rotates around the unit circle as we count from 0 to ${P-1}.</p>
+                <ul>
+                    <li>${mathInline('k=1')}: Each number advances the point by ${mathInline(`\\frac{2\\pi}{${P}} = ${baseAngle.toFixed(5)}`)} rad (1 full rotation total)</li>
+                    <li>${mathInline(`k=${k}`)}: Each number advances by ${mathInline(`${wk.toFixed(5)}`)} rad (<strong>${k} full rotations</strong> from 0 to ${P-1})</li>
+                </ul>
+                <p>Think of it like a clock hand: ${mathInline('k')} controls how many times the hand goes around as you count through all numbers.</p>
+            `, '#8b5cf6')}
+
+            ${card('Why is this useful for addition?', `
+                <p>Because addition of numbers becomes addition of angles:</p>
+                ${mathBlock(`\\underbrace{\\cos(\\omega_k \\cdot (a+b))}_{\\substack{\\text{cosine of the angle}\\\\\\text{for the SUM}}} = \\cos\\!\\left(\\underbrace{\\omega_k \\cdot a}_{\\substack{\\text{angle}\\\\\\text{for }a}} + \\underbrace{\\omega_k \\cdot b}_{\\substack{\\text{angle}\\\\\\text{for }b}}\\right)`)}
+                <p>And angle-addition can be computed with simple multiplications (the addition theorem). This is what the MLP learns to do!</p>
+            `, '#059669')}
+
+            <p style="text-align:center; color:#64748b; font-size:0.9em;">The trained network uses 5 frequencies: ${mathInline(`k \\in \\{${FREQS.join(', ')}\\}`)}</p>
+        `;
+        renderMath();
+    }});
+
+    // ── STEP 2: Embedding ──
+    steps.push({ title: 'Embedding: Numbers to Circle', render() {
+        const k = FREQS[0];
+        const wk = 2 * Math.PI * k / P;
+        const angA = wk * a, cosA = Math.cos(angA), sinA = Math.sin(angA);
+        const angB = wk * b, cosB = Math.cos(angB), sinB = Math.sin(angB);
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Embedding</h2>
+            <p style="text-align:center; color:#64748b;">Each input number is mapped to a point on the unit circle</p>
+
+            ${card('The Embedding Formula', `
+                ${mathBlock(`\\underbrace{n}_{\\substack{\\text{input}\\\\\\text{number}}} \\;\\longmapsto\\; \\left(\\;\\underbrace{\\cos(\\omega_k \\cdot n)}_{\\substack{x\\text{-coordinate}\\\\\\text{on the circle}}},\\;\\; \\underbrace{\\sin(\\omega_k \\cdot n)}_{\\substack{y\\text{-coordinate}\\\\\\text{on the circle}}}\\;\\right)`)}
+                <p>This happens for <strong>each</strong> of the 5 frequencies simultaneously. So each number becomes 5 points on 5 different circles.</p>
+            `)}
+
+            ${card('Concrete values (k=' + k + ')', `
+                <p>First, recall what ${mathInline('\\omega_k')} is for this frequency:</p>
+                ${mathBlock(`\\underbrace{\\omega_{${k}}}_{\\substack{\\text{angular velocity}\\\\\\text{for frequency }k=${k}}} = \\frac{2\\pi}{\\underbrace{${P}}_{\\text{modulus}}} \\cdot \\underbrace{${k}}_{\\text{freq. index}} = ${wk.toFixed(6)}`)}
+                <p>Now apply it to input ${mathInline('a')}:</p>
+                ${mathBlock(`\\underbrace{a = ${a}}_{\\text{first input}} \\;\\mapsto\\; \\left(\\;\\cos\\!\\left(\\underbrace{${wk.toFixed(4)}}_{\\omega_{${k}}} \\cdot \\underbrace{${a}}_{a}\\right),\\;\\; \\sin\\!\\left(\\underbrace{${wk.toFixed(4)}}_{\\omega_{${k}}} \\cdot \\underbrace{${a}}_{a}\\right)\\;\\right)`)}
+                ${mathBlock(`= \\left(\\;\\cos(\\underbrace{${angA.toFixed(4)}}_{${wk.toFixed(4)} \\times ${a}}),\\;\\; \\sin(\\underbrace{${angA.toFixed(4)}}_{${wk.toFixed(4)} \\times ${a}})\\;\\right) = (${cosA.toFixed(4)},\\; ${sinA.toFixed(4)})`)}
+                <p>And input ${mathInline('b')}:</p>
+                ${mathBlock(`\\underbrace{b = ${b}}_{\\text{second input}} \\;\\mapsto\\; \\left(\\;\\cos\\!\\left(\\underbrace{${wk.toFixed(4)}}_{\\omega_{${k}}} \\cdot \\underbrace{${b}}_{b}\\right),\\;\\; \\sin\\!\\left(\\underbrace{${wk.toFixed(4)}}_{\\omega_{${k}}} \\cdot \\underbrace{${b}}_{b}\\right)\\;\\right)`)}
+                ${mathBlock(`= \\left(\\;\\cos(\\underbrace{${angB.toFixed(4)}}_{${wk.toFixed(4)} \\times ${b}}),\\;\\; \\sin(\\underbrace{${angB.toFixed(4)}}_{${wk.toFixed(4)} \\times ${b}})\\;\\right) = (${cosB.toFixed(4)},\\; ${sinB.toFixed(4)})`)}
+            `, '#ef4444')}
+
+            ${plotDiv('step2-circle', '380px')}
+
+            ${card('What is the embedding matrix?', `
+                <p>The Transformer has an <strong>embedding matrix</strong> ${mathInline('W_E')} of shape ${mathInline(`(${P}, d_{\\text{model}})`)}. After training, its columns contain these cos/sin values for each frequency ${mathInline('k')}. When token "${a}" is fed in, the network looks up row ${a} of ${mathInline('W_E')}, which gives exactly ${mathInline(`(\\cos(\\omega_k \\cdot ${a}), \\sin(\\omega_k \\cdot ${a}))`)}.
+                </p>
+            `, '#64748b')}
+        `;
+        renderMath();
+
+        const theta = Array.from({ length: 100 }, (_, i) => i * 2 * Math.PI / 99);
+        Plotly.newPlot('step2-circle', [
+            { x: theta.map(Math.cos), y: theta.map(Math.sin), mode: 'lines', line: { color: themeColor('#e2e8f0'), width: 1.5 }, showlegend: false, hoverinfo: 'skip' },
+            { x: [0, cosA], y: [0, sinA], mode: 'lines+markers', line: { color: '#ef4444', width: 3 }, marker: { size: [4, 13], color: '#ef4444' }, name: `a=${a}: (${cosA.toFixed(3)}, ${sinA.toFixed(3)})`, hoverinfo: 'name' },
+            { x: [0, cosB], y: [0, sinB], mode: 'lines+markers', line: { color: '#3b82f6', width: 3 }, marker: { size: [4, 13], color: '#3b82f6', symbol: 'square' }, name: `b=${b}: (${cosB.toFixed(3)}, ${sinB.toFixed(3)})`, hoverinfo: 'name' },
+        ], {
+            xaxis: { range: [-1.5, 1.5], zeroline: true, scaleanchor: 'y', title: 'cos(w*n)' },
+            yaxis: { range: [-1.5, 1.5], zeroline: true, title: 'sin(w*n)' },
+            margin: { t: 30, b: 50, l: 60, r: 20 },
+            title: { text: `Both inputs on the unit circle (frequency k=${k})`, font: { size: 13 } },
+            showlegend: true, legend: { x: 0.01, y: 0.99 },
+            paper_bgcolor: themeColor('#fff'),
+            plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+// ── NEW STEP: Embedding Space Geometry ──
+	steps.push({ title: 'The Embedding Space', render() {
+		content.innerHTML = `
+	<h2 style="text-align:center; color:#1e293b;">The Embedding Space</h2>
+	<p style="text-align:center; color:#64748b;">How all ${P} tokens are arranged in the learned embedding</p>
+
+	${card('The Full Picture', `
+	    <p>The embedding matrix ${mathInline('W_E')} is ${mathInline(`${P} \\times 128`)} — each token gets a 128-dimensional vector.</p>
+	    <p>But only <strong>10 dimensions matter</strong> (5 frequencies × 2 for sin/cos). The rest is noise that gets cleaned up during training.</p>
+	    ${mathBlock(`W_E[n] = \\left(\\underbrace{\\cos(\\omega_{14} n), \\sin(\\omega_{14} n)}_{\\text{2D subspace for }k=14},\\; \\underbrace{\\cos(\\omega_{35} n), \\sin(\\omega_{35} n)}_{\\text{2D subspace for }k=35},\\; \\ldots,\\; \\underbrace{\\cos(\\omega_{52} n), \\sin(\\omega_{52} n)}_{\\text{2D subspace for }k=52},\\; \\underbrace{0, 0, \\ldots, 0}_{\\text{118 unused dims}}\\right)`)}
+	`, '#3b82f6')}
+
+	<div style="display:flex; gap:10px; margin:10px 0;">
+	    <label style="font-size:0.85em; font-weight:600;">Frequency:
+		<select id="embed-freq-select" style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px;">
+		    ${FREQS.map(k => `<option value="${k}">k=${k} (period ${(P/k).toFixed(1)})</option>`).join('')}
+		</select>
+	    </label>
+	    <label style="font-size:0.85em; font-weight:600;">
+		<input type="checkbox" id="embed-highlight-inputs" checked> Highlight a=${a}, b=${b}
+	    </label>
+	</div>
+
+	${plotDiv('embed-circle-plot', '450px')}
+
+	${card('What you see above', `
+	    <p>Each dot is one of the ${P} tokens, plotted at its position ${mathInline('(\\cos(\\omega_k \\cdot n),\\; \\sin(\\omega_k \\cdot n))')} for the selected frequency.</p>
+	    <p>All tokens lie <strong>exactly on the unit circle</strong> — evenly spaced, making ${mathInline('k')} full rotations as ${mathInline('n')} goes from 0 to ${P-1}.</p>
+	    <p>The <span style="color:#ef4444; font-weight:bold;">red</span> and <span style="color:#3b82f6; font-weight:bold;">blue</span> dots show inputs a and b. The <span style="color:#059669; font-weight:bold;">green</span> triangle shows where the sum (a+b) mod P lands.</p>
+	`, '#8b5cf6')}
+
+	${card('Why circles?', `
+	    <p>Modular arithmetic wraps around: after ${P-1} comes 0 again. A circle is the natural geometry for this!</p>
+	    <p>The embedding matrix ${mathInline('W_E')} is <strong>sparse in the Fourier basis</strong> — it only has significant norm at 5-6 frequencies out of 56 possible.</p>
+	    ${mathBlock(`\\|W_E\\|_{\\text{Fourier component } k} \\approx \\begin{cases} \\text{large} & k \\in \\{14, 35, 41, 42, 52\\} \\\\ \\approx 0 & \\text{otherwise} \\end{cases}`)}
+	`, '#f59e0b')}
+    `;
+		renderMath();
+
+		function renderEmbedCircle() {
+			const k = parseInt(document.getElementById('embed-freq-select').value);
+			const highlight = document.getElementById('embed-highlight-inputs').checked;
+			const wk = 2 * Math.PI * k / P;
+
+			// All tokens on the circle
+			const allX = tokens.map(n => Math.cos(wk * n));
+			const allY = tokens.map(n => Math.sin(wk * n));
+
+			const traces = [
+				// Unit circle outline
+				{ x: Array.from({length:100}, (_,i) => Math.cos(i*2*Math.PI/99)),
+					y: Array.from({length:100}, (_,i) => Math.sin(i*2*Math.PI/99)),
+					mode: 'lines', line: { color: themeColor('#e2e8f0'), width: 1 }, showlegend: false, hoverinfo: 'skip' },
+				// All tokens
+				{ x: allX, y: allY, mode: 'markers',
+					marker: { size: 4, color: themeColor('#94a3b8'), opacity: 0.6 },
+					text: tokens.map(n => `Token ${n}`),
+					hoverinfo: 'text', name: `All ${P} tokens` },
+			];
+
+			if (highlight) {
+				// Input a
+				traces.push({ x: [Math.cos(wk*a)], y: [Math.sin(wk*a)], mode: 'markers',
+					marker: { size: 16, color: '#ef4444', symbol: 'circle', line: { width: 2, color: themeColor('#fff') } },
+					name: `a=${a}`, hoverinfo: 'name' });
+				// Input b
+				traces.push({ x: [Math.cos(wk*b)], y: [Math.sin(wk*b)], mode: 'markers',
+					marker: { size: 16, color: '#3b82f6', symbol: 'square', line: { width: 2, color: themeColor('#fff') } },
+					name: `b=${b}`, hoverinfo: 'name' });
+				// Sum
+				traces.push({ x: [Math.cos(wk*correctAnswer)], y: [Math.sin(wk*correctAnswer)], mode: 'markers',
+					marker: { size: 18, color: '#059669', symbol: 'triangle-up', line: { width: 2, color: themeColor('#fff') } },
+					name: `(a+b)%P=${correctAnswer}`, hoverinfo: 'name' });
+
+				// Draw arcs showing the angles
+				const arcA = Array.from({length:30}, (_,i) => i * wk * a / 29);
+				traces.push({ x: arcA.map(t => 0.3*Math.cos(t)), y: arcA.map(t => 0.3*Math.sin(t)),
+					mode: 'lines', line: { color: '#ef4444', width: 2, dash: 'dot' },
+					showlegend: false, hoverinfo: 'skip' });
+			}
+
+			Plotly.newPlot('embed-circle-plot', traces, {
+				xaxis: { range: [-1.6, 1.6], zeroline: true, scaleanchor: 'y', title: `cos(ω_${k} · n)` },
+				yaxis: { range: [-1.6, 1.6], zeroline: true, title: `sin(ω_${k} · n)` },
+				margin: { t: 30, b: 50, l: 60, r: 20 },
+				title: { text: `Embedding space projection: frequency k=${k}`, font: { size: 13 } },
+				showlegend: true, legend: { x: 1.02, y: 0.98, xanchor: 'left' },
+			paper_bgcolor: themeColor('#fff'),
+			plot_bgcolor: themeColor('#fff')
+			}, { responsive: true });
+		}
+
+		document.getElementById('embed-freq-select').addEventListener('change', renderEmbedCircle);
+		document.getElementById('embed-highlight-inputs').addEventListener('change', renderEmbedCircle);
+		renderEmbedCircle();
+	}});
+
+    // ── STEP 3: Addition Theorem ──
+    steps.push({ title: 'The Addition Theorem', render() {
+        const k = FREQS[0];
+        const wk = 2 * Math.PI * k / P;
+        const angA = wk * a, angB = wk * b, angS = wk * (a + b);
+        const cosA = Math.cos(angA), sinA = Math.sin(angA);
+        const cosB = Math.cos(angB), sinB = Math.sin(angB);
+        const cosS = Math.cos(angS), sinS = Math.sin(angS);
+        const prod_cc = cosA * cosB, prod_ss = sinA * sinB;
+        const prod_sc = sinA * cosB, prod_cs = cosA * sinB;
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">The Addition Theorem</h2>
+            <p style="text-align:center; color:#64748b;">The network computes cos(w*(a+b)) using only the individual embeddings of a and b</p>
+
+            ${card('Recall: what is ' + mathInline('\\omega_k') + ' here?', `
+                ${mathBlock(`\\underbrace{\\omega_{${k}}}_{\\substack{\\text{angular velocity}\\\\\\text{for freq. }k=${k}}} = \\frac{2\\pi}{\\underbrace{${P}}_{P}} \\cdot \\underbrace{${k}}_{k} = ${wk.toFixed(6)} \\text{ rad per number}`)}
+                <p>This value stays the same throughout this step. Every ${mathInline('\\omega_k')} below equals ${wk.toFixed(4)}.</p>
+            `, '#64748b')}
+
+            ${card('The Key Identity (Cosine)', `
+                ${mathBlock(`\\overbrace{\\cos(\\underbrace{\\omega_k}_{=${wk.toFixed(4)}} \\cdot \\underbrace{(a+b)}_{${a}+${b}=${a+b}})}^{\\substack{\\text{what we WANT:}\\\\\\text{cosine of the sum-angle}}} = \\underbrace{\\cos(\\omega_k \\cdot a)}_{\\substack{\\text{from embedding of }a\\\\= \\cos(${wk.toFixed(4)} \\cdot ${a})\\\\= ${cosA.toFixed(4)}}} \\cdot \\underbrace{\\cos(\\omega_k \\cdot b)}_{\\substack{\\text{from embedding of }b\\\\= \\cos(${wk.toFixed(4)} \\cdot ${b})\\\\= ${cosB.toFixed(4)}}} - \\underbrace{\\sin(\\omega_k \\cdot a)}_{\\substack{\\text{from embedding of }a\\\\= \\sin(${wk.toFixed(4)} \\cdot ${a})\\\\= ${sinA.toFixed(4)}}} \\cdot \\underbrace{\\sin(\\omega_k \\cdot b)}_{\\substack{\\text{from embedding of }b\\\\= \\sin(${wk.toFixed(4)} \\cdot ${b})\\\\= ${sinB.toFixed(4)}}}`)}
+            `, '#059669')}
+
+            ${card('The Key Identity (Sine)', `
+                ${mathBlock(`\\overbrace{\\sin(\\underbrace{\\omega_k}_{=${wk.toFixed(4)}} \\cdot \\underbrace{(a+b)}_{=${a+b}})}^{\\text{what we WANT}} = \\underbrace{\\sin(\\omega_k a)}_{\\substack{\\text{embed. of }a\\\\=${sinA.toFixed(4)}}} \\cdot \\underbrace{\\cos(\\omega_k b)}_{\\substack{\\text{embed. of }b\\\\=${cosB.toFixed(4)}}} + \\underbrace{\\cos(\\omega_k a)}_{\\substack{\\text{embed. of }a\\\\=${cosA.toFixed(4)}}} \\cdot \\underbrace{\\sin(\\omega_k b)}_{\\substack{\\text{embed. of }b\\\\=${sinB.toFixed(4)}}}`)}
+            `, '#3b82f6')}
+
+            ${card('Numerical verification (k=' + k + ')', `
+                ${mathBlock(`\\cos(\\omega_{${k}}(a+b)) = \\underbrace{\\underbrace{${cosA.toFixed(4)}}_{\\cos(\\omega \\cdot ${a})} \\cdot \\underbrace{${cosB.toFixed(4)}}_{\\cos(\\omega \\cdot ${b})}}_{= ${prod_cc.toFixed(5)}} \\;-\\; \\underbrace{\\underbrace{${sinA.toFixed(4)}}_{\\sin(\\omega \\cdot ${a})} \\cdot \\underbrace{${sinB.toFixed(4)}}_{\\sin(\\omega \\cdot ${b})}}_{= ${prod_ss.toFixed(5)}} = ${(prod_cc - prod_ss).toFixed(5)}`)}
+                ${mathBlock(`\\text{Check: } \\cos(\\underbrace{\\omega_{${k}}}_{${wk.toFixed(4)}} \\cdot \\underbrace{(a+b)}_{${a+b}}) = \\cos(\\underbrace{${angS.toFixed(4)}}_{${wk.toFixed(4)} \\times ${a+b}}) = ${cosS.toFixed(5)} \\quad \\checkmark`)}
+                ${mathBlock(`\\sin(\\omega_{${k}}(a+b)) = \\underbrace{\\underbrace{${sinA.toFixed(4)}}_{\\sin(\\omega \\cdot ${a})} \\cdot \\underbrace{${cosB.toFixed(4)}}_{\\cos(\\omega \\cdot ${b})}}_{= ${prod_sc.toFixed(5)}} \\;+\\; \\underbrace{\\underbrace{${cosA.toFixed(4)}}_{\\cos(\\omega \\cdot ${a})} \\cdot \\underbrace{${sinB.toFixed(4)}}_{\\sin(\\omega \\cdot ${b})}}_{= ${prod_cs.toFixed(5)}} = ${(prod_sc + prod_cs).toFixed(5)}`)}
+                ${mathBlock(`\\text{Check: } \\sin(\\underbrace{${angS.toFixed(4)}}_{${wk.toFixed(4)} \\times ${a+b}}) = ${sinS.toFixed(5)} \\quad \\checkmark`)}
+            `, '#f59e0b')}
+
+            ${card('How the Attention Heads Compute Pairwise Products', `
+                <p>The 4 attention heads each produce a <strong>degree-2 product</strong> of Fourier embeddings. Here's the mechanism:</p>
+
+                <p><strong>Step A: Attention Pattern (scalar weight)</strong></p>
+                <p>For head ${mathInline('j')}, the attention from "=" to position 0 (token ${mathInline('a')}) is:</p>
+                ${mathBlock(`A^j_0 = \\sigma\\!\\left(\\underbrace{C^j[a] - C^j[b]}_{\\text{difference of lookup scores}}\\right) \\approx 0.5 + \\underbrace{\\alpha_j}_{\\text{learned}} \\cdot (\\cos(\\omega_{k_j} a) - \\cos(\\omega_{k_j} b)) + \\underbrace{\\beta_j}_{\\text{learned}} \\cdot (\\sin(\\omega_{k_j} a) - \\sin(\\omega_{k_j} b))`)}
+                <p style="font-size:0.88em; color:#64748b;">The softmax over 2 positions reduces to a sigmoid ${mathInline('\\sigma')}, which operates in a near-linear regime (97.5% FVE with linear fit).</p>
+
+                <p><strong>Step B: OV Circuit (value output)</strong></p>
+                <p>The OV circuit ${mathInline('W^j_O W^j_V x^{(0)}')} outputs a vector concentrated on a single frequency's sin/cos:</p>
+                ${mathBlock(`\\text{OV}^j(\\text{pos } i) \\approx \\gamma_j \\cdot \\cos(\\omega_{k_j} \\cdot t_i) + \\delta_j \\cdot \\sin(\\omega_{k_j} \\cdot t_i)`)}
+
+                <p><strong>Step C: The Product (attention × value)</strong></p>
+                <p>The head output is attention weight × OV output. Since both are functions of a single frequency:</p>
+                ${mathBlock(`\\text{Head}^j = \\underbrace{A^j_0}_{\\substack{\\text{attention weight}\\\\\\propto \\cos(\\omega_k a) \\text{ or } \\sin(\\omega_k a)}} \\times \\underbrace{\\text{OV}^j(\\text{pos } 1)}_{\\substack{\\text{value output}\\\\\\propto \\cos(\\omega_k b) \\text{ or } \\sin(\\omega_k b)}} \\;\\Rightarrow\\; \\text{degree-2 product}`)}
+
+                <p><strong>Result: Each head computes one pairwise product:</strong></p>
+                <table style="width:100%; border-collapse:collapse; font-size:0.88em; margin:8px 0;">
+                    <tr style="background:#f8fafc;"><th style="padding:6px; border:1px solid #e2e8f0;">Head</th><th style="padding:6px; border:1px solid #e2e8f0;">Attention pattern ∝</th><th style="padding:6px; border:1px solid #e2e8f0;">OV output ∝</th><th style="padding:6px; border:1px solid #e2e8f0;">Product</th></tr>
+                    <tr><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">0</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\cos(\\omega_k a)')}</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\cos(\\omega_k b)')}</td><td style="padding:6px; border:1px solid #e2e8f0; font-weight:bold;">${mathInline('\\cos(\\omega_k a)\\cos(\\omega_k b)')}</td></tr>
+                    <tr><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">1</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\sin(\\omega_k a)')}</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\sin(\\omega_k b)')}</td><td style="padding:6px; border:1px solid #e2e8f0; font-weight:bold;">${mathInline('\\sin(\\omega_k a)\\sin(\\omega_k b)')}</td></tr>
+                    <tr><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">2</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\sin(\\omega_k a)')}</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\cos(\\omega_k b)')}</td><td style="padding:6px; border:1px solid #e2e8f0; font-weight:bold;">${mathInline('\\sin(\\omega_k a)\\cos(\\omega_k b)')}</td></tr>
+                    <tr><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">3</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\cos(\\omega_k a)')}</td><td style="padding:6px; border:1px solid #e2e8f0;">${mathInline('\\sin(\\omega_k b)')}</td><td style="padding:6px; border:1px solid #e2e8f0; font-weight:bold;">${mathInline('\\cos(\\omega_k a)\\sin(\\omega_k b)')}</td></tr>
+                </table>
+                <p style="font-size:0.85em; color:#64748b;">Note: In practice, heads 0 and 2 compute degree-2 products while heads 1 and 3 amplify key frequencies in the residual stream (their attention patterns nearly sum to 1).</p>
+            `, '#8b5cf6')}
+
+            ${plotDiv('step3-circle', '340px')}
+
+            ${card('How the network layers implement this', `
+                <p>The computation is split across two layers:</p>
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em; margin:10px 0;">
+                    <tr style="background:#ede9fe;"><td style="padding:10px; border:1px solid #e2e8f0; font-weight:bold; color:#7c3aed;">Attention<br>(4 heads)</td><td style="padding:10px; border:1px solid #e2e8f0;">
+                        <p style="margin:0 0 5px 0;">Each head attends from the output position back to positions a and b, creating <strong>pairwise products</strong>:</p>
+                        ${mathBlock(`\\underbrace{\\text{Head 0}}_{\\text{computes}} \\to \\cos(\\omega_k a) \\cdot \\cos(\\omega_k b)`)}
+                        ${mathBlock(`\\underbrace{\\text{Head 1}}_{\\text{computes}} \\to \\sin(\\omega_k a) \\cdot \\sin(\\omega_k b)`)}
+                        ${mathBlock(`\\underbrace{\\text{Head 2}}_{\\text{computes}} \\to \\sin(\\omega_k a) \\cdot \\cos(\\omega_k b)`)}
+                        ${mathBlock(`\\underbrace{\\text{Head 3}}_{\\text{computes}} \\to \\cos(\\omega_k a) \\cdot \\sin(\\omega_k b)`)}
+                    </td></tr>
+                    <tr style="background:#ecfdf5;"><td style="padding:10px; border:1px solid #e2e8f0; font-weight:bold; color:#059669;">MLP<br>(512 ReLU neurons)</td><td style="padding:10px; border:1px solid #e2e8f0;">
+                        <p style="margin:0 0 5px 0;">Combines the products using the addition theorem:</p>
+                        ${mathBlock(`\\underbrace{\\text{cos}\\cdot\\text{cos}}_{\\text{from Head 0}} - \\underbrace{\\text{sin}\\cdot\\text{sin}}_{\\text{from Head 1}} = \\cos(\\omega_k(a+b))`)}
+                        ${mathBlock(`\\underbrace{\\text{sin}\\cdot\\text{cos}}_{\\text{from Head 2}} + \\underbrace{\\text{cos}\\cdot\\text{sin}}_{\\text{from Head 3}} = \\sin(\\omega_k(a+b))`)}
+                        <p style="margin:5px 0 0 0; font-size:0.9em; color:#64748b;">ReLU neurons approximate the subtraction/addition by learning appropriate weights. Pairs of neurons can approximate products via ${mathInline('\\text{ReLU}(x+y)^2 - \\text{ReLU}(x-y)^2 \\propto xy')}.</p>
+                    </td></tr>
+                </table>
+            `, '#059669')}
+        `;
+        renderMath();
+
+        // Circle plot
+        const theta = Array.from({ length: 100 }, (_, i) => i * 2 * Math.PI / 99);
+        Plotly.newPlot('step3-circle', [
+            { x: theta.map(Math.cos), y: theta.map(Math.sin), mode: 'lines', line: { color: themeColor('#e2e8f0'), width: 1.5 }, showlegend: false, hoverinfo: 'skip' },
+            { x: [0, cosA], y: [0, sinA], mode: 'lines+markers', line: { color: '#ef4444', width: 1.5, dash: 'dot' }, marker: { size: [3, 8] }, name: `a=${a}`, opacity: 0.5 },
+            { x: [0, cosB], y: [0, sinB], mode: 'lines+markers', line: { color: '#3b82f6', width: 1.5, dash: 'dot' }, marker: { size: [3, 8] }, name: `b=${b}`, opacity: 0.5 },
+            { x: [0, cosS], y: [0, sinS], mode: 'lines+markers', line: { color: '#059669', width: 4 }, marker: { size: [4, 15], symbol: ['circle', 'triangle-up'], color: '#059669' }, name: `a+b mod P = ${correctAnswer}` },
+        ], {
+            xaxis: { range: [-1.5, 1.5], zeroline: true, scaleanchor: 'y', title: 'cos' },
+            yaxis: { range: [-1.5, 1.5], zeroline: true, title: 'sin' },
+            margin: { t: 20, b: 50, l: 55, r: 20 },
+            showlegend: true, legend: { x: 0.01, y: 0.99 },
+            paper_bgcolor: themeColor('#fff'),
+            plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+    // ── STEP 4: Unembedding ──
+    steps.push({ title: 'Unembedding: Compare with All Tokens', render() {
+        const k = FREQS[0];
+        const wk = 2 * Math.PI * k / P;
+        const signal = allSignals[0];
+        const falsePeaks = tokens.filter(c => signal[c] > 0.9 && c !== correctAnswer);
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Unembedding</h2>
+            <p style="text-align:center; color:#64748b;">For every possible output token c: how well does it match the computed sum?</p>
+
+            ${card('The Formula', `
+                <p>The unembedding matrix ${mathInline('W_U')} contains cos/sin values for each token. For each candidate ${mathInline('c')}, we compute a dot product:</p>
+                ${mathBlock(`\\underbrace{\\text{Logit}(c)}_{\\substack{\\text{how well does}\\\\\\text{token } c \\text{ match?}}} = \\underbrace{\\cos(\\omega_k \\cdot (a+b))}_{\\substack{\\text{computed by}\\\\\\text{the MLP}}} \\cdot \\underbrace{\\cos(\\omega_k \\cdot c)}_{\\substack{\\text{row } c \\text{ of}\\\\\\text{matrix } W_U}} + \\underbrace{\\sin(\\omega_k \\cdot (a+b))}_{\\substack{\\text{computed by}\\\\\\text{the MLP}}} \\cdot \\underbrace{\\sin(\\omega_k \\cdot c)}_{\\substack{\\text{row } c \\text{ of}\\\\\\text{matrix } W_U}}`)}
+                <p>By the cosine subtraction identity, this simplifies to:</p>
+                ${mathBlock(`\\text{Logit}(c) = \\cos(\\underbrace{\\omega_k \\cdot (a+b) - \\omega_k \\cdot c}_{= \\omega_k \\cdot (a+b-c)})`)}
+            `, '#3b82f6')}
+
+	    ${card('How to read the plot below', `
+		<p>We evaluate ${mathInline('\\cos(\\omega_k \\cdot (a+b-c))')} for every token ${mathInline('c \\in \\{0, 1, \\ldots, ' + (P-1) + '\\}')}:</p>
+		<ul>
+		    <li>At ${mathInline('c^* = ' + correctAnswer)}: we get ${mathInline('a+b-c^* = ' + a + '+' + b + '-' + correctAnswer + ' = ' + ((a+b)-correctAnswer))} which is ${mathInline('\\equiv 0 \\pmod{' + P + '}')} so ${mathInline('\\cos(0) = 1')} (maximum!)</li>
+		    <li>At other values of ${mathInline('c')}: the angle is nonzero, so the cosine is less than 1</li>
+		    <li><strong>Problem:</strong> cosine is periodic with period ${mathInline('P/k = ' + P + '/' + k + ' \\approx ' + (P/k).toFixed(1))}, so there are <strong>${falsePeaks.length} false peaks</strong> above 0.9!</li>
+		</ul>
+	    `, '#f59e0b')}
+
+	    ${plotDiv('step4-plot', '320px')}
+
+	    ${card('What is ' + mathInline('c') + '?', `
+		<p>${mathInline('c')} is a <strong>candidate output token</strong>. The network must choose one of the ${P} possible outputs. The unembedding step computes a score (logit) for each candidate, and the highest-scoring one becomes the prediction.</p>
+	    `, '#64748b')}
+	`;
+	    renderMath();
+
+	    Plotly.newPlot('step4-plot', [
+		    { x: tokens, y: signal, mode: 'lines', line: { color: '#3b82f6', width: 1.5 }, fill: 'tozeroy', fillcolor: 'rgba(59,130,246,0.04)', name: `cos(w_${k} * (a+b-c))` },
+		    { x: [correctAnswer], y: [signal[correctAnswer]], mode: 'markers', marker: { size: 13, color: '#ef4444', symbol: 'star' }, name: `Correct: c*=${correctAnswer}` },
+		    { x: falsePeaks, y: falsePeaks.map(c => signal[c]), mode: 'markers', marker: { size: 7, color: '#f59e0b' }, name: `False peaks (${falsePeaks.length})` },
+	    ], {
+		    xaxis: { title: 'Candidate output token c', range: [-2, P + 2] },
+		    yaxis: { title: `cos(w_${k} * (a+b-c))`, range: [-1.3, 1.4] },
+		    margin: { t: 40, b: 50, l: 55, r: 20 },
+		    shapes: [{ type: 'line', x0: 0, x1: P, y0: 0, y1: 0, line: { color: themeColor('#94a3b8'), width: 0.5 } }],
+		    showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' },
+	    paper_bgcolor: themeColor('#fff'),
+	    plot_bgcolor: themeColor('#fff')
+	    }, { responsive: true });
+    }});
+
+	// ── NEW STEP: Multi-Frequency View ──
+	steps.push({ title: 'Five Circles: One Token, Five Positions', render() {
+		content.innerHTML = `
+	<h2 style="text-align:center; color:#1e293b;">Five Circles, Five Positions</h2>
+	<p style="text-align:center; color:#64748b;">Each token exists simultaneously on 5 different circles</p>
+
+	${card('The key insight', `
+	    <p>Token ${mathInline(`n = ${a}`)} doesn't have just one position in the embedding space. It has <strong>5 positions</strong>, one per frequency:</p>
+	    ${mathBlock(`\\text{Token } ${a} \\;\\mapsto\\; \\begin{cases} \\text{Circle 1 (k=14):} & (\\cos(\\omega_{14} \\cdot ${a}),\\; \\sin(\\omega_{14} \\cdot ${a})) \\\\ \\text{Circle 2 (k=35):} & (\\cos(\\omega_{35} \\cdot ${a}),\\; \\sin(\\omega_{35} \\cdot ${a})) \\\\ \\text{Circle 3 (k=41):} & (\\cos(\\omega_{41} \\cdot ${a}),\\; \\sin(\\omega_{41} \\cdot ${a})) \\\\ \\text{Circle 4 (k=42):} & (\\cos(\\omega_{42} \\cdot ${a}),\\; \\sin(\\omega_{42} \\cdot ${a})) \\\\ \\text{Circle 5 (k=52):} & (\\cos(\\omega_{52} \\cdot ${a}),\\; \\sin(\\omega_{52} \\cdot ${a})) \\end{cases}`)}
+	    <p>These 5 circles live in <strong>orthogonal 2D subspaces</strong> of the 128-dimensional embedding space.</p>
+	`, '#3b82f6')}
+
+	${plotDiv('multi-freq-plot', '350px')}
+
+	${card('Why orthogonal subspaces matter', `
+	    <p>Because the 5 frequency channels are (approximately) orthogonal in the 128-dimensional space, they <strong>don't interfere with each other</strong> during computation. Each frequency's computation is independent until the final summation in the unembedding step.</p>
+	    <p>This is like having 5 independent radio channels — each carries its own signal without cross-talk.</p>
+	`, '#8b5cf6')}
+    `;
+		renderMath();
+
+		const colors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+		const traces = [];
+		const circleTheta = Array.from({length:80}, (_,i) => i*2*Math.PI/79);
+
+		FREQS.forEach((k, idx) => {
+			const wk = 2 * Math.PI * k / P;
+			const offsetX = (idx - 2) * 3; // Spread circles horizontally
+
+			// Circle outline
+			traces.push({
+				x: circleTheta.map(t => Math.cos(t) + offsetX),
+				y: circleTheta.map(t => Math.sin(t)),
+				mode: 'lines', line: { color: themeColor('#e2e8f0'), width: 1 },
+				showlegend: false, hoverinfo: 'skip'
+			});
+
+			// Token a
+			traces.push({
+				x: [Math.cos(wk * a) + offsetX],
+				y: [Math.sin(wk * a)],
+				mode: 'markers',
+				marker: { size: 12, color: '#ef4444', symbol: 'circle' },
+				name: idx === 0 ? `a=${a}` : undefined,
+				showlegend: idx === 0,
+				hovertext: `a=${a} on k=${k}: (${Math.cos(wk*a).toFixed(3)}, ${Math.sin(wk*a).toFixed(3)})`,
+				hoverinfo: 'text'
+			});
+
+			// Token b
+			traces.push({
+				x: [Math.cos(wk * b) + offsetX],
+				y: [Math.sin(wk * b)],
+				mode: 'markers',
+				marker: { size: 12, color: '#3b82f6', symbol: 'square' },
+				name: idx === 0 ? `b=${b}` : undefined,
+				showlegend: idx === 0,
+				hovertext: `b=${b} on k=${k}: (${Math.cos(wk*b).toFixed(3)}, ${Math.sin(wk*b).toFixed(3)})`,
+				hoverinfo: 'text'
+			});
+
+			// Correct answer
+			traces.push({
+				x: [Math.cos(wk * correctAnswer) + offsetX],
+				y: [Math.sin(wk * correctAnswer)],
+				mode: 'markers',
+				marker: { size: 14, color: '#059669', symbol: 'triangle-up' },
+				name: idx === 0 ? `c*=${correctAnswer}` : undefined,
+				showlegend: idx === 0,
+				hovertext: `c*=${correctAnswer} on k=${k}`,
+				hoverinfo: 'text'
+			});
+
+			// Label
+			traces.push({
+				x: [offsetX], y: [-1.5],
+				mode: 'text', text: [`k=${k}`],
+				textfont: { size: 11, color: colors[idx] },
+				showlegend: false, hoverinfo: 'skip'
+			});
+		});
+
+		Plotly.newPlot('multi-freq-plot', traces, {
+			xaxis: { range: [-8, 8], showgrid: false, zeroline: false, showticklabels: false },
+			yaxis: { range: [-2, 1.8], showgrid: false, zeroline: false, showticklabels: false, scaleanchor: 'x' },
+			margin: { t: 20, b: 30, l: 20, r: 20 },
+			showlegend: true, legend: { x: 0.5, y: 1.1, orientation: 'h', xanchor: 'center' },
+		paper_bgcolor: themeColor('#fff'),
+		plot_bgcolor: themeColor('#fff')
+		}, { responsive: true });
+	}});
+
+    // ── STEP 5: Why one frequency fails ──
+    steps.push({ title: 'Why One Frequency Fails', render() {
+        const k = FREQS[0];
+        const signal = allSignals[0];
+        const highPeaks = tokens.filter(c => signal[c] > 0.9);
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Why One Frequency Fails</h2>
+            <p style="text-align:center; color:#64748b;">Cosine is periodic, so there are too many "false" peaks!</p>
+
+            ${card('The Problem', `
+                <p>The function ${mathInline('\\cos(\\omega_k \\cdot x)')} has a <strong>period</strong> of ${mathInline('P/k')}:</p>
+                ${mathBlock(`\\underbrace{\\cos(\\omega_k \\cdot x)}_{\\text{repeats every } P/k \\text{ tokens}} \\quad \\text{Period} = \\frac{P}{k} = \\frac{${P}}{${k}} \\approx ${(P/k).toFixed(1)}`)}
+                <p>This means: every <strong>~${Math.round(P/k)} tokens</strong>, the pattern repeats and there is a new peak!</p>
+                <p>Result: <strong>${highPeaks.length} tokens</strong> have activation > 0.9. The network cannot distinguish them with just one frequency!</p>
+            `, '#ef4444')}
+
+            ${plotDiv('step5-plot', '300px')}
+
+            ${card('The Solution: Multiple Frequencies!', `
+                <p>If we combine <strong>multiple frequencies</strong> with <strong>different periods</strong>:</p>
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                    <tr style="background:#f8fafc;"><th style="padding:6px; border:1px solid #e2e8f0;">Frequency k</th><th style="padding:6px; border:1px solid #e2e8f0;">Period P/k</th><th style="padding:6px; border:1px solid #e2e8f0;">False peaks every...</th></tr>
+                    ${FREQS.map(kk => `<tr><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">${kk}</td><td style="padding:6px; border:1px solid #e2e8f0; text-align:center;">${(P/kk).toFixed(1)}</td><td style="padding:6px; border:1px solid #e2e8f0;">~${Math.round(P/kk)} tokens</td></tr>`).join('')}
+                </table>
+                <p style="margin-top:10px;">The false peaks of each frequency are at <strong>different positions</strong>!</p>
+                <p style="color:#059669; font-weight:bold;">Only at c* = ${correctAnswer} do ALL frequencies peak simultaneously!</p>
+            `, '#059669')}
+        `;
+        renderMath();
+
+        Plotly.newPlot('step5-plot', [
+            { x: tokens, y: signal, mode: 'lines', line: { color: '#3b82f6', width: 1.2 }, name: `cos(w_${k}*(a+b-c))` },
+            { x: highPeaks, y: highPeaks.map(c => signal[c]), mode: 'markers', marker: { size: 7, color: '#f59e0b' }, name: `${highPeaks.length} peaks > 0.9` },
+            { x: [correctAnswer], y: [1.0], mode: 'markers', marker: { size: 14, color: '#ef4444', symbol: 'star' }, name: `Correct: c*=${correctAnswer}` },
+        ], {
+            xaxis: { title: 'Candidate token c' },
+            yaxis: { title: `cos(w_${k} * (a+b-c))`, range: [-1.2, 1.4] },
+            margin: { t: 20, b: 50, l: 55, r: 20 },
+            shapes: [
+                { type: 'line', x0: 0, x1: P, y0: 0.9, y1: 0.9, line: { color: '#f59e0b', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, x1: P, y0: 0, y1: 0, line: { color: themeColor('#94a3b8'), width: 0.5 } }
+            ],
+            showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' },
+        paper_bgcolor: themeColor('#fff'),
+        plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+    // ── STEP 6: All 5 frequencies ──
+    steps.push({ title: 'All 5 Frequencies Together', render() {
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">All 5 Frequencies</h2>
+            <p style="text-align:center; color:#64748b;">Each frequency peaks at c*=${correctAnswer}, but their false peaks are at different positions</p>
+
+            ${card('How each row is computed', `
+                <p>For each frequency ${mathInline('k')}, we compute the logit for every candidate token ${mathInline('c')}:</p>
+                ${mathBlock(`\\underbrace{f_k(c)}_{\\substack{\\text{activation for}\\\\\\text{token } c \\text{ at}\\\\\\text{frequency } k}} = \\cos\\!\\left(\\underbrace{\\frac{2\\pi k}{${P}}}_{\\omega_k} \\cdot \\underbrace{(${a}+${b}-c)}_{\\substack{\\text{difference between}\\\\\\text{the sum and}\\\\\\text{candidate } c}}\\right)`)}
+                <p>Each frequency has a different period ${mathInline('P/k')}, so the false peaks land at <strong>different positions</strong>.</p>
+            `, '#3b82f6')}
+
+            ${plotDiv('step6-plot', '380px')}
+
+            ${card('Key Observation', `
+                <p>The <span style="color:#ef4444;">red dashed line</span> at c*=${correctAnswer} hits <strong>every single peak</strong>. But the other peaks are scattered at different positions for each frequency!</p>
+                <p style="font-weight:bold; color:#059669;">Next step: Sum all 5 signals. Only c* survives!</p>
+            `, '#059669')}
+        `;
+        renderMath();
+
+        const colors = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+        const traces = FREQS.map((k, i) => ({
+            x: tokens,
+            y: allSignals[i].map(v => v + i * 2.5),
+            mode: 'lines',
+            line: { color: colors[i], width: 1.3 },
+            name: `k=${k} (period ${(P/k).toFixed(1)})`,
+        }));
+        FREQS.forEach((k, i) => {
+            traces.push({
+                x: [correctAnswer],
+                y: [allSignals[i][correctAnswer] + i * 2.5],
+                mode: 'markers',
+                marker: { size: 8, color: '#ef4444' },
+                showlegend: false,
+            });
+        });
+
+        Plotly.newPlot('step6-plot', traces, {
+            xaxis: { title: 'Candidate output token c', range: [-2, P + 2] },
+            yaxis: { showticklabels: false },
+            margin: { t: 20, b: 50, l: 30, r: 20 },
+            shapes: [{ type: 'line', x0: correctAnswer, x1: correctAnswer, y0: -1, y1: 12.5, line: { color: '#ef4444', width: 1.5, dash: 'dash' } }],
+            showlegend: true, legend: { x: 1.02, y: 0.98, xanchor: 'left' },
+        paper_bgcolor: themeColor('#fff'),
+        plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+    // ── STEP 7: Constructive Interference ──
+    steps.push({ title: 'Constructive Interference', render() {
+        const maxVal = totalSignal[correctAnswer];
+        const sorted = [...totalSignal].map((v, i) => ({ v, i })).sort((x, y) => y.v - x.v);
+        const second = sorted[0].i === correctAnswer ? sorted[1] : sorted[0];
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Constructive Interference</h2>
+            <p style="text-align:center; color:#64748b;">The sum of all 5 waves: only the correct answer survives!</p>
+
+            ${card('The Formula', `
+                <p>The final logit for each candidate token ${mathInline('c')} is the sum over all 5 frequencies:</p>
+                ${mathBlock(`\\underbrace{\\text{Logit}(c)}_{\\substack{\\text{final score}\\\\\\text{for token } c}} = \\sum_{k \\in \\{${FREQS.join(',')}\\}} \\underbrace{\\cos(\\omega_k \\cdot (\\overbrace{a+b}^{\\text{the sum}} - \\overbrace{c}^{\\substack{\\text{candidate}\\\\\\text{token}}}))}_{\\substack{\\text{contribution from}\\\\\\text{frequency } k}}`)}
+            `, '#3b82f6')}
+
+            ${plotDiv('step7-plot', '340px')}
+
+            ${card('Why is c* the maximum?', `
+                <p>At the correct answer ${mathInline('c^* = ' + correctAnswer)}:</p>
+                ${mathBlock(`\\underbrace{a + b - c^*}_{${a}+${b}-${correctAnswer} = ${(a+b)-correctAnswer}} \\equiv 0 \\pmod{${P}}`)}
+                ${mathBlock(`\\Rightarrow \\; \\omega_k \\cdot 0 = 0 \\;\\; \\Rightarrow \\;\\; \\underbrace{\\cos(0) = 1}_{\\text{for ALL } k}`)}
+                ${mathBlock(`\\Rightarrow \\; \\text{Logit}(c^*) = \\underbrace{1 + 1 + 1 + 1 + 1}_{\\substack{\\text{all 5 frequencies}\\\\\\text{contribute maximum}}} = 5`)}
+                <p>At every other ${mathInline('c')}: the cosine values are different for different ${mathInline('k')}, so they partially cancel out (<strong>destructive interference</strong>).</p>
+                <p>2nd highest peak: c=${second.i} with logit=${second.v.toFixed(3)} (far below ${maxVal.toFixed(0)}!)</p>
+            `, '#059669')}
+
+            ${card('Analogy', `
+                <p>Think of a lock with <strong>5 tumblers</strong>. Each frequency is one tumbler. Only the correct key (c*=${correctAnswer}) fits all 5 simultaneously. Every other key fails at least one tumbler.</p>
+            `, '#8b5cf6')}
+        `;
+        renderMath();
+
+        Plotly.newPlot('step7-plot', [
+            { x: tokens, y: totalSignal, mode: 'lines', line: { color: '#3b82f6', width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(59,130,246,0.06)', name: 'Sum of 5 cosines' },
+            { x: [correctAnswer], y: [maxVal], mode: 'markers', marker: { size: 16, color: '#ef4444', symbol: 'star' }, name: `c*=${correctAnswer} (logit=${maxVal.toFixed(1)})` },
+            { x: [second.i], y: [second.v], mode: 'markers', marker: { size: 10, color: '#f59e0b' }, name: `2nd place: c=${second.i} (${second.v.toFixed(2)})` },
+        ], {
+            xaxis: { title: 'Candidate output token c', range: [-2, P + 2] },
+            yaxis: { title: 'Total logit = sum of cos(wk*(a+b-c))' },
+            margin: { t: 20, b: 50, l: 55, r: 20 },
+            shapes: [{ type: 'line', x0: 0, x1: P, y0: 0, y1: 0, line: { color: themeColor('#94a3b8'), width: 0.5 } }],
+            showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' },
+        paper_bgcolor: themeColor('#fff'),
+        plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+    // ── STEP 8: Softmax ──
+    steps.push({ title: 'Softmax: Logits to Probabilities', render() {
+        const prob = softmaxSignal[correctAnswer];
+
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Softmax</h2>
+            <p style="text-align:center; color:#64748b;">Converting raw logits into a probability distribution</p>
+
+            ${card('The Formula', `
+                ${mathBlock(`\\underbrace{P(c)}_{\\substack{\\text{probability that}\\\\\\text{token } c \\text{ is}\\\\\\text{the answer}}} = \\frac{\\overbrace{\\exp(\\text{Logit}(c))}^{\\substack{\\text{exponentiate to}\\\\\\text{make positive}}}}{\\underbrace{\\sum_{j=0}^{${P-1}} \\exp(\\text{Logit}(j))}_{\\substack{\\text{sum over all tokens}\\\\\\text{(normalization)}}}}`)}
+                <p>Softmax turns raw logit scores into probabilities: all values between 0 and 1, summing to 1. The token with the highest logit gets the highest probability.</p>
+            `, '#3b82f6')}
+
+            ${plotDiv('step8-plot', '300px')}
+
+            ${card('Result', `
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                    <tr style="background:#f8fafc;"><td style="padding:8px; border:1px solid #e2e8f0;">${mathInline('\\text{Logit}(c^* = ' + correctAnswer + ')')}</td><td style="padding:8px; border:1px solid #e2e8f0; font-weight:bold;">${totalSignal[correctAnswer].toFixed(3)}</td></tr>
+                    <tr><td style="padding:8px; border:1px solid #e2e8f0;">${mathInline('\\exp(\\text{Logit}(c^*))')}</td><td style="padding:8px; border:1px solid #e2e8f0;">${Math.exp(totalSignal[correctAnswer]).toFixed(2)}</td></tr>
+                    <tr style="background:#ecfdf5;"><td style="padding:8px; border:1px solid #e2e8f0; color:#059669; font-weight:bold;">${mathInline('P(c^* = ' + correctAnswer + ')')}</td><td style="padding:8px; border:1px solid #e2e8f0; color:#059669; font-weight:bold;">${(prob * 100).toFixed(2)}%</td></tr>
+                </table>
+                <p style="margin-top:10px;">In reality (with learned weights ${mathInline('\\alpha_k')}), the peak is <strong>much sharper</strong>: P(c*) > 99%.</p>
+                <p style="color:#059669; font-weight:bold; font-size:1.1em;">${mathInline('\\arg\\max_c P(c)')} = ${correctAnswer} = (${a}+${b}) mod ${P}  &#10003;</p>
+            `, '#059669')}
+        `;
+        renderMath();
+
+        Plotly.newPlot('step8-plot', [
+            { x: tokens, y: softmaxSignal.map(v => v * 100), mode: 'lines', line: { color: '#10b981', width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.08)', name: 'P(c) [%]' },
+            { x: [correctAnswer], y: [prob * 100], mode: 'markers', marker: { size: 14, color: '#ef4444', symbol: 'star' }, name: `c*=${correctAnswer}: ${(prob*100).toFixed(2)}%` },
+        ], {
+            xaxis: { title: 'Candidate output token c', range: [-2, P + 2] },
+            yaxis: { title: 'Probability [%]', rangemode: 'tozero' },
+            margin: { t: 20, b: 50, l: 55, r: 20 },
+            showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' },
+        paper_bgcolor: themeColor('#fff'),
+        plot_bgcolor: themeColor('#fff')
+        }, { responsive: true });
+    }});
+
+    // ── STEP 9: Complete Algorithm ──
+    steps.push({ title: 'Complete Algorithm', render() {
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">The Complete Algorithm</h2>
+            <p style="text-align:center; color:#64748b;">All formulas at a glance ${cite('(Nanda et al., 2023)', 'nanda2023grokking')}</p>
+
+            ${card('(1) EMBEDDING: Numbers become circle-points', `
+                ${mathBlock(`\\underbrace{n}_{\\text{input token}} \\;\\mapsto\\; \\left(\\underbrace{\\cos(\\omega_k \\cdot n)}_{x},\\; \\underbrace{\\sin(\\omega_k \\cdot n)}_{y}\\right) \\quad \\text{where } \\underbrace{\\omega_k = \\frac{2\\pi k}{P}}_{\\text{angular velocity}},\\; k \\in \\{${FREQS.join(', ')}\\}`)}
+            `, '#3b82f6')}
+
+            ${card('(2) ATTENTION: Bringing information together', `
+                <p>The 4 attention heads move information from positions a and b to the output position, creating products:</p>
+                ${mathBlock(`\\underbrace{\\cos(\\omega_k a) \\cdot \\cos(\\omega_k b)}_{\\text{head 0: cos-cos product}}, \\quad \\underbrace{\\sin(\\omega_k a) \\cdot \\sin(\\omega_k b)}_{\\text{head 1: sin-sin product}}, \\quad \\underbrace{\\sin(\\omega_k a) \\cdot \\cos(\\omega_k b)}_{\\text{head 2: sin-cos product}}`)}
+
+                <p><strong>How each head produces its product:</strong></p>
+                ${mathBlock(`\\text{Head}^j \\;=\\; \\underbrace{A^j_0}_{\\substack{\\text{attention weight}\\\\= \\sigma(C^j[a] - C^j[b])\\\\\\approx 0.5 + \\alpha_j(\\cos(\\omega_{k_j} a) - \\cos(\\omega_{k_j} b))}} \\;\\times\\; \\underbrace{W^j_O W^j_V x^{(0)}}_{\\substack{\\text{OV circuit output}\\\\\\propto \\cos(\\omega_{k_j} b) \\text{ or } \\sin(\\omega_{k_j} b)}}`)}
+                <p style="font-size:0.88em; color:#64748b;">The softmax over 2 positions reduces to a sigmoid σ, which operates in a near-linear regime (97.5% FVE with linear fit). The product of the linear attention weight × OV output gives a degree-2 polynomial.</p>
+            `, '#8b5cf6')}
+
+            ${card('(3) MLP: Applying addition theorems', `
+                <p>512 ReLU neurons combine the products to compute:</p>
+                ${mathBlock(`\\overbrace{\\cos(\\omega_k(a+b))}^{\\substack{\\text{the cosine of}\\\\\\text{the sum-angle}}} = \\underbrace{\\cos(\\omega_k a)\\cos(\\omega_k b)}_{\\text{from attention}} - \\underbrace{\\sin(\\omega_k a)\\sin(\\omega_k b)}_{\\text{from attention}}`)}
+                ${mathBlock(`\\overbrace{\\sin(\\omega_k(a+b))}^{\\substack{\\text{the sine of}\\\\\\text{the sum-angle}}} = \\underbrace{\\sin(\\omega_k a)\\cos(\\omega_k b)}_{\\text{from attention}} + \\underbrace{\\cos(\\omega_k a)\\sin(\\omega_k b)}_{\\text{from attention}}`)}
+            `, '#059669')}
+
+            ${card('(4) UNEMBEDDING: Compare with all tokens', `
+                ${mathBlock(`\\underbrace{\\text{Logit}(c)}_{\\substack{\\text{score for}\\\\\\text{candidate } c}} = \\sum_{k} \\alpha_k \\cdot \\underbrace{\\cos(\\omega_k \\cdot (a+b-c))}_{\\substack{= 1 \\text{ when } c = c^* \\\\ < 1 \\text{ otherwise}}}`)}
+            `, '#f59e0b')}
+
+            ${card('(5) SOFTMAX + ARGMAX: Final answer', `
+                ${mathBlock(`c^* = \\underbrace{\\arg\\max_c}_{\\substack{\\text{pick the token}\\\\\\text{with highest prob.}}} \\frac{\\exp(\\text{Logit}(c))}{\\sum_j \\exp(\\text{Logit}(j))} = ${correctAnswer}`)}
+                <div style="text-align:center; padding:12px; background:#ecfdf5; border-radius:8px; margin-top:10px;">
+                    <span style="font-size:1.3em; font-weight:bold; color:#059669;">${a} + ${b} mod ${P} = ${correctAnswer} &#10003;</span>
+                </div>
+            `, '#ef4444')}
+        `;
+        renderMath();
+    }});
+
+	// ── STEP 10: Interactive Playground ──
+	steps.push({ title: 'Interactive Playground', render() {
+		content.innerHTML = `
+	<h2 style="text-align:center; color:#1e293b;">Interactive Playground</h2>
+	<p style="text-align:center; color:#64748b;">Change a, b and toggle frequencies to see how the algorithm works (or breaks!)</p>
+
+	<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin:15px 0;">
+	    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
+		<div>
+		    <label style="font-weight:600; font-size:0.9em;">Number a:</label><br>
+		    <input type="range" id="play-a" min="0" max="${P-1}" value="${a}" style="width:100%;">
+		    <span id="play-a-val" style="font-weight:bold;">${a}</span>
+		</div>
+		<div>
+		    <label style="font-weight:600; font-size:0.9em;">Number b:</label><br>
+		    <input type="range" id="play-b" min="0" max="${P-1}" value="${b}" style="width:100%;">
+		    <span id="play-b-val" style="font-weight:bold;">${b}</span>
+		</div>
+		<div>
+		    <label style="font-weight:600; font-size:0.9em;">Correct answer:</label><br>
+		    <span id="play-result" style="font-size:1.5em; font-weight:bold; color:#059669;">${correctAnswer}</span>
+		</div>
+	    </div>
+	    <div style="margin-bottom:10px;">
+		<label style="font-weight:600; font-size:0.9em;">Active frequencies (try disabling some!):</label><br>
+		${FREQS.map(k => `<label style="margin-right:12px; cursor:pointer;"><input type="checkbox" class="play-freq" value="${k}" checked> k=${k} (period ${(P/k).toFixed(1)})</label>`).join('')}
+	    </div>
+	</div>
+
+	${plotDiv('play-plot', '320px')}
+
+	<div id="play-info" style="text-align:center; padding:12px; background:#f0f9ff; border-radius:8px; margin-top:10px; font-size:0.95em;"></div>
+    `;
+		renderMath();
+
+		function updatePlayground() {
+			const playA = parseInt(document.getElementById('play-a').value);
+			const playB = parseInt(document.getElementById('play-b').value);
+			const playResult = (playA + playB) % P;
+			const activeFreqs = Array.from(document.querySelectorAll('.play-freq:checked')).map(el => parseInt(el.value));
+
+			document.getElementById('play-a-val').textContent = playA;
+			document.getElementById('play-b-val').textContent = playB;
+			document.getElementById('play-result').textContent = playResult;
+
+			// Handle zero frequencies selected
+			if (activeFreqs.length === 0) {
+				const flatSignal = tokens.map(() => 0);
+				Plotly.react('play-plot', [
+					{ x: tokens, y: flatSignal, mode: 'lines', line: { color: themeColor('#94a3b8'), width: 2 }, name: 'Logit(c) [no frequencies]' },
+				], {
+					xaxis: { title: 'Candidate token c', range: [-2, P + 2] },
+					yaxis: { title: 'Logit', range: [-1, 1] },
+					margin: { t: 20, b: 50, l: 50, r: 20 },
+					showlegend: true, legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' }
+				});
+				document.getElementById('play-info').innerHTML = `<span style="color:#ef4444; font-weight:bold;">&#10007; No frequencies active! All logits are 0. The network cannot distinguish any token.</span>`;
+				return;
+			}
+
+			const playSignal = tokens.map(c => {
+				return activeFreqs.reduce((sum, k) => {
+					const wk = 2 * Math.PI * k / P;
+					return sum + Math.cos(wk * (playA + playB) - wk * c);
+				}, 0);
+			});
+
+			const maxVal = Math.max(...playSignal);
+			const numFreqs = activeFreqs.length;
+
+			// Sort signal values descending to find the margin
+			const sorted = [...playSignal].sort((a, b) => b - a);
+			const secondMax = sorted[1];
+			const margin = maxVal - secondMax;
+
+			// The margin with all 5 frequencies is ~5 - (~1.5) = ~3.5
+			// With 1 frequency the margin is ~1.0 - 0.997 = ~0.003
+			// We consider the prediction "unreliable" if margin < 0.5 per active frequency
+			// This threshold means: the 2nd-best token gets more than (max - 0.5*numFreqs)
+			const reliableThreshold = 0.5; // margin must be at least this to be "reliable"
+			const isReliable = margin > reliableThreshold;
+
+			// Find near-peak tokens (within 10% of the max value relative to the range)
+			const range = maxVal - Math.min(...playSignal);
+			const nearPeakThreshold = maxVal - 0.1 * range; // within top 10% of range
+			const nearPeakTokens = tokens.filter(c => playSignal[c] >= nearPeakThreshold);
+
+			// The argmax (first occurrence)
+			const maxIdx = playSignal.indexOf(maxVal);
+			const isCorrect = maxIdx === playResult;
+
+			// Build plot traces
+			const traces = [
+				{ x: tokens, y: playSignal, mode: 'lines', line: { color: '#3b82f6', width: 2 }, fill: 'tozeroy', fillcolor: 'rgba(59,130,246,0.04)', name: 'Logit(c)' },
+				{ x: [playResult], y: [playSignal[playResult]], mode: 'markers', marker: { size: 14, color: '#ef4444', symbol: 'star' }, name: `Correct: ${playResult}` },
+			];
+
+			if (isReliable) {
+				traces.push({
+					x: [maxIdx], y: [playSignal[maxIdx]], mode: 'markers',
+					marker: { size: 10, color: isCorrect ? '#10b981' : '#f59e0b', symbol: 'diamond' },
+					name: `argmax: ${maxIdx}`
+				});
+			} else {
+				// Show all near-peak tokens to illustrate the ambiguity
+				traces.push({
+					x: nearPeakTokens, y: nearPeakTokens.map(c => playSignal[c]), mode: 'markers',
+					marker: { size: 8, color: '#f59e0b', symbol: 'diamond' },
+					name: `${nearPeakTokens.length} near-peak tokens (margin=${margin.toFixed(4)})`
+				});
+			}
+
+			// Add a horizontal line at the near-peak threshold when unreliable
+			const layout = {
+				xaxis: { title: 'Candidate token c', range: [-2, P + 2] },
+				yaxis: { title: 'Logit' },
+				margin: { t: 20, b: 50, l: 50, r: 20 },
+				showlegend: true,
+				legend: { x: 0.5, y: 1.15, orientation: 'h', xanchor: 'center', yanchor: 'bottom' },
+				shapes: [],
+				paper_bgcolor: themeColor('#fff'),
+				plot_bgcolor: themeColor('#fff')
+			};
+
+			if (!isReliable) {
+				layout.shapes.push({
+					type: 'line', x0: -2, x1: P + 2,
+					y0: nearPeakThreshold, y1: nearPeakThreshold,
+					line: { color: '#f59e0b', width: 1.5, dash: 'dash' }
+				});
+			}
+
+			Plotly.react('play-plot', traces, layout);
+
+			// Update info display
+			const infoEl = document.getElementById('play-info');
+			if (isCorrect && isReliable) {
+				infoEl.innerHTML = `<span style="color:#059669; font-weight:bold;">&#10003; Correct! argmax = ${maxIdx} = (${playA}+${playB}) mod ${P}</span><br><span style="font-size:0.85em;">${numFreqs} frequency(ies) active. Peak: ${maxVal.toFixed(2)} / ${numFreqs}.0 | Margin over 2nd place: <strong>${margin.toFixed(4)}</strong></span>`;
+			} else if (isCorrect && !isReliable) {
+				infoEl.innerHTML = `<span style="color:#f59e0b; font-weight:bold;">&#9888; Technically correct, but unreliable! Margin is only ${margin.toFixed(4)}</span><br><span style="font-size:0.85em;">With only ${numFreqs} frequency(ies), <strong>${nearPeakTokens.length} tokens</strong> have nearly identical scores (within top 10% of range). The correct answer c*=${playResult} wins by a hair, but noise or finite precision would break this.</span><br><span style="font-size:0.82em; color:#64748b;">Near-peak tokens: [${nearPeakTokens.slice(0, 12).join(', ')}${nearPeakTokens.length > 12 ? ', ...' : ''}] — spaced ~P/k ≈ ${(P / activeFreqs[0]).toFixed(1)} apart.</span>`;
+			} else if (!isCorrect) {
+				infoEl.innerHTML = `<span style="color:#ef4444; font-weight:bold;">&#10007; Wrong! argmax = ${maxIdx}, but correct = ${playResult}</span><br><span style="font-size:0.85em;">${numFreqs} frequency(ies) active. Margin: ${margin.toFixed(4)}. ${!isReliable ? 'Prediction is unreliable.' : ''}</span>`;
+			}
+		}
+
+		document.getElementById('play-a').addEventListener('input', updatePlayground);
+		document.getElementById('play-b').addEventListener('input', updatePlayground);
+		document.querySelectorAll('.play-freq').forEach(el => el.addEventListener('change', updatePlayground));
+		updatePlayground();
+	}});
+
+    // ── STEP 11: Summary & Grokking ──
+    steps.push({ title: 'Summary and Grokking', render() {
+        content.innerHTML = `
+            <h2 style="text-align:center; color:#1e293b;">Summary</h2>
+            <p style="text-align:center; color:#64748b;">Why this is remarkable, and how it connects to "Grokking"</p>
+
+            ${card('1. REPRESENTATION: Numbers as Angles', `
+                <p>Modular arithmetic <strong>is</strong> circular: after P you wrap around to 0. The network independently discovered this natural representation ${cite('(Nanda et al., 2023, Section 4.1)', 'nanda2023grokking')}!</p>
+                ${mathBlock(`\\underbrace{n}_{\\text{number}} \\;\\mapsto\\; \\underbrace{e^{i\\omega_k n}}_{\\text{point on circle}} = (\\underbrace{\\cos(\\omega_k n)}_{x},\\; \\underbrace{\\sin(\\omega_k n)}_{y})`)}
+            `, '#3b82f6')}
+
+            ${card('2. COMPUTATION: Trigonometric Identities', `
+                ${mathBlock(`\\underbrace{\\cos(\\alpha + \\beta)}_{\\substack{\\text{what we need:}\\\\\\text{cosine of the sum}}} = \\underbrace{\\cos\\alpha\\cos\\beta - \\sin\\alpha\\sin\\beta}_{\\substack{\\text{products that ReLU neurons}\\\\\\text{can compute}}}`)}
+                <p>Only multiplication and addition needed. ReLU neurons can approximate quadratic terms (products) because ${mathInline('\\text{ReLU}(x)^2 \\approx x \\cdot y')} patterns emerge in pairs of neurons.</p>
+            `, '#059669')}
+
+            ${card('3. SELECTION: Constructive Interference', `
+                <p>Each frequency alone has many false peaks. But the false peaks are at <strong>different positions</strong>.</p>
+                <p>When summed: only c* has cos=1 everywhere. Everything else cancels out.</p>
+                ${mathBlock(`\\underbrace{\\text{Logit}(c^*)}_{\\text{correct answer}} = \\underbrace{1 + 1 + 1 + 1 + 1}_{\\substack{\\text{all 5 frequencies}\\\\\\text{agree: cos}=1}} = 5 \\;\\gg\\; \\underbrace{\\text{Logit}(c \\neq c^*)}_{\\substack{\\text{wrong answers:}\\\\\\text{partial cancellation}}}`)}
+            `, '#f59e0b')}
+
+            ${card('4. GROKKING: Sudden Understanding', `
+                <p><strong>Phase 1 (Memorization):</strong> The network memorizes training data. Test accuracy stays at ~0%.</p>
+                <p><strong>Phase 2 (Circuit Formation):</strong> Weight decay penalizes large weights. The Fourier multiplication circuit forms gradually while train/test loss stay flat.</p>
+                <p><strong>Phase 3 (Cleanup):</strong> The memorization components are shed. Test accuracy jumps from ~0% to ~100% in a few hundred steps ${cite('(Power et al., 2022)', 'grokking')}!</p>
+                <p>This phenomenon is called <strong>"Grokking"</strong>: sudden understanding after prolonged memorization. The key insight from Nanda et al. is that grokking is <em>not</em> sudden — the generalizing circuit forms continuously during Phase 2, well before the test accuracy jump.</p>
+            `, '#8b5cf6')}
+
+            <div style="text-align:center; padding:20px; background:#ecfdf5; border-radius:12px; margin-top:20px;">
+                <p style="font-size:1.3em; font-weight:bold; color:#059669; margin:0;">${a} + ${b} mod ${P} = ${correctAnswer}</p>
+                <p style="color:#64748b; margin:5px 0 0 0;">Computed by 5 cosine waves and constructive interference &#10003;</p>
+            </div>
+        `;
+        renderMath();
+    }});
+
+    // ─── Navigation Logic ────────────────────────────────────────────────────
+
+    let currentStep = 0;
+
+    function updateDots() {
+        dotsEl.innerHTML = '';
+        steps.forEach((_, i) => {
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:10px; height:10px; border-radius:50%; cursor:pointer; transition:all 0.2s; display:inline-block; ${i === currentStep ? 'background:#3b82f6; transform:scale(1.3);' : 'background:#cbd5e1;'}`;
+            dot.addEventListener('click', () => goToStep(i));
+            dotsEl.appendChild(dot);
+        });
+    }
+
+    function goToStep(idx) {
+        if (idx < 0 || idx >= steps.length) return;
+        currentStep = idx;
+        stepLabel.textContent = `Step ${currentStep + 1} / ${steps.length}: ${steps[currentStep].title}`;
+        btnPrev.style.opacity = currentStep === 0 ? '0.4' : '1';
+        btnPrev.style.pointerEvents = currentStep === 0 ? 'none' : 'auto';
+        btnNext.style.opacity = currentStep === steps.length - 1 ? '0.4' : '1';
+        btnNext.style.pointerEvents = currentStep === steps.length - 1 ? 'none' : 'auto';
+        btnNext.textContent = currentStep === steps.length - 1 ? 'Done!' : 'Next \u2192';
+        btnNext.style.background = currentStep === steps.length - 1 ? '#64748b' : '#22c55e';
+        updateDots();
+        content.scrollTop = 0;
+        steps[currentStep].render();
+    }
+
+    btnNext.addEventListener('click', () => goToStep(currentStep + 1));
+    btnPrev.addEventListener('click', () => goToStep(currentStep - 1));
+
+    document.addEventListener('keydown', (e) => {
+        const rect = root.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goToStep(currentStep + 1); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); goToStep(currentStep - 1); }
+    });
+
+    // ─── Initialize ──────────────────────────────────────────────────────────
+    goToStep(0);
+}
+
+function renderICLExecution(container, options = {}) {
+    const root = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!root) { console.error('renderICLExecution: container not found'); return; }
+
+    // ─── State ───────────────────────────────────────────────────────────────
+    let numA = 128;
+    let numB = 367;
+    let steps = [];
+    let currentStep = 0;
+    let animating = false;
+    let animInterval = null;
+    let selectedAlgo = 'addition';
+
+    const algorithms = {
+        addition: {
+            name: 'Addition (Columnar)',
+            code: 'def add(a, b):\n    carry = 0\n    result = []\n    while a or b or carry:\n        d_a = a % 10\n        d_b = b % 10\n        s = d_a + d_b + carry\n        result.append(s % 10)\n        carry = s // 10\n        a //= 10\n        b //= 10\n    return reversed(result)',
+            execute: function(a, b) {
+                let carry = 0;
+                let result = [];
+                let traceSteps = [];
+                let iteration = 0;
+                traceSteps.push({
+                    iteration: 0,
+                    action: 'init',
+                    description: 'Initialize: carry=0, result=[]',
+                    state: { a: a, b: b, carry: 0, result: [], d_a: null, d_b: null, s: null },
+                    layerActivity: { parsing: 1.0, binding: 0.8, execution: 0.2 },
+                    tokenGenerated: 'carry=0'
+                });
+                while (a > 0 || b > 0 || carry > 0) {
+                    iteration++;
+                    let d_a = a % 10;
+                    let d_b = b % 10;
+                    let s = d_a + d_b + carry;
+                    let newDigit = s % 10;
+                    let newCarry = Math.floor(s / 10);
+                    result.push(newDigit);
+                    traceSteps.push({
+                        iteration: iteration,
+                        action: 'loop_body',
+                        description: `Iter ${iteration}: d_a=${d_a}, d_b=${d_b}, carry=${carry}. s=${d_a}+${d_b}+${carry}=${s}. digit=${newDigit}, new_carry=${newCarry}`,
+                        state: { a: Math.floor(a/10), b: Math.floor(b/10), carry: newCarry, result: [...result], d_a: d_a, d_b: d_b, s: s },
+                        layerActivity: {
+                            parsing: 0.3,
+                            binding: 0.5 + 0.3 * (iteration === 1 ? 1 : 0),
+                            execution: 0.9
+                        },
+                        tokenGenerated: `${d_a}+${d_b}+${carry}=${s}, digit=${newDigit}, C=${newCarry}`
+                    });
+                    carry = newCarry;
+                    a = Math.floor(a / 10);
+                    b = Math.floor(b / 10);
+                }
+                traceSteps.push({
+                    iteration: iteration + 1,
+                    action: 'return',
+                    description: `Loop ended. Result (reversed): ${result.slice().reverse().join('')}`,
+                    state: { a: 0, b: 0, carry: 0, result: result, d_a: null, d_b: null, s: null },
+                    layerActivity: { parsing: 0.1, binding: 0.2, execution: 1.0 },
+                    tokenGenerated: result.slice().reverse().join('')
+                });
+                return traceSteps;
+            }
+        },
+        multiplication: {
+            name: 'Multiplication (Repeated Addition)',
+            code: 'def multiply(a, b):\n    result = 0\n    for i in range(b):\n        result = add(result, a)\n    return result',
+            execute: function(a, b) {
+                let bSmall = Math.min(Math.abs(b), 12);
+                let result = 0;
+                let traceSteps = [];
+                traceSteps.push({
+                    iteration: 0,
+                    action: 'init',
+                    description: `Initialize: result=0, will add ${a} exactly ${bSmall} times`,
+                    state: { a: a, b: bSmall, result: 0, i: 0 },
+                    layerActivity: { parsing: 1.0, binding: 0.9, execution: 0.2 },
+                    tokenGenerated: 'result=0'
+                });
+                for (let i = 0; i < bSmall; i++) {
+                    result += a;
+                    traceSteps.push({
+                        iteration: i + 1,
+                        action: 'loop_body',
+                        description: `Iter ${i+1}: result = result + ${a} = ${result - a} + ${a} = ${result}`,
+                        state: { a: a, b: bSmall, result: result, i: i + 1 },
+                        layerActivity: { parsing: 0.2, binding: 0.4, execution: 0.95 },
+                        tokenGenerated: `add(${result - a}, ${a}) = ${result}`
+                    });
+                }
+                traceSteps.push({
+                    iteration: bSmall + 1,
+                    action: 'return',
+                    description: `Loop ended after ${bSmall} iterations. Result: ${result}`,
+                    state: { a: a, b: bSmall, result: result, i: bSmall },
+                    layerActivity: { parsing: 0.1, binding: 0.1, execution: 1.0 },
+                    tokenGenerated: `${result}`
+                });
+                return traceSteps;
+            }
+        },
+        gcd: {
+            name: 'GCD (Euclidean)',
+            code: 'def gcd(a, b):\n    while b != 0:\n        temp = b\n        b = a % b\n        a = temp\n    return a',
+            execute: function(a, b) {
+                a = Math.abs(a) || 1;
+                b = Math.abs(b) || 1;
+                let traceSteps = [];
+                let iteration = 0;
+                traceSteps.push({
+                    iteration: 0,
+                    action: 'init',
+                    description: `Initialize: a=${a}, b=${b}`,
+                    state: { a: a, b: b, temp: null },
+                    layerActivity: { parsing: 1.0, binding: 0.9, execution: 0.2 },
+                    tokenGenerated: `a=${a}, b=${b}`
+                });
+                while (b !== 0 && iteration < 50) {
+                    iteration++;
+                    let temp = b;
+                    let newB = a % b;
+                    traceSteps.push({
+                        iteration: iteration,
+                        action: 'loop_body',
+                        description: `Iter ${iteration}: a=${a}, b=${b}. temp=${temp}, b=a%b=${a}%${b}=${newB}, a=temp=${temp}`,
+                        state: { a: temp, b: newB, temp: temp },
+                        layerActivity: { parsing: 0.2, binding: 0.5, execution: 0.9 },
+                        tokenGenerated: `${a} % ${b} = ${newB}, a←${temp}, b←${newB}`
+                    });
+                    a = temp;
+                    b = newB;
+                }
+                traceSteps.push({
+                    iteration: iteration + 1,
+                    action: 'return',
+                    description: `b=0, loop ended. GCD = ${a}`,
+                    state: { a: a, b: 0, temp: null },
+                    layerActivity: { parsing: 0.1, binding: 0.1, execution: 1.0 },
+                    tokenGenerated: `${a}`
+                });
+                return traceSteps;
+            }
+        }
+    };
+
+    // ─── Render UI ───────────────────────────────────────────────────────────
+    function render() {
+        root.innerHTML = '';
+        root.style.fontFamily = "'Segoe UI', system-ui, sans-serif";
+        root.style.maxWidth = '960px';
+        root.style.margin = '0 auto';
+
+        // Title
+        const title = document.createElement('div');
+        title.style.cssText = 'text-align:center; margin-bottom:20px;';
+        title.innerHTML = `
+            <h3 style="color:${themeColor('#1e293b')}; margin:0 0 8px 0;">In-Context Algorithm Execution</h3>
+            <p style="color:${themeColor('#64748b')}; margin:0; font-size:0.9em;">The algorithm exists <strong>only in the prompt</strong>. Watch how the LLM traces through it token by token.</p>
+        `;
+        root.appendChild(title);
+
+        // Algorithm selector + inputs
+        const controlPanel = document.createElement('div');
+        controlPanel.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;';
+
+        // Left: algorithm selection and code display
+        const leftPanel = document.createElement('div');
+        leftPanel.style.cssText = 'background:#1e293b; border-radius:10px; padding:15px; color:#e2e8f0;';
+        leftPanel.innerHTML = `
+            <div style="margin-bottom:10px;">
+                <label style="font-size:0.8em; color:#94a3b8; font-weight:600;">ALGORITHM IN CONTEXT:</label>
+                <select id="icl-algo-select" style="margin-left:10px; padding:4px 8px; border-radius:4px; background:#334155; color:#e2e8f0; border:1px solid #475569;">
+                    <option value="addition">Addition (Columnar)</option>
+                    <option value="multiplication">Multiplication (Repeated Add)</option>
+                    <option value="gcd">GCD (Euclidean)</option>
+                </select>
+            </div>
+            <pre id="icl-code-display" style="margin:0; font-size:0.82em; line-height:1.5; background: black !important; color:green; overflow-x:auto; white-space:pre-wrap;">${algorithms[selectedAlgo].code}</pre>
+        `;
+        controlPanel.appendChild(leftPanel);
+
+        // Right: inputs and controls
+        const rightPanel = document.createElement('div');
+        rightPanel.style.cssText = `background:${themeColor('#f8fafc')}; border:1px solid ${themeColor('#e2e8f0')}; border-radius:10px; padding:15px;`;
+        rightPanel.innerHTML = `
+            <label style="font-size:0.8em; color:${themeColor('#64748b')}; font-weight:600;">FUNCTION CALL:</label>
+            <div style="margin:10px 0; font-family:monospace; font-size:1.1em; color:${themeColor('#1e293b')}; background:${themeColor('#fff')}; padding:10px; border-radius:6px; border:1px solid ${themeColor('#e2e8f0')};">
+                <span id="icl-call-display">${selectedAlgo}(<span style="color:${themeColor('#3b82f6')};">${numA}</span>, <span style="color:${themeColor('#3b82f6')};">${numB}</span>)</span>
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div>
+                    <label style="font-size:0.75em; color:${themeColor('#64748b')};">Param A:</label><br>
+                    <input type="number" id="icl-param-a" value="${numA}" style="width:80px; padding:5px; border:1px solid ${themeColor('#cbd5e1')}; border-radius:4px;">
+                </div>
+                <div>
+                    <label style="font-size:0.75em; color:${themeColor('#64748b')};">Param B:</label><br>
+                    <input type="number" id="icl-param-b" value="${numB}" style="width:80px; padding:5px; border:1px solid ${themeColor('#cbd5e1')}; border-radius:4px;">
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="icl-execute-btn" style="padding:8px 16px; border:none; border-radius:6px; background:${themeColor('#3b82f6')}; color:#fff; cursor:pointer; font-weight:600;">⚡ Execute</button>
+                <button id="icl-step-btn" style="padding:8px 16px; border:none; border-radius:6px; background:${themeColor('#8b5cf6')}; color:#fff; cursor:pointer; font-weight:600;">→ Step</button>
+                <button id="icl-animate-btn" style="padding:8px 16px; border:none; border-radius:6px; background:${themeColor('#10b981')}; color:#fff; cursor:pointer; font-weight:600;">▶ Animate</button>
+                <button id="icl-reset-btn" style="padding:8px 16px; border:none; border-radius:6px; background:${themeColor('#64748b')}; color:#fff; cursor:pointer; font-weight:600;">↺ Reset</button>
+            </div>
+        `;
+        controlPanel.appendChild(rightPanel);
+        root.appendChild(controlPanel);
+
+        // Execution trace area
+        const traceArea = document.createElement('div');
+        traceArea.style.cssText = 'display:grid; grid-template-columns:2fr 1fr; gap:15px; margin-bottom:15px;';
+
+        // Left: token generation trace
+        const tokenTrace = document.createElement('div');
+        tokenTrace.id = 'icl-token-trace';
+        tokenTrace.style.cssText = `background:${themeColor('#fff')}; border:1px solid ${themeColor('#e2e8f0')}; border-radius:10px; padding:15px; max-height:400px; overflow-y:auto;`;
+        tokenTrace.innerHTML = `<div style="color:${themeColor('#94a3b8')}; font-size:0.85em; text-align:center; padding:30px;">Press Execute or Step to begin</div>`;
+        traceArea.appendChild(tokenTrace);
+
+        // Right: state panel + layer activity
+        const statePanel = document.createElement('div');
+        statePanel.id = 'icl-state-panel';
+        statePanel.style.cssText = 'display:flex; flex-direction:column; gap:10px;';
+        statePanel.innerHTML = `
+            <div id="icl-state-vars" style="background:${themeColor('#f0fdf4')}; border:1px solid ${themeColor('#bbf7d0')}; border-radius:10px; padding:15px;">
+                <h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#166534')};">RESIDUAL STREAM STATE</h4>
+                <div style="color:${themeColor('#94a3b8')}; font-size:0.85em;">No state yet</div>
+            </div>
+            <div id="icl-layer-activity" style="background:${themeColor('#eff6ff')}; border:1px solid ${themeColor('#bfdbfe')}; border-radius:10px; padding:15px;">
+                <h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#1e40af')};">LAYER ACTIVITY</h4>
+                <div id="icl-layers-viz" style="font-size:0.85em; color:${themeColor('#94a3b8')};">No activity yet</div>
+            </div>
+            <div id="icl-progress" style="background:${themeColor('#fefce8')}; border:1px solid ${themeColor('#fef08a')}; border-radius:10px; padding:15px;">
+                <h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#854d0e')};">EXECUTION PROGRESS</h4>
+                <div style="color:${themeColor('#94a3b8')}; font-size:0.85em;">0 / 0 steps</div>
+            </div>
+        `;
+        traceArea.appendChild(statePanel);
+        root.appendChild(traceArea);
+
+        // Explanation panel
+        const explPanel = document.createElement('div');
+        explPanel.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:15px;';
+        explPanel.innerHTML = `
+            <div style="padding:12px; background:${themeColor('#fef3c7')}; border:1px solid ${themeColor('#fcd34d')}; border-radius:8px;">
+                <h5 style="margin:0 0 6px 0; color:${themeColor('#92400e')}; font-size:0.8em;">1. PARSING (Layers 1–4)</h5>
+                <p style="margin:0; font-size:0.78em; line-height:1.5; color:${themeColor('#451a03')};">
+                    Attention heads identify loop structures, variable assignments, and arithmetic operations in the prompt.
+                    Induction heads match "when I see <code>carry = s // 10</code> and s=15, carry becomes 1."
+                </p>
+            </div>
+            <div style="padding:12px; background:${themeColor('#dbeafe')}; border:1px solid ${themeColor('#93c5fd')}; border-radius:8px;">
+                <h5 style="margin:0 0 6px 0; color:${themeColor('#1e40af')}; font-size:0.8em;">2. STATE BINDING (Layers 5–8)</h5>
+                <p style="margin:0; font-size:0.78em; line-height:1.5; color:${themeColor('#1e3a5f')};">
+                    The model binds query inputs (${numA}, ${numB}) to algorithm parameters (a, b).
+                    The residual stream now encodes: current variable values, loop position, partial results.
+                </p>
+            </div>
+            <div style="padding:12px; background:${themeColor('#f0fdf4')}; border:1px solid ${themeColor('#86efac')}; border-radius:8px;">
+                <h5 style="margin:0 0 6px 0; color:${themeColor('#166534')}; font-size:0.8em;">3. STEP EXECUTION (Layers 9–12)</h5>
+                <p style="margin:0; font-size:0.78em; line-height:1.5; color:${themeColor('#14532d')};">
+                    MLP layers apply the transformation rule from context. Each generated token advances state by one micro-step.
+                    The output becomes input for the next forward pass — the scratchpad is external memory.
+                </p>
+            </div>
+        `;
+        root.appendChild(explPanel);
+
+        // Bind events
+        bindEvents();
+    }
+
+    function bindEvents() {
+        document.getElementById('icl-algo-select').addEventListener('change', (e) => {
+            selectedAlgo = e.target.value;
+            document.getElementById('icl-code-display').textContent = algorithms[selectedAlgo].code;
+            document.getElementById('icl-call-display').innerHTML = `${selectedAlgo}(<span style="color:${themeColor('#3b82f6')};">${numA}</span>, <span style="color:${themeColor('#3b82f6')};">${numB}</span>)`;
+            resetExecution();
+        });
+
+        document.getElementById('icl-param-a').addEventListener('change', (e) => {
+            numA = parseInt(e.target.value) || 0;
+            document.getElementById('icl-call-display').innerHTML = `${selectedAlgo}(<span style="color:${themeColor('#3b82f6')};">${numA}</span>, <span style="color:${themeColor('#3b82f6')};">${numB}</span>)`;
+            resetExecution();
+        });
+
+        document.getElementById('icl-param-b').addEventListener('change', (e) => {
+            numB = parseInt(e.target.value) || 0;
+            document.getElementById('icl-call-display').innerHTML = `${selectedAlgo}(<span style="color:${themeColor('#3b82f6')};">${numA}</span>, <span style="color:${themeColor('#3b82f6')};">${numB}</span>)`;
+            resetExecution();
+        });
+
+        document.getElementById('icl-execute-btn').addEventListener('click', () => {
+            executeAll();
+        });
+
+        document.getElementById('icl-step-btn').addEventListener('click', () => {
+            stepOnce();
+        });
+
+        document.getElementById('icl-animate-btn').addEventListener('click', () => {
+            toggleAnimate();
+        });
+
+        document.getElementById('icl-reset-btn').addEventListener('click', () => {
+            resetExecution();
+        });
+    }
+
+    function computeSteps() {
+        if (steps.length === 0) {
+            steps = algorithms[selectedAlgo].execute(numA, numB);
+            currentStep = 0;
+        }
+    }
+
+    function resetExecution() {
+        if (animating) {
+            clearInterval(animInterval);
+            animating = false;
+            const btn = document.getElementById('icl-animate-btn');
+            if (btn) { btn.textContent = '▶ Animate'; btn.style.background = '#10b981'; }
+        }
+        steps = [];
+        currentStep = 0;
+        const tokenTrace = document.getElementById('icl-token-trace');
+        if (tokenTrace) tokenTrace.innerHTML = '<div style="color:#94a3b8; font-size:0.85em; text-align:center; padding:30px;">Press Execute or Step to begin</div>';
+        const stateVars = document.getElementById('icl-state-vars');
+        if (stateVars) stateVars.innerHTML = `<h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#166534')};">RESIDUAL STREAM STATE</h4><div style="color:${themeColor('#94a3b8')}; font-size:0.85em;">No state yet</div>`;
+        const layersViz = document.getElementById('icl-layers-viz');
+        if (layersViz) layersViz.innerHTML = `<div style="color:${themeColor('#94a3b8')};">No activity yet</div>`;
+        const progress = document.getElementById('icl-progress');
+        if (progress) progress.innerHTML = `<h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#854d0e')};">EXECUTION PROGRESS</h4><div style="color:${themeColor('#94a3b8')}; font-size:0.85em;">0 / 0 steps</div>`;
+    }
+
+    function renderStep(stepIdx) {
+        const step = steps[stepIdx];
+        if (!step) return;
+
+        // Token trace
+        const tokenTrace = document.getElementById('icl-token-trace');
+        if (stepIdx === 0) {
+            tokenTrace.innerHTML = '';
+        }
+
+        const stepDiv = document.createElement('div');
+        stepDiv.style.cssText = ` padding:8px 12px; margin-bottom:6px; border-radius:6px; border-left:3px solid ${step.action === 'init' ? themeColor('#3b82f6') : step.action === 'return' ? themeColor('#10b981') : themeColor('#f59e0b')}; background:${step.action === 'init' ? themeColor('#eff6ff') : step.action === 'return' ? themeColor('#f0fdf4') : themeColor('#fffbeb')}; animation: fadeIn 0.3s ease; `;
+        stepDiv.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.75em; font-weight:600; color:${themeColor('#64748b')};">STEP ${step.iteration}</span>
+                <span style="font-size:0.7em; padding:2px 6px; border-radius:3px; background:${step.action === 'init' ? themeColor('#3b82f6') : step.action === 'return' ? themeColor('#10b981') : themeColor('#f59e0b')}; color:#fff;">${step.action.toUpperCase()}</span>
+            </div>
+            <div style="font-size:0.85em; margin:5px 0; color:${themeColor('#1e293b')};">${step.description}</div>
+            <div style="font-family:monospace; font-size:0.8em; color:${themeColor('#7c3aed')}; background:${themeColor('#f5f3ff')}; padding:4px 8px; border-radius:4px; margin-top:4px;">
+                → token: "${step.tokenGenerated}"
+            </div>
+        `;
+        tokenTrace.appendChild(stepDiv);
+        tokenTrace.scrollTop = tokenTrace.scrollHeight;
+
+        // State variables
+        const stateVars = document.getElementById('icl-state-vars');
+        let stateHTML = `<h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#166534')};">RESIDUAL STREAM STATE</h4>`;
+        const state = step.state;
+        for (const [key, val] of Object.entries(state)) {
+            if (val === null) continue;
+            let displayVal = Array.isArray(val) ? '[' + val.join(', ') + ']' : val;
+            stateHTML += `<div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid ${themeColor('#dcfce7')};">
+                <span style="font-family:monospace; font-size:0.85em; color:${themeColor('#166534')}; font-weight:600;">${key}</span>
+                <span style="font-family:monospace; font-size:0.85em; color:${themeColor('#1e293b')};">${displayVal}</span>
+            </div>`
+        }
+        stateVars.innerHTML = stateHTML;
+
+        // Layer activity
+        const layersViz = document.getElementById('icl-layers-viz');
+        const la = step.layerActivity;
+        layersViz.innerHTML = ` 
+            <div style="margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-bottom:2px;">
+                    <span>Parsing (L1–4)</span>
+                    <span>${(la.parsing * 100).toFixed(0)}%</span>
+                </div>
+                <div style="height:8px; background:${themeColor('#e2e8f0')}; border-radius:4px; overflow:hidden;">
+                    <div style="height:100%; width:${la.parsing * 100}%; background:${themeColor('#f59e0b')}; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-bottom:2px;">
+                    <span>State Binding (L5–8)</span>
+                    <span>${(la.binding * 100).toFixed(0)}%</span>
+                </div>
+                <div style="height:8px; background:${themeColor('#e2e8f0')}; border-radius:4px; overflow:hidden;">
+                    <div style="height:100%; width:${la.binding * 100}%; background:${themeColor('#3b82f6')}; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-bottom:2px;">
+                    <span>Execution (L9–12)</span>
+                    <span>${(la.execution * 100).toFixed(0)}%</span>
+                </div>
+                <div style="height:8px; background:${themeColor('#e2e8f0')}; border-radius:4px; overflow:hidden;">
+                    <div style="height:100%; width:${la.execution * 100}%; background:${themeColor('#10b981')}; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+            </div>
+        `;
+
+        // Progress
+        const progress = document.getElementById('icl-progress');
+        const pct = ((stepIdx + 1) / steps.length * 100).toFixed(0);
+        progress.innerHTML = `
+            <h4 style="margin:0 0 10px 0; font-size:0.85em; color:${themeColor('#854d0e')};">EXECUTION PROGRESS</h4>
+            <div style="font-size:0.85em; color:${themeColor('#1e293b')}; margin-bottom:6px;">${stepIdx + 1} / ${steps.length} steps</div>
+            <div style="height:10px; background:${themeColor('#fef9c3')}; border-radius:5px; overflow:hidden;">
+                <div style="height:100%; width:${pct}%; background:${themeColor('#eab308')}; border-radius:5px; transition:width 0.3s;"></div>
+            </div>
+            ${stepIdx === steps.length - 1 ? `<div style="margin-top:8px; font-weight:bold; color:${themeColor('#059669')};">✅ Execution complete</div>` : ''}
+        `;
+    }
+
+    function stepOnce() {
+        computeSteps();
+        if (currentStep < steps.length) {
+            renderStep(currentStep);
+            currentStep++;
+        }
+    }
+
+    function executeAll() {
+        resetExecution();
+        computeSteps();
+        for (let i = 0; i < steps.length; i++) {
+            renderStep(i);
+        }
+        currentStep = steps.length;
+    }
+
+    function toggleAnimate() {
+        const btn = document.getElementById('icl-animate-btn');
+        if (animating) {
+            clearInterval(animInterval);
+            animating = false;
+            btn.textContent = '▶ Animate';
+            btn.style.background = '#10b981';
+            return;
+        }
+        if (currentStep >= steps.length) {
+            resetExecution();
+        }
+        computeSteps();
+        animating = true;
+        btn.textContent = '⏸ Pause';
+        btn.style.background = '#f59e0b';
+        animInterval = setInterval(() => {
+            if (currentStep >= steps.length) {
+                clearInterval(animInterval);
+                animating = false;
+                btn.textContent = '▶ Animate';
+                btn.style.background = '#10b981';
+                return;
+            }
+            renderStep(currentStep);
+            currentStep++;
+        }, 600);
+    }
+
+    // Add CSS animation
+    const style = document.createElement('style');
+    style.textContent = '@keyframes fadeIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }';
+    document.head.appendChild(style);
+
+    // Initialize
+    render();
+}
+
+/**
+ * Algorithmic Prompting Visualization
+ *
+ * Demonstrates the key findings from Zhou et al. (2022)
+ * "Teaching Algorithmic Reasoning via In-context Learning"
+ *
+ * Shows:
+ * 1. The ambiguity problem with few-shot examples
+ * 2. How algorithmic prompting eliminates ambiguity
+ * 3. The four stages of teaching algorithms
+ * 4. Proof that the model follows in-context rules (not pretrained knowledge)
+ */
+
+function renderAlgorithmicPrompting(container, options = {}) {
+    const root = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!root) { console.error('renderAlgorithmicPrompting: container not found'); return; }
+
+    root.style.fontFamily = "'Segoe UI', system-ui, -apple-system, sans-serif";
+    root.style.maxWidth = '960px';
+    root.style.margin = '0 auto';
+
+    // ─── State ───────────────────────────────────────────────────────────────
+    let currentView = 'ambiguity'; // 'ambiguity', 'specificity', 'stages', 'proof'
+    let animationFrame = null;
+
+    // ─── Render ──────────────────────────────────────────────────────────────
+    function render() {
+        root.innerHTML = '';
+
+        // Title
+        const header = document.createElement('div');
+        header.style.cssText = 'text-align:center; margin-bottom:20px;';
+        header.innerHTML = `
+            <h3 style="color:${themeColor('#1e293b')}; margin:0 0 8px 0;">🎯 Algorithmic Prompting: Teaching LLMs to Execute Algorithms</h3>
+            <p style="color:${themeColor('#64748b')}; margin:0; font-size:0.9em;">
+                Based on <em>Teaching Algorithmic Reasoning via In-context Learning</em> (Zhou et al., 2022)
+            </p>
+        `;
+        root.appendChild(header);
+
+        // Tab navigation
+        const tabs = document.createElement('div');
+        tabs.style.cssText = `display:flex; gap:4px; margin-bottom:20px; background:${themeColor('#f1f5f9')}; padding:4px; border-radius:10px;`;
+        const tabDefs = [
+            { id: 'ambiguity', label: '1. The Ambiguity Problem', icon: '❓' },
+            { id: 'specificity', label: '2. Specificity Spectrum', icon: '📊' },
+            { id: 'stages', label: '3. Four Stages', icon: '🪜' },
+            { id: 'proof', label: '4. Proof of Execution', icon: '🔬' },
+        ];
+        tabDefs.forEach(tab => {
+            const btn = document.createElement('button');
+            btn.style.cssText = `
+                flex:1; padding:10px 12px; border:none; border-radius:8px; cursor:pointer;
+                font-size:0.82em; font-weight:600; transition:all 0.2s;
+                background:${currentView === tab.id ? themeColor('#fff') : 'transparent'};
+                color:${currentView === tab.id ? themeColor('#1e293b') : themeColor('#64748b')};
+                box-shadow:${currentView === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
+            `;
+            btn.textContent = `${tab.icon} ${tab.label}`;
+            btn.addEventListener('click', () => { currentView = tab.id; render(); });
+            tabs.appendChild(btn);
+        });
+        root.appendChild(tabs);
+
+        // Content area
+        const content = document.createElement('div');
+        content.style.cssText = 'min-height:500px;';
+        root.appendChild(content);
+
+        switch (currentView) {
+            case 'ambiguity': renderAmbiguity(content); break;
+            case 'specificity': renderSpecificity(content); break;
+            case 'stages': renderStages(content); break;
+            case 'proof': renderProof(content); break;
+        }
+    }
+
+    // ─── View 1: Ambiguity Problem ──────────────────────────────────────────
+    function renderAmbiguity(container) {
+        container.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                <div style="background:${themeColor('#fef2f2')}; border:1px solid ${themeColor('#fecaca')}; border-radius:12px; padding:20px;">
+                    <h4 style="margin:0 0 12px 0; color:${themeColor('#991b1b')};">❌ Few-Shot Prompt (Ambiguous)</h4>
+                    <pre style="background:#1e293b; padding:14px; border-radius:8px; font-size:0.8em; line-height:1.6; overflow-x:auto; white-space:pre-wrap;">Q: 128 + 367
+Step 1: 8+7=15, write 5, carry 1
+Step 2: 2+6+1=9, write 9, carry 0
+Step 3: 1+3+0=4, write 4
+Answer: 495
+
+Q: 45 + 23
+Step 1: 5+3=8, write 8, carry 0
+Step 2: 4+2+0=6, write 6
+Answer: 68
+
+Q: 789 + 456 = ?</pre>
+                    <div style="margin-top:12px; padding:10px; background:${themeColor('#fff')}; border-radius:6px; border:1px solid ${themeColor('#fecaca')};">
+                        <p style="margin:0 0 8px 0; font-size:0.85em; font-weight:600; color:${themeColor('#991b1b')};">Multiple rules are consistent:</p>
+                        <div id="ambiguity-rules"></div>
+                    </div>
+                </div>
+                <div style="background:${themeColor('#f0fdf4')}; border:1px solid ${themeColor('#bbf7d0')}; border-radius:12px; padding:20px;">
+                    <h4 style="margin:0 0 12px 0; color:${themeColor('#166534')};">✅ Algorithmic Prompt (Unambiguous)</h4>
+                    <pre style="background:#1e293b; padding:14px; border-radius:8px; font-size:0.8em; line-height:1.6; overflow-x:auto; white-space:pre-wrap;">Q: 128 + 367
+FN[3]=8. SN[3]=7. C[3]=0.
+  Compute: 8+7+0=15.
+  Since 15≥10: digit=15%10=5.
+  New carry: (15-5)/10=1. C[2]=1.
+FN[2]=2. SN[2]=6. C[2]=1.
+  Compute: 2+6+1=9.
+  Since 9<10: digit=9.
+  New carry: 0. C[1]=0.
+FN[1]=1. SN[1]=3. C[1]=0.
+  Compute: 1+3+0=4.
+  Since 4<10: digit=4.
+  New carry: 0.
+Answer: 495
+
+Q: 789 + 456 = ?</pre>
+                    <div style="margin-top:12px; padding:10px; background:${themeColor('#fff')}; border-radius:6px; border:1px solid ${themeColor('#bbf7d0')};">
+                        <p style="margin:0 0 8px 0; font-size:0.85em; font-weight:600; color:${themeColor('#166534')};">Only ONE rule is consistent:</p>
+                        <div style="font-size:0.85em; color:${themeColor('#166534')}; font-family:monospace;">
+                            carry = 1 iff sum ≥ 10<br>
+                            digit = sum % 10<br>
+                            (fully specified, no ambiguity)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:${themeColor('#eff6ff')}; border:1px solid ${themeColor('#bfdbfe')}; border-radius:12px; padding:20px; margin-bottom:20px;">
+                <h4 style="margin:0 0 12px 0; color:${themeColor('#1e40af')};">Interactive: How Many Rules Fit the Examples?</h4>
+                <p style="margin:0 0 12px 0; font-size:0.88em; color:${themeColor('#334155')};">
+                    Click "Add Example" to see how ambiguity decreases as you provide more detailed examples.
+                    With few-shot prompting, even many examples leave room for wrong rules.
+                </p>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <button id="amb-add-example" style="padding:8px 16px; border:none; border-radius:6px; background:#3b82f6; color:#fff; cursor:pointer; font-weight:600;">+ Add Example</button>
+                    <button id="amb-add-algorithmic" style="padding:8px 16px; border:none; border-radius:6px; background:#10b981; color:#fff; cursor:pointer; font-weight:600;">+ Add Algorithmic Step</button>
+                    <button id="amb-reset" style="padding:8px 16px; border:none; border-radius:6px; background:#64748b; color:#fff; cursor:pointer; font-weight:600;">↺ Reset</button>
+                </div>
+                <canvas id="ambiguity-canvas" width="900" height="280" style="width:100%; border:1px solid #e2e8f0; border-radius:8px;"></canvas>
+            </div>
+        `;
+
+        // Ambiguity rules display
+        const rulesDiv = document.getElementById('ambiguity-rules');
+        const rules = [
+            { text: 'carry = 1 when sum ≥ 10', correct: true },
+            { text: 'carry = 1 when both digits ≥ 5', correct: false },
+            { text: 'carry = 1 on first iteration', correct: false },
+            { text: 'carry = 1 when result has 2 digits', correct: false },
+        ];
+        rulesDiv.innerHTML = rules.map(r => `
+            <div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.82em;">
+                <span style="color:${r.correct ? '#16a34a' : '#dc2626'}; font-weight:bold;">${r.correct ? '✓' : '✗'}</span>
+                <span style="color:#334155; font-family:monospace;">${r.text}</span>
+                <span style="color:${r.correct ? '#16a34a' : '#f59e0b'}; font-size:0.85em; margin-left:auto;">
+                    ${r.correct ? 'correct' : 'also consistent!'}
+                </span>
+            </div>
+        `).join('');
+
+        // Canvas visualization
+        const canvas = document.getElementById('ambiguity-canvas');
+        const ctx = canvas.getContext('2d');
+        let fewShotExamples = 0;
+        let algorithmicSteps = 0;
+
+        function drawAmbiguityChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const margin = { top: 30, right: 30, bottom: 50, left: 60 };
+            const w = canvas.width - margin.left - margin.right;
+            const h = canvas.height - margin.top - margin.bottom;
+
+            // Axes
+            ctx.strokeStyle = themeColor('#cbd5e1');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, margin.top + h);
+            ctx.lineTo(margin.left + w, margin.top + h);
+            ctx.stroke();
+
+            // Y-axis label
+            ctx.save();
+            ctx.translate(15, margin.top + h / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('# Consistent (Wrong) Rules', 0, 0);
+            ctx.restore();
+
+            // X-axis label
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Information provided to model', margin.left + w / 2, canvas.height - 10);
+
+            // Compute ambiguity levels
+            // Few-shot: ambiguity decreases slowly (many rules remain consistent)
+            // Algorithmic: ambiguity drops sharply (rules are explicit)
+            const maxRules = 50;
+            const fewShotAmbiguity = Math.max(1, maxRules * Math.exp(-fewShotExamples * 0.15));
+            const algorithmicAmbiguity = Math.max(1, maxRules * Math.exp(-algorithmicSteps * 1.5));
+
+            // Draw bars
+            const barWidth = 120;
+            const barGap = 80;
+            const startX = margin.left + w / 2 - barWidth - barGap / 2;
+
+            // Few-shot bar
+            const fewShotHeight = (fewShotAmbiguity / maxRules) * h;
+            ctx.fillStyle = '#fca5a5';
+            ctx.fillRect(startX, margin.top + h - fewShotHeight, barWidth, fewShotHeight);
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(startX, margin.top + h - fewShotHeight, barWidth, fewShotHeight);
+
+            ctx.fillStyle = '#991b1b';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Few-Shot`, startX + barWidth / 2, margin.top + h + 20);
+            ctx.font = '11px sans-serif';
+            ctx.fillText(`(${fewShotExamples} examples)`, startX + barWidth / 2, margin.top + h + 35);
+
+            // Number on bar
+            ctx.fillStyle = '#991b1b';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(`~${Math.round(fewShotAmbiguity)} rules`, startX + barWidth / 2, margin.top + h - fewShotHeight - 8);
+
+            // Algorithmic bar
+            const algoX = startX + barWidth + barGap;
+            const algoHeight = (algorithmicAmbiguity / maxRules) * h;
+            ctx.fillStyle = '#86efac';
+            ctx.fillRect(algoX, margin.top + h - algoHeight, barWidth, algoHeight);
+            ctx.strokeStyle = '#16a34a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(algoX, margin.top + h - algoHeight, barWidth, algoHeight);
+
+            ctx.fillStyle = '#166534';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Algorithmic`, algoX + barWidth / 2, margin.top + h + 20);
+            ctx.font = '11px sans-serif';
+            ctx.fillText(`(${algorithmicSteps} steps)`, algoX + barWidth / 2, margin.top + h + 35);
+
+            // Number on bar
+            ctx.fillStyle = '#166534';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(algorithmicAmbiguity <= 1.5 ? '1 rule ✓' : `~${Math.round(algorithmicAmbiguity)} rules`, algoX + barWidth / 2, margin.top + h - algoHeight - 8);
+
+            // Target line
+            const targetY = margin.top + h - (1 / maxRules) * h;
+            ctx.strokeStyle = '#16a34a';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(margin.left, targetY);
+            ctx.lineTo(margin.left + w, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#16a34a';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Goal: only 1 consistent rule', margin.left + 5, targetY - 5);
+
+            // Y-axis ticks
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const val = Math.round(maxRules * i / 5);
+                const y = margin.top + h - (i / 5) * h;
+                ctx.fillText(val.toString(), margin.left - 8, y + 4);
+                ctx.strokeStyle = themeColor('#f1f5f9');
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(margin.left + w, y);
+                ctx.stroke();
+            }
+
+            // Insight annotation
+            if (fewShotExamples >= 5 && algorithmicSteps >= 2) {
+                ctx.fillStyle = themeColor('#1e293b');
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Even with many examples, few-shot leaves ambiguity.', canvas.width / 2, margin.top + 15);
+                ctx.fillText('Algorithmic prompting reaches 1 rule with just 1-2 detailed steps!', canvas.width / 2, margin.top + 30);
+            }
+        }
+
+        drawAmbiguityChart();
+
+        document.getElementById('amb-add-example').addEventListener('click', () => {
+            fewShotExamples = Math.min(fewShotExamples + 1, 20);
+            drawAmbiguityChart();
+        });
+        document.getElementById('amb-add-algorithmic').addEventListener('click', () => {
+            algorithmicSteps = Math.min(algorithmicSteps + 1, 10);
+            drawAmbiguityChart();
+        });
+        document.getElementById('amb-reset').addEventListener('click', () => {
+            fewShotExamples = 0;
+            algorithmicSteps = 0;
+            drawAmbiguityChart();
+        });
+    }
+
+    // ─── View 2: Specificity Spectrum ────────────────────────────────────────
+    function renderSpecificity(container) {
+        container.innerHTML = `
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 12px 0; color:#1e293b;">Accuracy vs. Prompt Specificity (19-digit Addition)</h4>
+                <p style="margin:0 0 15px 0; font-size:0.88em; color:#64748b;">
+                    Each bar represents a different prompting strategy. The more explicitly the algorithm is described,
+                    the better the model executes it. Data from Zhou et al. (2022), Table 2.
+                </p>
+            </div>
+            <canvas id="specificity-canvas" width="900" height="380" style="width:100%; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;"></canvas>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:16px;">
+                    <h5 style="margin:0 0 8px 0; color:#92400e; font-size:0.9em;">🔑 Key Insight</h5>
+                    <p style="margin:0; font-size:0.85em; line-height:1.6; color:#451a03;">
+                        The jump from 25% (chain-of-thought) to 90.5% (algorithmic) isn't just "more detail."
+                        It's the difference between <strong>ambiguous hints</strong> and <strong>executable specifications</strong>.
+                        The model's attention heads can extract and follow precise rules, but they cannot reliably
+                        disambiguate vague ones.
+                    </p>
+                </div>
+                <div style="background:#ede9fe; border:1px solid #c4b5fd; border-radius:10px; padding:16px;">
+                    <h5 style="margin:0 0 8px 0; color:#5b21b6; font-size:0.9em;">Why This Works</h5>
+                    <p style="margin:0; font-size:0.85em; line-height:1.6; color:#3b0764;">
+                        Induction heads (the same circuits that do "[A][B]...[A]→B" pattern completion)
+                        generalize to matching algorithmic patterns: "when I see <code>sum≥10</code> and sum=15,
+                        the carry is 1." But they need the rule stated explicitly — they can't reliably
+                        <em>infer</em> it from examples alone.
+                    </p>
+                </div>
+            </div>
+        `;
+
+        const canvas = document.getElementById('specificity-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const data = [
+            { label: 'Zero-shot', accuracy: 0.5, color: themeColor('#94a3b8'), desc: '"Add these numbers"' },
+            { label: 'Few-shot\n(3 examples)', accuracy: 9.5, color: '#f87171', desc: 'Show input→output pairs' },
+            { label: 'Chain-of-\nThought', accuracy: 25, color: '#fb923c', desc: 'Show informal reasoning' },
+            { label: 'Scratchpad\n(detailed)', accuracy: 42, color: '#fbbf24', desc: 'Show intermediate steps' },
+            { label: 'Algorithmic\nPrompting', accuracy: 90.5, color: '#34d399', desc: 'Every micro-step explicit' },
+        ];
+
+        const margin = { top: 40, right: 30, bottom: 80, left: 60 };
+        const w = canvas.width - margin.left - margin.right;
+        const h = canvas.height - margin.top - margin.bottom;
+        const barWidth = w / data.length * 0.6;
+        const barGap = w / data.length * 0.4;
+
+        // Background
+        ctx.fillStyle = themeColor('#fafafa');
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid lines
+        ctx.strokeStyle = themeColor('#f1f5f9');
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 10; i++) {
+            const y = margin.top + h - (i / 10) * h;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y);
+            ctx.lineTo(margin.left + w, y);
+            ctx.stroke();
+
+            ctx.fillStyle = themeColor('#94a3b8');
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${i * 10}%`, margin.left - 8, y + 4);
+        }
+
+        // Axes
+        ctx.strokeStyle = themeColor('#cbd5e1');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, margin.top + h);
+        ctx.lineTo(margin.left + w, margin.top + h);
+        ctx.stroke();
+
+        // Bars
+        data.forEach((d, i) => {
+            const x = margin.left + i * (barWidth + barGap) + barGap / 2;
+            const barH = (d.accuracy / 100) * h;
+            const y = margin.top + h - barH;
+
+            // Bar shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            ctx.fillRect(x + 3, y + 3, barWidth, barH);
+
+            // Bar
+            ctx.fillStyle = d.color;
+            ctx.fillRect(x, y, barWidth, barH);
+
+            // Bar border
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, barWidth, barH);
+
+            // Value label
+            ctx.fillStyle = themeColor('#1e293b');
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${d.accuracy}%`, x + barWidth / 2, y - 8);
+
+            // X-axis label
+            ctx.fillStyle = themeColor('#334155');
+            ctx.font = '11px sans-serif';
+            const lines = d.label.split('\n');
+            lines.forEach((line, li) => {
+                ctx.fillText(line, x + barWidth / 2, margin.top + h + 18 + li * 14);
+            });
+
+            // Description
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '9px sans-serif';
+            ctx.fillText(d.desc, x + barWidth / 2, margin.top + h + 18 + lines.length * 14 + 4);
+        });
+
+        // Arrow showing improvement
+        ctx.strokeStyle = '#059669';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        const arrowStartX = margin.left + 1.5 * (barWidth + barGap);
+        const arrowEndX = margin.left + 4.5 * (barWidth + barGap);
+        const arrowY = margin.top + 15;
+        ctx.beginPath();
+        ctx.moveTo(arrowStartX, arrowY);
+        ctx.lineTo(arrowEndX, arrowY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Arrowhead
+        ctx.beginPath();
+        ctx.moveTo(arrowEndX - 8, arrowY - 5);
+        ctx.lineTo(arrowEndX, arrowY);
+        ctx.lineTo(arrowEndX - 8, arrowY + 5);
+        ctx.stroke();
+        ctx.fillStyle = '#059669';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('9× error reduction', (arrowStartX + arrowEndX) / 2, arrowY - 8);
+
+        // Y-axis label
+        ctx.save();
+        ctx.translate(15, margin.top + h / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillStyle = themeColor('#64748b');
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Accuracy on 19-digit addition', 0, 0);
+        ctx.restore();
+    }
+
+    // ─── View 3: Four Stages ─────────────────────────────────────────────────
+    function renderStages(container) {
+        const stages = [
+            {
+                num: 1,
+                title: 'Single Skill',
+                subtitle: 'Teach one algorithm with full specificity',
+                color: '#3b82f6',
+                bgColor: '#eff6ff',
+                borderColor: '#bfdbfe',
+                example: 'Addition algorithm with every carry step explicit',
+                accuracy: '90.5% on 19-digit addition',
+                mechanism: 'Induction heads match "when sum≥10, carry=1" pattern from context',
+                icon: '🎯'
+            },
+            {
+                num: 2,
+                title: 'Skill Accumulation',
+                subtitle: 'Multiple algorithms in one prompt',
+                color: '#8b5cf6',
+                bgColor: '#f5f3ff',
+                borderColor: '#ddd6fe',
+                example: 'Addition AND subtraction in same prompt; model selects correct one',
+                accuracy: '87% on mixed addition/subtraction',
+                mechanism: 'Attention heads learn to route to the correct algorithm based on operator token',
+                icon: '📚'
+            },
+            {
+                num: 3,
+                title: 'Skill Composition',
+                subtitle: 'Chain algorithms as subroutines',
+                color: '#059669',
+                bgColor: '#ecfdf5',
+                borderColor: '#a7f3d0',
+                example: 'Multiplication = repeated addition; model calls addition sub-algorithm',
+                accuracy: '78% on 2-digit × 2-digit multiplication',
+                mechanism: 'Model recognizes when to "call" a sub-algorithm and correctly passes state between them',
+                icon: '🔗'
+            },
+            {
+                num: 4,
+                title: 'Skills as Tools',
+                subtitle: 'Algorithms within broader reasoning',
+                color: '#dc2626',
+                bgColor: '#fef2f2',
+                borderColor: '#fecaca',
+                example: 'Word problem → extract numbers → apply addition algorithm → format answer',
+                accuracy: 'Degrades due to interference between formal/informal reasoning',
+                mechanism: 'Mixing algorithm execution with natural language reasoning causes mutual interference',
+                icon: '🧰'
+            }
+        ];
+
+        // Build stage cards
+        const stageGrid = document.createElement('div');
+        stageGrid.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;';
+
+        stages.forEach(stage => {
+            const card = document.createElement('div');
+            card.style.cssText = `background:${stage.bgColor}; border:1px solid ${stage.borderColor}; border-radius:12px; padding:18px; cursor:pointer; transition:all 0.2s;`;
+            card.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                    <span style="font-size:1.5em;">${stage.icon}</span>
+                    <div>
+                        <h4 style="margin:0; color:${stage.color}; font-size:0.95em;">Stage ${stage.num}: ${stage.title}</h4>
+                        <p style="margin:2px 0 0 0; font-size:0.8em; color:#64748b;">${stage.subtitle}</p>
+                    </div>
+                </div>
+                <div class="stage-details" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid ${stage.borderColor};">
+                    <p style="margin:0 0 6px 0; font-size:0.85em;"><strong>Example:</strong> ${stage.example}</p>
+                    <p style="margin:0 0 6px 0; font-size:0.85em;"><strong>Accuracy:</strong> ${stage.accuracy}</p>
+                    <p style="margin:0; font-size:0.85em;"><strong>Mechanism:</strong> ${stage.mechanism}</p>
+                </div>
+            `;
+            card.addEventListener('click', () => {
+                const details = card.querySelector('.stage-details');
+                const isVisible = details.style.display !== 'none';
+                details.style.display = isVisible ? 'none' : 'block';
+                card.style.boxShadow = isVisible ? 'none' : `0 4px 12px ${stage.borderColor}`;
+            });
+            stageGrid.appendChild(card);
+        });
+        container.appendChild(stageGrid);
+
+        // Composition diagram (Stage 3 visualization)
+        const compositionDiv = document.createElement('div');
+        compositionDiv.style.cssText = 'background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:20px;';
+        compositionDiv.innerHTML = `
+            <h4 style="margin:0 0 12px 0; color:#1e293b;">Stage 3: Skill Composition in Action</h4>
+            <p style="margin:0 0 15px 0; font-size:0.88em; color:#64748b;">
+                Multiplication as repeated addition. The model must recognize when to invoke the addition sub-algorithm.
+            </p>
+            <canvas id="composition-canvas" width="900" height="200" style="width:100%; border-radius:8px;"></canvas>
+        `;
+        container.appendChild(compositionDiv);
+
+        // Draw composition diagram
+        setTimeout(() => {
+            const canvas = document.getElementById('composition-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            const steps = [
+                { label: 'Parse\n"23 × 4"', color: '#3b82f6', x: 50 },
+                { label: 'Decompose:\n4 iterations', color: '#8b5cf6', x: 200 },
+                { label: 'add(0, 23)\n= 23', color: '#059669', x: 350 },
+                { label: 'add(23, 23)\n= 46', color: '#059669', x: 500 },
+                { label: 'add(46, 23)\n= 69', color: '#059669', x: 650 },
+                { label: 'add(69, 23)\n= 92', color: '#059669', x: 800 },
+            ];
+
+            // Draw flow
+            steps.forEach((step, i) => {
+                // Box
+                const boxW = 120;
+                const boxH = 50;
+                const x = step.x - boxW / 2;
+                const y = 75;
+
+                ctx.fillStyle = step.color + '15';
+                ctx.strokeStyle = step.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(x, y, boxW, boxH, 8);
+                ctx.fill();
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = step.color;
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                const lines = step.label.split('\n');
+                lines.forEach((line, li) => {
+                    ctx.fillText(line, step.x, y + 22 + li * 14);
+                });
+
+                // Arrow to next
+                if (i < steps.length - 1) {
+                    const nextX = steps[i + 1].x - 60;
+                    const fromX = step.x + 60;
+                    ctx.strokeStyle = themeColor('#94a3b8');
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(fromX, 100);
+                    ctx.lineTo(nextX, 100);
+                    ctx.stroke();
+                    // Arrowhead
+                    ctx.beginPath();
+                    ctx.moveTo(nextX - 6, 96);
+                    ctx.lineTo(nextX, 100);
+                    ctx.lineTo(nextX - 6, 104);
+                    ctx.stroke();
+                }
+            });
+
+            // "Sub-algorithm call" bracket
+            ctx.strokeStyle = '#059669';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(290, 135);
+            ctx.lineTo(290, 155);
+            ctx.lineTo(860, 155);
+            ctx.lineTo(860, 135);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#059669';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('← Addition algorithm called as subroutine (Stage 1 skill) →', 575, 172);
+
+            // Final result
+            ctx.fillStyle = themeColor('#1e293b');
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText('Final Result: 92 ✓', 800, 30);
+        }, 100);
+    }
+
+    // ─── View 4: Proof of Execution ──────────────────────────────────────────
+    function renderProof(container) {
+        container.innerHTML = `
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 8px 0; color:#1e293b;">Proof: The Model Actually Follows In-Context Rules</h4>
+                <p style="margin:0 0 15px 0; font-size:0.88em; color:#64748b;">
+                    Zhou et al. (2022) prove the model genuinely executes the algorithm from context — not just pattern-matching
+                    from pretraining — through three decisive experiments.
+                </p>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:20px;">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px;">
+                    <h5 style="margin:0 0 8px 0; color:#166534; font-size:0.85em;">Test 1: Intermediate Steps</h5>
+                    <p style="margin:0; font-size:0.82em; line-height:1.6; color:#14532d;">
+                        For every correct final answer, <strong>ALL intermediate steps were also correct</strong>.
+                        The model doesn't skip steps — it traces through the algorithm as written.
+                    </p>
+                    <div style="margin-top:8px; padding:6px; background:#dcfce7; border-radius:4px; text-align:center; font-weight:bold; color:#166534; font-size:0.9em;">
+                        100% step accuracy
+                    </div>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:16px;">
+                    <h5 style="margin:0 0 8px 0; color:#991b1b; font-size:0.85em;">Test 2: Wrong Rules Kill It</h5>
+                    <p style="margin:0; font-size:0.82em; line-height:1.6; color:#450a0a;">
+                        When ALL carry calculations in examples are deliberately wrong, accuracy drops to <strong>~0%</strong>.
+                        If it relied on pretrained knowledge, wrong examples wouldn't matter.
+                    </p>
+                    <div style="margin-top:8px; padding:6px; background:#fee2e2; border-radius:4px; text-align:center; font-weight:bold; color:#991b1b; font-size:0.9em;">
+                        0% with wrong rules
+                    </div>
+                </div>
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px;">
+                    <h5 style="margin:0 0 8px 0; color:#1e40af; font-size:0.85em;">Test 3: Partial Errors → Partial Degradation</h5>
+                    <p style="margin:0; font-size:0.82em; line-height:1.6; color:#1e3a5f;">
+                        When only SOME steps have errors, the model can still extrapolate the correct rule.
+                        It <strong>generalizes from the pattern</strong>, not memorizing specific examples.
+                    </p>
+                    <div style="margin-top:8px; padding:6px; background:#dbeafe; border-radius:4px; text-align:center; font-weight:bold; color:#1e40af; font-size:0.9em;">
+                        Graceful degradation
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:20px;">
+                <h4 style="margin:0 0 12px 0; color:#1e293b;">Interactive: Error Injection Experiment</h4>
+                <p style="margin:0 0 12px 0; font-size:0.88em; color:#64748b;">
+                    Adjust the error rate in the prompt examples and see how model accuracy changes.
+                    Compare with chain-of-thought (which relies on pretrained knowledge and is barely affected by errors).
+                </p>
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
+                    <label style="font-size:0.85em; font-weight:600;">Error rate in prompt examples:</label>
+                    <input type="range" id="proof-error-rate" min="0" max="100" value="0" style="flex:1; max-width:300px;">
+                    <span id="proof-error-val" style="font-weight:bold; min-width:40px;">0%</span>
+                </div>
+                <canvas id="proof-canvas" width="900" height="300" style="width:100%; border:1px solid #f1f5f9; border-radius:8px;"></canvas>
+            </div>
+
+            <div style="background:#fefce8; border:1px solid #fef08a; border-radius:10px; padding:16px;">
+                <h5 style="margin:0 0 8px 0; color:#854d0e; font-size:0.9em;">💡 The Decisive Contrast</h5>
+                <p style="margin:0; font-size:0.88em; line-height:1.7; color:#451a03;">
+                    <strong>Chain-of-thought prompting:</strong> Providing wrong reasoning patterns barely affects performance (~5% drop).
+                    This proves CoT models rely on <em>pretrained knowledge</em>, not in-context learning.<br><br>
+                    <strong>Algorithmic prompting:</strong> Wrong rules destroy performance completely (~90% drop).
+                    This proves the model is <em>actually reading and following</em> the in-context algorithm.
+                </p>
+            </div>
+        `;
+
+        // Error injection visualization
+        const slider = document.getElementById('proof-error-rate');
+        const valDisplay = document.getElementById('proof-error-val');
+        const canvas = document.getElementById('proof-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawProofChart(errorRate) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const margin = { top: 40, right: 30, bottom: 50, left: 70 };
+            const w = canvas.width - margin.left - margin.right;
+            const h = canvas.height - margin.top - margin.bottom;
+
+            // Axes
+            ctx.strokeStyle = themeColor('#cbd5e1');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, margin.top + h);
+            ctx.lineTo(margin.left + w, margin.top + h);
+            ctx.stroke();
+
+            // Y-axis label
+            ctx.save();
+            ctx.translate(18, margin.top + h / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Model Accuracy (%)', 0, 0);
+            ctx.restore();
+
+            // X-axis label
+            ctx.fillStyle = themeColor('#64748b');
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Error Rate in Prompt Examples (%)', margin.left + w / 2, canvas.height - 10);
+
+            // Grid lines
+            for (let i = 0; i <= 10; i++) {
+                const y = margin.top + h - (i / 10) * h;
+                ctx.strokeStyle = themeColor('#f1f5f9');
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(margin.left + w, y);
+                ctx.stroke();
+                ctx.fillStyle = themeColor('#94a3b8');
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${i * 10}`, margin.left - 8, y + 4);
+            }
+
+            // X-axis ticks
+            for (let i = 0; i <= 10; i++) {
+                const x = margin.left + (i / 10) * w;
+                ctx.fillStyle = themeColor('#94a3b8');
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${i * 10}`, x, margin.top + h + 18);
+            }
+
+            // Algorithmic prompting curve: drops sharply with errors
+            const numPoints = 50;
+            ctx.strokeStyle = '#059669';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i <= numPoints; i++) {
+                const errPct = i / numPoints * 100;
+                // Accuracy drops exponentially with error rate
+                const accuracy = 90.5 * Math.exp(-errPct * 0.04) * (1 - errPct / 120);
+                const x = margin.left + (errPct / 100) * w;
+                const y = margin.top + h - (Math.max(0, accuracy) / 100) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Chain-of-thought curve: barely affected
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            for (let i = 0; i <= numPoints; i++) {
+                const errPct = i / numPoints * 100;
+                // CoT barely drops (relies on pretrained knowledge)
+                const accuracy = 25 - errPct * 0.05 + Math.sin(errPct * 0.1) * 2;
+                const x = margin.left + (errPct / 100) * w;
+                const y = margin.top + h - (Math.max(0, accuracy) / 100) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Few-shot curve: already low, barely changes
+            ctx.strokeStyle = themeColor('#94a3b8');
+            ctx.lineWidth = 2;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            for (let i = 0; i <= numPoints; i++) {
+                const errPct = i / numPoints * 100;
+                const accuracy = 9.5 - errPct * 0.03;
+                const x = margin.left + (errPct / 100) * w;
+                const y = margin.top + h - (Math.max(0, accuracy) / 100) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Current error rate indicator
+            const currentX = margin.left + (errorRate / 100) * w;
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(currentX, margin.top);
+            ctx.lineTo(currentX, margin.top + h);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Compute current accuracies
+            const algoAcc = Math.max(0, 90.5 * Math.exp(-errorRate * 0.04) * (1 - errorRate / 120));
+            const cotAcc = Math.max(0, 25 - errorRate * 0.05);
+            const fewAcc = Math.max(0, 9.5 - errorRate * 0.03);
+
+            // Dots at current position
+            const algoY = margin.top + h - (algoAcc / 100) * h;
+            const cotY = margin.top + h - (cotAcc / 100) * h;
+            const fewY = margin.top + h - (fewAcc / 100) * h;
+
+            ctx.fillStyle = '#059669';
+            ctx.beginPath(); ctx.arc(currentX, algoY, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath(); ctx.arc(currentX, cotY, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = themeColor('#94a3b8');
+            ctx.beginPath(); ctx.arc(currentX, fewY, 5, 0, Math.PI * 2); ctx.fill();
+
+            // Legend
+            const legendX = margin.left + w - 220;
+            const legendY = margin.top + 10;
+
+            ctx.fillStyle = '#059669';
+            ctx.fillRect(legendX, legendY, 20, 3);
+            ctx.fillStyle = themeColor('#1e293b');
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Algorithmic: ${algoAcc.toFixed(1)}%`, legendX + 25, legendY + 5);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(legendX, legendY + 18, 20, 3);
+            ctx.fillStyle = themeColor('#1e293b');
+            ctx.fillText(`Chain-of-Thought: ${cotAcc.toFixed(1)}%`, legendX + 25, legendY + 23);
+
+            ctx.fillStyle = themeColor('#94a3b8');
+            ctx.fillRect(legendX, legendY + 36, 20, 3);
+            ctx.fillStyle = themeColor('#1e293b');
+            ctx.fillText(`Few-shot: ${fewAcc.toFixed(1)}%`, legendX + 25, legendY + 41);
+
+            // Annotation at high error rates
+            if (errorRate > 60) {
+                ctx.fillStyle = '#991b1b';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Algorithmic prompting collapses!', margin.left + w / 2, margin.top + 20);
+                ctx.font = '10px sans-serif';
+                ctx.fillStyle = themeColor('#64748b');
+                ctx.fillText('(Proves it was actually following the rules)', margin.left + w / 2, margin.top + 35);
+            }
+
+            if (errorRate > 30 && errorRate <= 60) {
+                ctx.fillStyle = '#854d0e';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('CoT barely affected → relies on pretrained knowledge', margin.left + w / 2, margin.top + 20);
+            }
+        }
+
+        drawProofChart(0);
+
+        slider.addEventListener('input', () => {
+            const val = parseInt(slider.value);
+            valDisplay.textContent = val + '%';
+            drawProofChart(val);
+        });
+    }
+
+    // ─── Initial Render ──────────────────────────────────────────────────────
+    render();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderFourierAlgorithm === 'function') {
+        renderFourierAlgorithm('fourier-algorithm-container', { a: 42, b: 80, P: 113 });
+    }
+
+    const container = document.getElementById('algorithmic-prompting-container');
+    if (container) {
+        renderAlgorithmicPrompting(container);
+    }
+
+    const waveContainer = document.getElementById('wave-interference-container');
+    if (waveContainer) {
+        renderWaveInterference(waveContainer);
+    }
+
+    // Re-render plots when the user toggles dark/light mode so themeColor()
+    // picks up the new palette on the next call.
+    if (window.__MN_DARK) {
+        window.__MN_DARK.onChange(() => {
+            try { renderFourierAlgorithm('fourier-algorithm-container', { a: 42, b: 80, P: 113 }); } catch (e) { /* ignore */ }
+            const c = document.getElementById('algorithmic-prompting-container');
+            if (c) { try { renderAlgorithmicPrompting(c); } catch (e) { /* ignore */ } }
+            const wc = document.getElementById('wave-interference-container');
+            if (wc) { try { renderWaveInterference(wc); } catch (e) { /* ignore */ } }
+            const ic = document.getElementById('icl-execution-container');
+            if (ic) { try { renderICLExecution(ic); } catch (e) { /* ignore */ } }
+        });
+    }
+
+
+    const iclContainer = document.getElementById('icl-execution-container');
+    if (iclContainer) {
+        renderICLExecution(iclContainer);
+    }
+});
+
+/**
+ * Wave Interference — Interactive Plotly demo
+ *
+ * Shows two sine waves and their point-by-point sum. The phase offset
+ * between them is controlled by a slider. At 0° the waves interfere
+ * constructively (sum has double amplitude); at 180° they interfere
+ * destructively (sum is zero everywhere). This is the same principle
+ * the trained Transformer exploits via Fourier features.
+ */
+function renderWaveInterference(container) {
+    const root = typeof container === 'string' ? document.getElementById(container) : container;
+    if (!root) { console.error('renderWaveInterference: container not found'); return; }
+
+    root.innerHTML = `
+        <div style="font-family:'Segoe UI', system-ui, -apple-system, sans-serif; max-width:900px; margin:0 auto; padding:10px 0;">
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:12px 16px; background:var(--mn-surface, #f8fafc); border:1px solid var(--mn-border, #e2e8f0); border-radius:10px; margin-bottom:10px;">
+                <label style="font-size:0.9em; font-weight:600; display:flex; align-items:center; gap:8px;">
+                    Phase shift (degrees):
+                    <input type="range" id="wi-phase" min="0" max="360" step="1" value="0" style="width:260px;">
+                </label>
+                <span id="wi-phase-readout" style="font-family:monospace; font-weight:bold; color:#3b82f6; min-width:70px; text-align:right;">0°</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="wi-preset" data-phase="0" style="padding:5px 12px; border:1px solid #10b981; border-radius:5px; background:#ecfdf5; color:#047857; font-size:0.85em; cursor:pointer; font-weight:600;">Constructive (0°)</button>
+                    <button type="button" class="wi-preset" data-phase="180" style="padding:5px 12px; border:1px solid #ef4444; border-radius:5px; background:#fef2f2; color:#b91c1c; font-size:0.85em; cursor:pointer; font-weight:600;">Destructive (180°)</button>
+                </div>
+            </div>
+            <div id="wi-status" style="font-size:0.95em; color:#334155; padding:0 4px 10px 4px; line-height:1.5;"></div>
+            <div id="wi-plot" data-plot-theme="self" style="width:100%; height:360px; border-radius:6px;"></div>
+            <div id="wi-explain" style="font-size:0.9em; color:#64748b; padding:10px 4px 0 4px; line-height:1.5;"></div>
+        </div>
+    `;
+
+    const phaseSlider = root.querySelector('#wi-phase');
+    const phaseReadout = root.querySelector('#wi-phase-readout');
+    const statusBox = root.querySelector('#wi-status');
+    const plotDiv = root.querySelector('#wi-plot');
+    const explainBox = root.querySelector('#wi-explain');
+
+    function render() {
+        const phaseDeg = parseFloat(phaseSlider.value);
+        const phaseRad = phaseDeg * Math.PI / 180;
+        const N = 800;
+        const x = Array.from({ length: N }, (_, i) => i * 4 * Math.PI / (N - 1));
+        const waveA = x.map(v => Math.sin(v));
+        const waveB = x.map(v => Math.sin(v + phaseRad));
+        const sum = x.map((v, i) => waveA[i] + waveB[i]);
+        const ampSum = Math.max(...sum).toFixed(3);
+        const ampA = Math.max(...waveA).toFixed(3);
+
+        phaseReadout.textContent = `${phaseDeg.toFixed(0)}°`;
+
+        let label = '';
+        let boxColor = '';
+        if (phaseDeg === 0) {
+            label = `<strong style="color:#10b981;">Constructive interference.</strong> The two waves are perfectly in phase — every peak aligns with a peak. The sum has amplitude <strong>${(2*ampA).toFixed(3)}</strong> (exactly double).`;
+            boxColor = '#10b981';
+        } else if (phaseDeg === 180) {
+            label = `<strong style="color:#ef4444;">Destructive interference.</strong> Every peak of wave A aligns with a trough of wave B. The two waves cancel exactly — the sum is zero everywhere.`;
+            boxColor = '#ef4444';
+        } else if (Math.abs(phaseDeg - 90) < 1 || Math.abs(phaseDeg - 270) < 1) {
+            label = `<strong style="color:#f59e0b;">Quadrature (90°).</strong> The two waves are perpendicular. The sum still oscillates, with amplitude <strong>${ampSum}</strong> ≈ √2 ≈ 1.414.`;
+            boxColor = '#f59e0b';
+        } else {
+            label = `<strong>Partial interference.</strong> Phase offset ${phaseDeg.toFixed(0)}°. Sum amplitude = <strong>${ampSum}</strong> (formula: $2\\cos(\\varphi/2)$, where $\\varphi$ is the phase shift).`;
+            boxColor = '#3b82f6';
+        }
+        statusBox.innerHTML = label;
+        statusBox.style.borderLeft = `4px solid ${boxColor}`;
+        statusBox.style.paddingLeft = '12px';
+
+        const ampTrace = 2.5;
+        const traces = [
+            { x, y: waveA, mode: 'lines', name: 'Wave A: sin(x)', line: { color: '#3b82f6', width: 2 } },
+            { x, y: waveB, mode: 'lines', name: 'Wave B: sin(x + phase)', line: { color: '#f59e0b', width: 2 } },
+            { x, y: sum, mode: 'lines', name: 'Sum (A + B)', line: { color: boxColor, width: 3, dash: 'dash' } },
+            { x: [0, 4 * Math.PI], y: [0, 0], mode: 'lines', line: { color: themeColor('#cbd5e1'), width: 0.8 }, showlegend: false, hoverinfo: 'skip' },
+        ];
+
+        const piTicks = [0, Math.PI, 2 * Math.PI, 3 * Math.PI, 4 * Math.PI];
+        const piLabels = ['0', 'π', '2π', '3π', '4π'];
+
+        Plotly.newPlot(plotDiv, traces, {
+            xaxis: {
+                title: 'x (radians)',
+                tickvals: piTicks,
+                ticktext: piLabels,
+                range: [-0.1, 4 * Math.PI + 0.1],
+                zeroline: false,
+                gridcolor: themeColor('#e2e8f0'),
+            },
+            yaxis: {
+                title: 'amplitude',
+                range: [-ampTrace, ampTrace],
+                zeroline: true,
+                zerolinecolor: themeColor('#94a3b8'),
+                gridcolor: themeColor('#e2e8f0'),
+            },
+            margin: { t: 30, b: 50, l: 60, r: 20 },
+            showlegend: true,
+            legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.6)' },
+            paper_bgcolor: themeColor('#fff'),
+            plot_bgcolor: themeColor('#fff'),
+            hovermode: 'x unified',
+        }, { responsive: true });
+
+        if (typeof renderMath === 'function') { try { renderMath(); } catch (e) { /* ignore */ } }
+
+        explainBox.innerHTML = `The trained Transformer uses exactly this trick: for each candidate answer $c$, it computes $\\cos(\\omega_k \\cdot (a+b-c))$ across its 5 learned frequencies. At the correct answer $c = (a+b) \\bmod P$ all five cosines equal $+1$ simultaneously — that is the <em>constructive</em> case (phase shift 0°). Anywhere else the cosines are smaller and partially cancel — partial or destructive interference. So only the right answer lights up.`;
+        if (typeof renderMath === 'function') { try { renderMath(); } catch (e) { /* ignore */ } }
+    }
+
+    phaseSlider.addEventListener('input', render);
+    root.querySelectorAll('.wi-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            phaseSlider.value = btn.dataset.phase;
+            render();
+        });
+    });
+
+    render();
+}

@@ -1,0 +1,160 @@
+<?php include_once("functions.php"); ?>
+<!--
+COURSE_METADATA:
+title: Loss: Teaching through Failure
+description: How models know they're wrong, MSE, cross-entropy, and the mathematics of measuring error.
+icon: &#127919;
+part: 2
+order: 1
+color: coral
+topics: training, math-i, programming
+tags: math-heavy, code-heavy
+-->
+
+<div class="md">
+In the previous section, we saw how AI represents data as **Tensors**. But how does a model actually learn to give the right answer? It uses a **Loss Function**.
+
+A Loss Function is a mathematical way of measuring *“how wrong”* the AI is. If the AI's guess is far from the truth, the Loss is a high number. If the guess is perfect, the Loss is zero. Training an AI is essentially the process of turning knobs (parameters) to make this Loss number *as small as possible*.
+</div>
+
+<div class="md" data-mathlevel="50" data-optionaltitle="Regression: Mean Squared Error (MSE)">
+## Regression: Mean Squared Error (MSE)
+
+When we want the AI to predict a specific number, like the price of a house or the temperature tomorrow, we use **Regression**. The most common tool here is **Mean Squared Error (MSE)**, first published by \citeauthor{legendre1805} in \citeyear{legendre1805} (for fitting celestial orbits) and independently developed by \citeauthor{gauss1809} in \citeyear{gauss1809} (§ 179, 213).
+
+For a single example the error is $(y_{\text{target}} - \hat{y}_{\text{pred}})^2$; the **mean** squared error averages this over the whole batch:
+
+$$\text{MSE} = \frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2$$
+
+(Textbooks and the Backpropagation chapter sometimes scale the sum by an extra factor $\frac{1}{2}$ for algebraic convenience; the location of the minimum is unchanged.)
+
+In the plot below, the loss creates a “bowl” shape. To train the AI, we calculate the **slope** (the derivative). If the slope is negative, the AI needs to increase its guess. If the slope is positive, it needs to decrease it.
+</div>
+
+<div style="display: flex; gap: 20px; align-items: center; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+	<div style="flex: 1;">
+		<label><b>Target Number ($y$):</b> <small>(The Truth)</small></label>
+		<input type="range" id="mse-true" min="0" max="10" step="1" value="7" style="width:100%">
+		<br><br>
+		<label><b>AI Guess ($\hat{y}$):</b> <small>(The Prediction)</small></label>
+		<input type="range" id="mse-pred" min="0" max="10" step="0.1" value="2" style="width:100%">
+	</div>
+	<div id="mse-math" style="flex: 1; font-size: 1.1em; border-left: 3px solid #3b82f6; padding-left: 20px;"></div>
+</div>
+
+<div id="plot-mse" data-plot-theme="self" style="height: 350px;"></div>
+
+<div class="md" data-mathlevel="48" data-optionaltitle="Classification: Cross-Entropy">
+## Classification: Cross-Entropy
+
+When an AI has to choose between categories (like “Cat” vs “Dog”), it doesn't just pick one; it outputs a **probability** for each. This is represented as a vector where all numbers add up to $1.0$ ($100\%$).
+
+**Cross-Entropy Loss** looks at the probability the AI gave to the *correct* answer. 
+* If the AI is $99\%$ sure it's a cat (and it is), the loss is almost $0$.
+* If the AI is only $1\%$ sure it's a cat, the loss becomes **extremely high**.
+
+The math uses a *logarithm* ($-\ln(P)$), which creates a steep “wall” as confidence approaches zero. This forces the AI to be very “uncomfortable” when it is wrong.
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 15px; background: #fff7ed; padding: 20px; border-radius: 12px; border: 1px solid #ffedd5;">
+	<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 15px;">
+		<p>Target Class: <span style="color: #f59e0b; font-weight: bold;">CAT</span></p>
+		<div style="display: grid; grid-template-columns: 70px 1fr 70px; gap: 15px; align-items: center; flex: 1 1 260px;">
+			<b style="font-size:0.8em">Class</b> <b style="font-size:0.8em">Confidence</b> <b style="font-size:0.8em">Loss</b>
+
+			<span>Cat (Target)</span>
+			<input type="range" id="cce-target" min="0.01" max="0.99" step="0.01" value="0.3">
+			<span id="loss-target" style="font-family: monospace; font-weight: bold; color: #10b981;">-</span>
+
+			<span>Dog</span>
+			<div id="bar-dog" style="height: 15px; background: #94a3b8; border-radius: 4px; transition: width 0.2s;"></div>
+			<span id="loss-dog" style="font-family: monospace; color: #ef4444;">-</span>
+
+			<span>Bird</span>
+			<div id="bar-bird" style="height: 15px; background: #94a3b8; border-radius: 4px; transition: width 0.2s;"></div>
+			<span id="loss-bird" style="font-family: monospace; color: #ef4444;">-</span>
+		</div>
+
+		<div style="background: #1e293b; color: #38bdf8; padding: 15px; border-radius: 8px; font-family: monospace; min-width: 180px; font-size: 0.8em;">
+			<div style="color: #94a3b8; margin-bottom: 5px; font-size: 0.8em;">Output Vector $\hat{y}$</div>
+			[ <span id="vec-dog">0.00</span>, <span id="vec-cat" style="color: #fbbf24; font-weight: bold;">0.00</span>, <span id="vec-bird">0.00</span> ]
+			<div style="margin-top: 10px; color: #94a3b8; font-size: 0.8em;">Target Vector $y$</div>
+			[ 0.00, <span style="color: #10b981;">1.00</span>, 0.00 ]
+		</div>
+	</div>
+        
+	<div id="cce-math" style="margin-top: 10px; font-size: 1.1em; border-top: 1px solid #ffedd5; padding-top:10px;"></div>
+</div>
+
+<div id="plot-cce" data-plot-theme="self" style="height: 380px;"></div>
+
+<div class="md">
+## Beware of Goodhart's Law
+
+\citealternativetitle{goodhartslaw} (p. 116) states that every measure which becomes a target becomes a bad measure. That is, 
+when we focus solely on optimizing a single metric, we often lose sight of the actual goal. 
+In the context of Language Models, this manifests as the gap between “Loss” and “True Intelligence.”
+
+While a model is trained to minimize **Loss** (predicting the next token), a low loss doesn't 
+inherently mean the model is “smart” or “truthful.” If we only optimize for mathematical 
+probability, we risk creating a “Stochastic Parrot”, a model that is statistically perfect 
+but logically hollow, or worse, one that learns to “game” the benchmarks.
+
+To truly evaluate success, we must look beyond the loss curve and use diverse benchmarks:
+* **Perplexity:** Measures how well the model predicts a sample, but it can be misleadingly low 
+if the model just memorizes data.
+* **Benchmarks (MMLU, HumanEval):** Tests for reasoning and coding, though even these can
+fall victim to Goodhart's Law if the test data “leaks” into the training set.
+* **Human Evaluation:** Ultimately, the best version of an Language Models is determined by whether
+it is actually helpful, safe, and accurate in real-world use.
+</div>
+
+<div class="optional md" data-headline="The benchmarks themselves are Goodhart targets">
+See the <a href="evaluation">Evaluation & Benchmarks chapter</a> for the full tour of MMLU, HumanEval, GSM8K, and the contamination crisis. The disease named here has many symptoms; that chapter is where you see them.
+</div>
+
+<div class="optional md" data-headline="The Mathematical Modeling of Loss">
+In the study \citetitle{hoffmann2022chinchilla}, the researchers estimated optimal performance by decomposing the loss function $L$. They proposed that the loss of a language model can be described as a function of the number of parameters $N$ and the number of training tokens $D$:
+
+$$L(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
+
+In this equation:
+* $E$: Represents the “irreducible loss” (the theoretical minimum error that remains even with infinite data and parameters).
+* $A, B, \alpha, \beta$: Are constants determined through empirical data fitting on over 400 models.
+
+By minimizing this function under the constraint of a fixed compute budget $C \approx 6ND$, the study concluded that for compute-optimal scaling, $N$ and $D$ must be increased in equal proportions (\cite[Hoffmann et al., 2022]{hoffmann2022chinchilla}).
+</div>
+
+<div class="md" data-mathlevel="60" data-optionaltitle="The Deepest Insight: Cross-Entropy Is Shannon Entropy">
+## The Deepest Insight: Cross-Entropy Is Shannon Entropy
+
+The connection between cross-entropy loss and information theory is not a superficial analogy, it is an **identity**. The loss function used to train every LLM is mathematically identical to Shannon's measure of surprise.
+
+Shannon's cross-entropy $H(P, Q)$ between a true distribution $P$ and a predicted distribution $Q$ is defined as:
+
+$$H(P, Q) = -\sum_{x} P(x) \log Q(x)$$
+
+With base-2 logarithms this measures how many **bits** are needed to encode events from $P$ using a code optimized for $Q$; with the natural logarithm (as in $-\ln(P)$ above) it measures the same quantity in *nats*, which differ from bits only by the constant factor $\ln 2$. When $P$ and $Q$ match perfectly, $H(P, Q) = H(P)$, the minimal possible number of bits (the true entropy). When they diverge, you waste extra bits.
+
+The same fact is the heart of \citetitle{colah2015visualinfo} (\citeyear{colah2015visualinfo}): cross-entropy counts the bits you *waste* when you code the world with the wrong model of it. Entropy is the cost of the *right* code, cross-entropy is the cost of *your* code, and their difference is the KL divergence — the model's regret, paid in bits \cite{colah2015visualinfo}.
+
+Cross-entropy loss for a classification task is:
+
+$$\mathcal{L} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{c=1}^{C} y_{i,c} \log \hat{y}_{i,c}$$
+
+where $y$ is the one-hot true label (the “true distribution” for a single example) and $\hat{y}$ is the predicted probability. This is **exactly** the per-example Shannon cross-entropy.
+
+The “aha-moment”: training an LLM is equivalent to building the world's best text compression algorithm. Every time the model computes cross-entropy loss, it is measuring how many extra bits it would need to encode the training text using its current beliefs. Reducing the loss means finding a shorter description of the data. This is why scaling works: more parameters allow more compression (finding more patterns in the data), which requires more accurate world models (because the best compression of natural language requires modeling physics, psychology, and causality), which produces more “intelligent” behavior.
+
+Intelligence, from this perspective, is not a separate objective, it is a side effect of optimal compression. The connection to Hutter's prize (\cite{hutter2006universal}) and the “intelligence is compression” thesis is direct: a model that achieves the minimal possible cross-entropy on human text has implicitly learned the causal structure of the world that generates that text.
+
+### Why Cross-Entropy Pairs Perfectly with Softmax
+
+The gradient of cross-entropy with softmax is beautifully simple:
+
+$$\frac{\partial \mathcal{L}}{\partial z_i} = \hat{y}_i - y_i$$
+
+The error signal is just “how wrong were you?”, the difference between prediction and truth. This simplicity is why this combination dominates classification: the gradient points directly from the prediction toward the target, with no complicating curvature or saturation effects (unlike MSE with softmax, which saturates when predictions are confidently wrong).
+</div>
+
+

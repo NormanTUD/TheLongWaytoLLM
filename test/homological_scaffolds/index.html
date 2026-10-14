@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Psilocybin vs Placebo — Persistent Homology Explorer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 8px;
+    background: #0e0f14; color: #e8e8ee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px;
+    height: 100vh; display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  h1 {
+    font-size: 22px; font-weight: 600; margin: 0 0 2px 0; color: #ffcc66;
+    letter-spacing: 0.3px;
+  }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 8px; }
+  .subtitle b { color: #c8c8d0; }
+
+  /* Compact horizontal control bar */
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center;
+    background: #171923; border: 1px solid #2a2d3a; border-radius: 6px;
+    padding: 5px 10px; margin-bottom: 6px; flex: 0 0 auto;
+    font-size: 12px;
+  }
+  .controls label { display: inline; font-size: 12px; color: #c0c0d0; margin: 0; }
+  .controls .group { display: flex; align-items: center; gap: 5px; }
+  .controls .group-sep { width: 1px; height: 20px; background: #2a2d3a; }
+  .controls input[type=range] { width: 90px; vertical-align: middle; }
+  .controls select { font-size: 12px; padding: 2px 6px; }
+  .controls button { font-size: 12px; padding: 3px 10px; }
+  .val { color: #ffcc66; font-family: monospace; font-weight: bold; font-size: 13px; }
+  .stat { font-family: monospace; font-size: 11px; color: #99ccff; }
+
+  .panel {
+    background: #171923; border: 1px solid #2a2d3a;
+    border-radius: 6px; padding: 8px;
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .panel-title {
+    font-size: 13px; font-weight: 600; color: #99ccff;
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 6px; flex: 0 0 auto;
+    letter-spacing: 0.2px;
+  }
+  .panel-title .badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: #262a38; font-weight: normal; }
+  .badge.pla { color: #66ccff; }
+  .badge.psi { color: #ff6b6b; }
+
+  /* Coloured border on the top of each dataset column so it's
+     immediately clear which set of plots belongs to placebo vs. psi */
+  .col.col-pla { border-top: 2px solid #66ccff; padding-top: 6px; }
+  .col.col-psi { border-top: 2px solid #ff6b6b; padding-top: 6px; }
+  canvas { background: #0a0b10; border-radius: 4px; display: block; width: 100%; height: 100%; }
+  button {
+    background: #262a38; color: #e8e8ee; border: 1px solid #3a3e50;
+    border-radius: 4px; cursor: pointer;
+  }
+  button:hover { background: #333849; }
+
+  /* ============================================================
+     Layout — explicit proportions so the comparison row never
+     hogs the screen:
+       Networks      :  flex 2 2 0   (big, primary visualisation)
+       PD + Barcode  :  flex 2 2 0   (big)
+       Compare (3×)  :  flex 0 0 150px  (small, summary)
+       Status        :  flex 0 0 auto
+     ============================================================ */
+  .main {
+    flex: 2 2 0; min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1.6fr 1fr;
+    gap: 6px;
+  }
+  .col { display: grid; grid-template-rows: subgrid; grid-row: span 2; gap: 6px; min-height: 0; }
+  .col-sub { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-height: 0; }
+
+  /* Compact comparison strip */
+  .compare {
+    flex: 0 0 150px;
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px; margin-top: 6px;
+    min-height: 0;
+  }
+
+  /* Status strip */
+  .status-strip {
+    flex: 0 0 auto; margin-top: 6px;
+    background: #171923; border: 1px solid #2a2d3a; border-radius: 6px;
+    padding: 6px 12px; font-size: 12px; color: #c0c0d0;
+    display: flex; gap: 14px; align-items: center; justify-content: space-between;
+  }
+  progress { appearance: none; -webkit-appearance: none; border: 1px solid #3a3e50;
+    background: #0a0b10; border-radius: 3px; height: 10px; flex: 1 1 200px; max-width: 280px; }
+  progress::-webkit-progress-bar { background: #0a0b10; border-radius: 3px; }
+  progress::-webkit-progress-value { background: linear-gradient(90deg, #66ccff, #ffcc66); border-radius: 3px; }
+  progress::-moz-progress-bar { background: linear-gradient(90deg, #66ccff, #ffcc66); border-radius: 3px; }
+  .stage { color: #ffcc66; }
+  .counts { display: flex; gap: 16px; }
+  .counts span b { color: #e8e8ee; }
+  .counts .pla b { color: #66ccff; }
+  .counts .psi b { color: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<h1>🍄 Persistent Homology of Brain Networks — Psilocybin vs Placebo</h1>
+<div class="subtitle">
+  Petri et al. (2014) — interactive scaffold explorer. Both datasets load automatically.
+</div>
+
+<!-- COMPACT HORIZONTAL CONTROLS -->
+<div class="controls">
+  <div class="group">
+    <label>ω =</label><span class="val" id="thrVal">0.500</span>
+    <input type="range" id="thr" min="0" max="1000" value="500">
+  </div>
+  <div class="group-sep"></div>
+  <div class="group">
+    <label>Layout</label>
+    <select id="layout">
+      <option value="circle">Circular</option>
+      <option value="force">Force</option>
+    </select>
+  </div>
+  <div class="group">
+    <label>Node</label>
+    <input type="range" id="nsz" min="1" max="20" value="5">
+  </div>
+  <div class="group">
+    <label>Edge α</label>
+    <input type="range" id="ea" min="10" max="100" value="60">
+  </div>
+  <div class="group-sep"></div>
+  <div class="group">
+    <button id="animBtn">▶ Animate</button>
+    <button id="resetBtn">↺ Reset</button>
+    <label>speed</label>
+    <input type="range" id="speed" min="1" max="50" value="10">
+  </div>
+  <div class="group-sep"></div>
+  <div class="group">
+    <label>PD</label>
+    <select id="pdScale">
+      <option value="linear">lin</option>
+      <option value="log">log</option>
+    </select>
+    <label>BC</label>
+    <select id="bcSort">
+      <option value="persistence">π</option>
+      <option value="birth">β</option>
+    </select>
+    <label>P(π)</label>
+    <select id="pScale">
+      <option value="linear">lin</option>
+      <option value="log">log</option>
+    </select>
+    <label>P(β)</label>
+    <select id="bScale">
+      <option value="log">log</option>
+      <option value="linear">lin</option>
+    </select>
+  </div>
+</div>
+
+<!-- MAIN 2-COLUMN VISUALISATIONS -->
+<div class="main">
+  <!-- LEFT: PLACEBO -->
+  <div class="col col-pla">
+    <div class="panel">
+      <div class="panel-title">
+        <span>① Network scaffold <span class="badge pla">Placebo</span></span>
+        <span class="stat" id="netInfoPla"></span>
+      </div>
+      <canvas id="netCanvasPla"></canvas>
+    </div>
+    <div class="col-sub">
+      <div class="panel">
+        <div class="panel-title">
+          <span>② Persistence Diagram <span class="badge pla">Pla</span></span>
+          <span class="stat" id="pdInfoPla"></span>
+        </div>
+        <canvas id="pdCanvasPla"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">
+          <span>③ Barcode H₁ <span class="badge pla">Pla</span></span>
+          <span class="stat" id="bcInfoPla"></span>
+        </div>
+        <canvas id="bcCanvasPla"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PSILOCYBIN -->
+  <div class="col col-psi">
+    <div class="panel">
+      <div class="panel-title">
+        <span>① Network scaffold <span class="badge psi">Psilocybin</span></span>
+        <span class="stat" id="netInfoPsi"></span>
+      </div>
+      <canvas id="netCanvasPsi"></canvas>
+    </div>
+    <div class="col-sub">
+      <div class="panel">
+        <div class="panel-title">
+          <span>② Persistence Diagram <span class="badge psi">Psi</span></span>
+          <span class="stat" id="pdInfoPsi"></span>
+        </div>
+        <canvas id="pdCanvasPsi"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-title">
+          <span>③ Barcode H₁ <span class="badge psi">Psi</span></span>
+          <span class="stat" id="bcInfoPsi"></span>
+        </div>
+        <canvas id="bcCanvasPsi"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM: COMPARISON OVERLAYS (both datasets on each canvas) -->
+<div class="compare">
+  <div class="panel">
+    <div class="panel-title">
+      <span>④ Betti curves <span class="badge pla">Pla</span><span class="badge psi">Psi</span></span>
+    </div>
+    <canvas id="bettiCanvas"></canvas>
+  </div>
+  <div class="panel">
+    <div class="panel-title">
+      <span>⑤ P(π) persistence density <span class="badge pla">Pla</span><span class="badge psi">Psi</span></span>
+    </div>
+    <canvas id="ppiCanvas"></canvas>
+  </div>
+  <div class="panel">
+    <div class="panel-title">
+      <span>⑥ P(β) birth density <span class="badge pla">Pla</span><span class="badge psi">Psi</span></span>
+    </div>
+    <canvas id="pbCanvas"></canvas>
+  </div>
+</div>
+
+<!-- STATUS STRIP -->
+<div class="status-strip">
+  <div id="status">Loading…</div>
+  <div id="progressWrap" style="display:none; display: flex; gap: 8px; align-items: center;">
+    <progress id="progressBar" value="0" max="100"></progress>
+    <span class="stat" id="progressLabel" style="min-width:80px; text-align:right;">0%</span>
+  </div>
+  <div class="counts">
+    <span class="pla"><b id="cPlaN">–</b> nodes</span>
+    <span class="psi"><b id="cPsiN">–</b> nodes</span>
+    <span class="pla"><b id="cPlaE">–</b> edges</span>
+    <span class="psi"><b id="cPsiE">–</b> edges</span>
+    <span class="pla"><b id="cPlaC">–</b> cyc</span>
+    <span class="psi"><b id="cPsiC">–</b> cyc</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   State
+   ============================================================ */
+const state = {
+  datasets: { placebo: null, psilocybin: null },
+  threshold: 0.5,
+  animating: false,
+  layout: 'circle',
+  nodeSize: 5,
+  edgeAlpha: 0.6,
+  pdScale: 'linear',
+  bcSort: 'persistence',
+  pScale: 'linear',
+  bScale: 'log',
+  speed: 10,
+};
+
+const FILES = {
+  placebo: 'rsif-2014-0873-File001',
+  psilocybin: 'rsif-2014-0873-File002',
+};
+
+/* ============================================================
+   Progress helpers
+   ============================================================ */
+function setProgress(pct, label) {
+  const wrap = document.getElementById('progressWrap');
+  const bar = document.getElementById('progressBar');
+  const lbl = document.getElementById('progressLabel');
+  if (pct === null) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  bar.value = pct;
+  lbl.textContent = label || `${pct.toFixed(0)}%`;
+}
+function setStatus(text) { document.getElementById('status').innerHTML = text; }
+
+/* ============================================================
+   fetchJSONWithProgress — streams the body and reports byte-level
+   progress so the user sees real download speed.
+   ============================================================ */
+async function fetchJSONWithProgress(url, label) {
+  const t0 = performance.now();
+  console.log(`[fetch] GET ${url}`);
+  setProgress(0, `${label} — connecting...`);
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const totalStr = res.headers.get('content-length');
+  const total = totalStr ? parseInt(totalStr, 10) : 0;
+
+  const reader = res.body.getReader();
+  const chunks = [];
+  let received = 0;
+  let lastUI = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    const pct = total ? (received / total) * 100 : 0;
+    const now = performance.now();
+    if (now - lastUI > 80) {
+      const mb = (received / 1048576).toFixed(2);
+      const totalMB = total ? (total / 1048576).toFixed(2) : '?';
+      const speed = (received / 1048576) / ((now - t0) / 1000);
+      setProgress(pct, `${label} ${mb}/${totalMB}MB ${speed.toFixed(1)}MB/s`);
+      lastUI = now;
+    }
+  }
+
+  const blob = new Blob(chunks);
+  console.log(`[fetch] ← ${url}  ${received}B in ${(performance.now()-t0).toFixed(0)}ms`);
+  setProgress(100, `${label} parsing...`);
+  const text = await blob.text();
+  const data = JSON.parse(text);
+  setProgress(100, `${label} ✓`);
+  return data;
+}
+
+/* ============================================================
+   Loader — auto-prefers the .precomputed.json variant.
+   ============================================================ */
+async function loadDatasetRaw(baseName, label) {
+  const precompUrl = `${baseName}.precomputed.json`;
+  const rawUrl = `${baseName}.json`;
+
+  let usePrecomputed = false;
+  try {
+    const head = await fetch(precompUrl, { method: 'HEAD' });
+    usePrecomputed = head.ok;
+  } catch (e) {
+    console.log(`[loader] HEAD probe failed: ${e.message}`);
+  }
+
+  const url = usePrecomputed ? precompUrl : rawUrl;
+  console.log(`[loader] using ${usePrecomputed ? 'PRECOMPUTED' : 'raw'}  →  ${url}`);
+  setStatus(`${label}: <span class="stage">fetching</span> ${url.split('/').pop()}`);
+  const data = await fetchJSONWithProgress(url, label);
+
+  const nodes = [];
+  const nodeMap = new Map();
+  for (const n of data.nodes) {
+    const idx = nodes.length;
+    const node = { id: n.id, label: n.label, mod: n.mod, idx, x: 0, y: 0, vx: 0, vy: 0 };
+    nodes.push(node);
+    nodeMap.set(n.id, node);
+  }
+  const edges = [];
+  for (const e of data.edges) {
+    const s = nodeMap.get(e.s);
+    const t = nodeMap.get(e.t);
+    if (s && t) edges.push({ s: s.idx, t: t.idx, w: e.w });
+  }
+
+  let wmax, wmin;
+  if (typeof data.wmin === 'number' && typeof data.wmax === 'number') {
+    wmin = data.wmin; wmax = data.wmax;
+  } else {
+    wmax = Math.max(...edges.map(e => e.w));
+    wmin = Math.min(...edges.map(e => e.w));
+  }
+  edges.forEach(e => { e.wn = (e.w - wmin) / (wmax - wmin + 1e-9); });
+  edges.sort((a, b) => b.wn - a.wn);
+
+  return { nodes, edges, wmin, wmax, precomputed: data.filtration || null };
+}
+
+async function loadDataset(key) {
+  const label = key === 'placebo' ? 'Placebo' : 'Psilocybin';
+  const t0 = performance.now();
+  try {
+    console.log(`[init] >>> loadDataset(${key}) START`);
+    const baseName = FILES[key];
+    const data = await loadDatasetRaw(baseName, label);
+
+    let filtration = data.precomputed;
+    if (!filtration) {
+      setStatus(`${label}: <span class="stage">computing</span> filtration...`);
+      await new Promise(r => setTimeout(r, 50));
+      filtration = computeFiltration(data);
+    }
+
+    data.filtration = filtration;
+    layoutCircular(data.nodes);
+    state.datasets[key] = data;
+
+    const elapsed = ((performance.now()-t0)/1000).toFixed(2);
+    const tag = key === 'placebo' ? 'Pla' : 'Psi';
+    document.getElementById(`c${tag}N`).textContent = data.nodes.length;
+    document.getElementById(`c${tag}E`).textContent = data.edges.length;
+    document.getElementById(`c${tag}C`).textContent = filtration.cycles.length;
+    console.log(`[init] <<< loadDataset(${key}) DONE  total=${elapsed}s`);
+
+    return data;
+  } catch(err) {
+    setStatus(`${label}: <span class="stage">ERROR</span> ${err.message}`);
+    console.error(`[init] loadDataset(${key}) failed:`, err);
+    throw err;
+  }
+}
+
+/* ============================================================
+   Persistent homology (fallback when no precomputed file)
+   ============================================================ */
+function computeFiltration(data) {
+  const t0 = performance.now();
+  const { nodes, edges } = data;
+  const n = nodes.length;
+  const parent = Array.from({length: n}, (_, i) => i);
+  const rank = new Array(n).fill(0);
+  function find(x){ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; }
+  function union(a,b){ a=find(a); b=find(b); if(a===b) return false;
+    if(rank[a]<rank[b]) [a,b]=[b,a]; parent[b]=a; if(rank[a]===rank[b]) rank[a]++;
+    return true;
+  }
+
+  const adj = Array.from({length: n}, () => new Set());
+  const bettiSteps = [];
+  const cyclesAlive = new Map();
+  const deadCycles = [];
+  let cid = 0;
+  let triangles = 0;
+
+  function findCycle(u, v) {
+    const prev = new Map();
+    prev.set(u, null);
+    const q = [u];
+    while(q.length){
+      const x = q.shift();
+      if(x === v) break;
+      for(const y of adj[x]){
+        if(!prev.has(y)){ prev.set(y, x); q.push(y); }
+      }
+    }
+    if(!prev.has(v)) return null;
+    const path = [];
+    let x = v;
+    while(x !== null){ path.push(x); x = prev.get(x); }
+    return path;
+  }
+
+  edges.forEach((e, step) => {
+    const {s, t, wn} = e;
+    const merged = union(s, t);
+    const common = [];
+    for(const x of adj[s]) if(adj[t].has(x)) common.push(x);
+    triangles += common.length;
+
+    if(!merged) {
+      const path = findCycle(s, t);
+      if(path && path.length >= 3){
+        const cyc = { id: cid++, birth: wn, edges: new Set() };
+        for(let i=0;i<path.length-1;i++){
+          const a = Math.min(path[i], path[i+1]);
+          const b = Math.max(path[i], path[i+1]);
+          cyc.edges.add(a+','+b);
+        }
+        const a = Math.min(s,t), b = Math.max(s,t);
+        cyc.edges.add(a+','+b);
+        cyclesAlive.set(cyc.id, cyc);
+      }
+    }
+
+    for(const x of common){
+      const eA = Math.min(s,t)+','+Math.max(s,t);
+      const eB = Math.min(s,x)+','+Math.max(s,x);
+      const eC = Math.min(t,x)+','+Math.max(t,x);
+      for(const [id, cyc] of cyclesAlive){
+        if(cyc.edges.has(eA) && cyc.edges.has(eB) && cyc.edges.has(eC)){
+          deadCycles.push({ id, birth: cyc.birth, death: wn });
+          cyclesAlive.delete(id);
+          break;
+        }
+      }
+    }
+
+    adj[s].add(t); adj[t].add(s);
+
+    if(step % Math.max(1, Math.floor(edges.length/300)) === 0 || step === edges.length-1){
+      const roots = new Set();
+      for(let i=0;i<n;i++) roots.add(find(i));
+      bettiSteps.push({
+        step, w: wn,
+        b0: roots.size,
+        b1: cyclesAlive.size,
+        edgeCount: step+1,
+        triCount: triangles
+      });
+    }
+  });
+
+  const allCycles = [...deadCycles];
+  for(const [id, cyc] of cyclesAlive){
+    allCycles.push({ id, birth: cyc.birth, death: 0 });
+  }
+  console.log(`[filtration] done in ${(performance.now()-t0).toFixed(0)}ms`);
+  return { bettiSteps, cycles: allCycles };
+}
+
+/* ============================================================
+   Layouts
+   ============================================================ */
+function layoutCircular(nodes) {
+  const sorted = [...nodes].sort((a,b) => a.mod - b.mod || a.idx - b.idx);
+  const N = sorted.length;
+  sorted.forEach((n, i) => {
+    const angle = (i / N) * 2 * Math.PI - Math.PI/2;
+    n.x = Math.cos(angle);
+    n.y = Math.sin(angle);
+  });
+}
+
+function layoutForce(nodes, edges, iters = 200) {
+  const N = nodes.length;
+  nodes.forEach(n => {
+    if(n.x === 0 && n.y === 0) {
+      n.x = (Math.random()-0.5)*2;
+      n.y = (Math.random()-0.5)*2;
+    }
+  });
+  const topEdges = edges.slice(0, Math.min(edges.length, 800));
+  for(let it=0; it<iters; it++){
+    for(let i=0;i<N;i++){
+      let fx=0, fy=0;
+      for(let j=0;j<N;j++){
+        if(i===j) continue;
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d2 = dx*dx+dy*dy+0.001;
+        const f = 0.005 / d2;
+        fx += dx*f; fy += dy*f;
+      }
+      nodes[i].vx = (nodes[i].vx + fx) * 0.85;
+      nodes[i].vy = (nodes[i].vy + fy) * 0.85;
+    }
+    for(const e of topEdges){
+      const a = nodes[e.s], b = nodes[e.t];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const f = 0.02 * e.wn;
+      a.vx += dx*f; a.vy += dy*f;
+      b.vx -= dx*f; b.vy -= dy*f;
+    }
+    for(const n of nodes){ n.x += n.vx; n.y += n.vy; }
+  }
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const n of nodes){ minX=Math.min(minX,n.x); maxX=Math.max(maxX,n.x); minY=Math.min(minY,n.y); maxY=Math.max(maxY,n.y); }
+  const cx=(minX+maxX)/2, cy=(minY+maxY)/2, s=Math.max(maxX-minX,maxY-minY)/2;
+  for(const n of nodes){ n.x=(n.x-cx)/s; n.y=(n.y-cy)/s; }
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function communityColor(m) {
+  const palette = ['#ff6b6b','#ffcc66','#66ff99','#66ccff','#c988ff','#ff88bb','#88ffdd','#ffaa44'];
+  return palette[m % palette.length];
+}
+
+function fitCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(1, Math.floor(rect.width * dpr));
+  const H = Math.max(1, Math.floor(rect.height * dpr));
+  if (canvas.width !== W || canvas.height !== H) {
+    canvas.width = W;
+    canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), W, H, dpr };
+}
+
+/* --- Network (one canvas per dataset) --- */
+function drawNetwork(key) {
+  const tag = key === 'placebo' ? 'Pla' : 'Psi';
+  const cv = document.getElementById(`netCanvas${tag}`);
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const data = state.datasets[key];
+  if (!data) return;
+  const { nodes, edges } = data;
+
+  const cx = W/2, cy = H/2;
+  const R = Math.min(W, H)/2 - 12;
+
+  const keepCount = Math.floor(edges.length * state.threshold);
+  const included = new Set();
+  const includedList = [];
+  for (let i = 0; i < keepCount; i++) {
+    const e = edges[i];
+    const key2 = Math.min(e.s, e.t) + ',' + Math.max(e.s, e.t);
+    included.add(key2);
+    includedList.push(e);
+  }
+
+  const adj = Array.from({length: nodes.length}, () => new Set());
+  for (const e of includedList) {
+    adj[e.s].add(e.t); adj[e.t].add(e.s);
+  }
+
+  const triangles = [];
+  if (includedList.length < 3000) {
+    for (const e of includedList) {
+      const {s, t} = e;
+      if (adj[s].size > adj[t].size) continue;
+      for (const x of adj[s]) {
+        if (x > t && adj[t].has(x)) triangles.push([s, t, x]);
+      }
+    }
+  }
+
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#c878ff';
+  for (const [a, b, c] of triangles) {
+    ctx.beginPath();
+    ctx.moveTo(cx + nodes[a].x*R, cy + nodes[a].y*R);
+    ctx.lineTo(cx + nodes[b].x*R, cy + nodes[b].y*R);
+    ctx.lineTo(cx + nodes[c].x*R, cy + nodes[c].y*R);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.globalAlpha = state.edgeAlpha;
+  for (const e of includedList) {
+    const a = nodes[e.s], b = nodes[e.t];
+    ctx.strokeStyle = communityColor(a.mod);
+    ctx.lineWidth = 0.3 + e.wn * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + a.x*R, cy + a.y*R);
+    ctx.lineTo(cx + b.x*R, cy + b.y*R);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  for (const n of nodes) {
+    ctx.fillStyle = communityColor(n.mod);
+    ctx.beginPath();
+    ctx.arc(cx + n.x*R, cy + n.y*R, state.nodeSize, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = '#0a0b10';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  document.getElementById(`netInfo${tag}`).textContent =
+    `${includedList.length}/${edges.length} edges · ${triangles.length} tri`;
+}
+
+/* --- Persistence Diagram (one canvas per dataset) --- */
+function drawPD(key) {
+  const tag = key === 'placebo' ? 'Pla' : 'Psi';
+  const cv = document.getElementById(`pdCanvas${tag}`);
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const data = state.datasets[key];
+  if (!data || !data.filtration) return;
+  const cycles = data.filtration.cycles;
+
+  const pad = 24 * (window.devicePixelRatio || 1);
+  const plotW = W - pad*2, plotH = H - pad*2;
+
+  // Axes: birth (x) and death (y) both go 0→1 left-to-right / bottom-to-top.
+  // Diagonal runs from bottom-left to top-right.
+  // Persistent points (birth ≫ death) sit in the upper-right area.
+  const isLog = state.pdScale === 'log';
+  function xmap(b) {
+    if (isLog) {
+      const v = Math.log10(Math.max(b, 1e-4));
+      return pad + ((v - (-4)) / 4) * plotW;
+    }
+    return pad + b * plotW;
+  }
+  function ymap(d) {
+    if (isLog) {
+      const v = Math.log10(Math.max(d, 1e-4));
+      return pad + (1 - (v - (-4)) / 4) * plotH;
+    }
+    return pad + (1 - d) * plotH;
+  }
+
+  // density
+  const bins = 30;
+  const density = Array.from({length: bins}, () => new Array(bins).fill(0));
+  for (const c of cycles) {
+    const bx = Math.floor(c.birth * bins);
+    const by = Math.floor((1 - c.death) * bins);
+    if (bx >= 0 && bx < bins && by >= 0 && by < bins) density[bx][by]++;
+  }
+  let dmax = 0;
+  for (let i = 0; i < bins; i++)
+    for (let j = 0; j < bins; j++)
+      if (density[i][j] > dmax) dmax = density[i][j];
+  if (dmax > 0) {
+    const cellW = plotW / bins, cellH = plotH / bins;
+    for (let i = 0; i < bins; i++) {
+      for (let j = 0; j < bins; j++) {
+        if (density[i][j] === 0) continue;
+        const v = Math.log(density[i][j] + 1) / Math.log(dmax + 1);
+        ctx.fillStyle = `rgba(${80 + 175*v | 0},${30 + 120*v | 0},${120 + 130*v | 0},${0.7*v + 0.1})`;
+        ctx.fillRect(pad + i*cellW, pad + j*cellH, cellW + 1, cellH + 1);
+      }
+    }
+  }
+
+  // diagonal — top-left (birth=0,death=0) to bottom-right (birth=1,death=1)
+  ctx.strokeStyle = '#666';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(xmap(0), ymap(0));
+  ctx.lineTo(xmap(1), ymap(1));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // threshold
+  ctx.strokeStyle = '#ffcc66';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(xmap(state.threshold), pad);
+  ctx.lineTo(xmap(state.threshold), pad + plotH);
+  ctx.stroke();
+
+  // points
+  const step = Math.max(1, Math.floor(cycles.length / 1500));
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  for (let i = 0; i < cycles.length; i += step) {
+    const c = cycles[i];
+    ctx.beginPath();
+    ctx.arc(xmap(c.birth), ymap(c.death), 1, 0, 2*Math.PI);
+    ctx.fill();
+  }
+
+  const fs = Math.max(8, 9 * (window.devicePixelRatio || 1));
+  ctx.font = `${fs}px monospace`;
+  ctx.fillStyle = '#888';
+  ctx.fillText(`${cycles.length} cyc`, pad, H - 6);
+
+  document.getElementById(`pdInfo${tag}`).textContent = `${cycles.length} cyc`;
+}
+
+/* --- Barcode (one canvas per dataset) --- */
+function drawBarcode(key) {
+  const tag = key === 'placebo' ? 'Pla' : 'Psi';
+  const cv = document.getElementById(`bcCanvas${tag}`);
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const data = state.datasets[key];
+  if (!data || !data.filtration) return;
+  let cycles = [...data.filtration.cycles];
+  if (state.bcSort === 'persistence')
+    cycles.sort((a, b) => (b.birth - b.death) - (a.birth - a.death));
+  else
+    cycles.sort((a, b) => b.birth - a.birth);
+
+  const N = Math.min(cycles.length, 120);
+  cycles = cycles.slice(0, N);
+
+  const pad = 24 * (window.devicePixelRatio || 1);
+  const plotW = W - pad*2, plotH = H - pad*2;
+  const barH = plotH / Math.max(N, 1);
+
+  function xmap(v) { return pad + v * plotW; }
+
+  for (let i = 0; i < N; i++) {
+    const c = cycles[i];
+    const pers = c.birth - c.death;
+    const t = Math.min(1, pers * 3);
+    ctx.strokeStyle = `rgb(${100 + 155*t | 0},${180 - 100*t | 0},${255 - 100*t | 0})`;
+    ctx.lineWidth = Math.max(1, barH * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(xmap(c.death), pad + i*barH + barH/2);
+    ctx.lineTo(xmap(c.birth), pad + i*barH + barH/2);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#ffcc66';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(xmap(state.threshold), pad);
+  ctx.lineTo(xmap(state.threshold), pad + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  document.getElementById(`bcInfo${tag}`).textContent = `top ${N}`;
+}
+
+/* --- Betti curves (overlay both) --- */
+function drawBetti() {
+  const cv = document.getElementById('bettiCanvas');
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = 24 * (window.devicePixelRatio || 1);
+  const plotW = W - pad*2, plotH = H - pad*2;
+  let maxB = 1;
+  for (const key of ['placebo', 'psilocybin']) {
+    const d = state.datasets[key];
+    if (!d || !d.filtration) continue;
+    for (const s of d.filtration.bettiSteps) {
+      if (s.b0 > maxB) maxB = s.b0;
+      if (s.b1 > maxB) maxB = s.b1;
+    }
+  }
+  function xmap(w) { return pad + w * plotW; }
+  function ymap(v) { return pad + plotH - (v / maxB) * plotH; }
+
+  const colors = { placebo: '#66ccff', psilocybin: '#ff6b6b' };
+  for (const key of ['placebo', 'psilocybin']) {
+    const d = state.datasets[key];
+    if (!d || !d.filtration) continue;
+    const steps = d.filtration.bettiSteps;
+    ctx.strokeStyle = colors[key];
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    steps.forEach((s, i) => {
+      const x = xmap(s.w), y = ymap(s.b0);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    steps.forEach((s, i) => {
+      const x = xmap(s.w), y = ymap(s.b1);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#ffcc66';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(xmap(state.threshold), pad);
+  ctx.lineTo(xmap(state.threshold), pad + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const fs = Math.max(8, 9 * (window.devicePixelRatio || 1));
+  ctx.font = `${fs}px monospace`;
+  ctx.fillStyle = '#66ccff'; ctx.fillText('β₀ pla', pad+4, pad+10);
+  ctx.fillStyle = '#ff6b6b'; ctx.fillText('β₀ psi', pad+50, pad+10);
+  ctx.fillStyle = '#66ccff'; ctx.fillText('β₁ pla', pad+4, pad+22);
+  ctx.fillStyle = '#ff6b6b'; ctx.fillText('β₁ psi', pad+50, pad+22);
+}
+
+/* --- P(π) overlay --- */
+function drawPPi() {
+  const cv = document.getElementById('ppiCanvas');
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = 24 * (window.devicePixelRatio || 1);
+  const plotW = W - pad*2, plotH = H - pad*2;
+
+  const results = {};
+  for (const key of ['placebo', 'psilocybin']) {
+    const d = state.datasets[key];
+    if (!d || !d.filtration) continue;
+    const bins = 30;
+    const hist = new Array(bins).fill(0);
+    for (const c of d.filtration.cycles) {
+      const p = c.birth - c.death;
+      const b = Math.min(bins - 1, Math.floor(p * bins));
+      if (b >= 0) hist[b]++;
+    }
+    const total = d.filtration.cycles.length || 1;
+    results[key] = hist.map(v => v / total);
+  }
+  const isLog = state.pScale === 'log';
+  let maxV = 0;
+  for (const k in results) for (const v of results[k]) if (v > maxV) maxV = v;
+  const minV = isLog ? 1e-4 : 0;
+
+  function xmap(i, N) { return pad + (i / (N - 1)) * plotW; }
+  function ymap(v) {
+    if (isLog) {
+      const lv = Math.log10(Math.max(v, minV));
+      const lmax = Math.log10(maxV || 1);
+      const lmin = Math.log10(minV);
+      return pad + plotH - ((lv - lmin) / (lmax - lmin)) * plotH;
+    }
+    return pad + plotH - (v / (maxV || 1)) * plotH;
+  }
+
+  const colors = { placebo: '#66ccff', psilocybin: '#ff6b6b' };
+  for (const k of ['placebo', 'psilocybin']) {
+    if (!results[k]) continue;
+    ctx.strokeStyle = colors[k];
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    results[k].forEach((v, i) => {
+      const x = xmap(i, results[k].length);
+      const y = ymap(Math.max(v, minV));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  const fs = Math.max(8, 9 * (window.devicePixelRatio || 1));
+  ctx.font = `${fs}px monospace`;
+  ctx.fillStyle = '#66ccff'; ctx.fillText('placebo', pad+4, pad+10);
+  ctx.fillStyle = '#ff6b6b'; ctx.fillText('psilocybin', pad+4, pad+22);
+}
+
+/* --- P(β) overlay --- */
+function drawPB() {
+  const cv = document.getElementById('pbCanvas');
+  const { ctx, W, H } = fitCanvas(cv);
+  ctx.fillStyle = '#0a0b10';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = 24 * (window.devicePixelRatio || 1);
+  const plotW = W - pad*2, plotH = H - pad*2;
+
+  const results = {};
+  for (const key of ['placebo', 'psilocybin']) {
+    const d = state.datasets[key];
+    if (!d || !d.filtration) continue;
+    const bins = 40;
+    const hist = new Array(bins).fill(0);
+    for (const c of d.filtration.cycles) {
+      const b = Math.min(bins - 1, Math.floor(c.birth * bins));
+      if (b >= 0) hist[b]++;
+    }
+    const total = d.filtration.cycles.length || 1;
+    results[key] = hist.map(v => v / total);
+  }
+  const isLog = state.bScale === 'log';
+  let maxV = 0;
+  for (const k in results) for (const v of results[k]) if (v > maxV) maxV = v;
+  const minV = isLog ? 1e-5 : 0;
+
+  function xmap(i, N) { return pad + (i / (N - 1)) * plotW; }
+  function ymap(v) {
+    if (isLog) {
+      const lv = Math.log10(Math.max(v, minV));
+      const lmax = Math.log10(maxV || 1);
+      const lmin = Math.log10(minV);
+      return pad + plotH - ((lv - lmin) / (lmax - lmin)) * plotH;
+    }
+    return pad + plotH - (v / (maxV || 1)) * plotH;
+  }
+
+  const colors = { placebo: '#66ccff', psilocybin: '#ff6b6b' };
+  for (const k of ['placebo', 'psilocybin']) {
+    if (!results[k]) continue;
+    ctx.strokeStyle = colors[k];
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    results[k].forEach((v, i) => {
+      const x = xmap(i, results[k].length);
+      const y = ymap(Math.max(v, minV));
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  const fs = Math.max(8, 9 * (window.devicePixelRatio || 1));
+  ctx.font = `${fs}px monospace`;
+  ctx.fillStyle = '#66ccff'; ctx.fillText('placebo', pad+4, pad+10);
+  ctx.fillStyle = '#ff6b6b'; ctx.fillText('psilocybin', pad+4, pad+22);
+}
+
+/* ============================================================
+   Master redraw — now redraws BOTH datasets
+   ============================================================ */
+function redrawAll() {
+  drawNetwork('placebo');
+  drawNetwork('psilocybin');
+  drawPD('placebo');
+  drawPD('psilocybin');
+  drawBarcode('placebo');
+  drawBarcode('psilocybin');
+  drawBetti();
+  drawPPi();
+  drawPB();
+}
+
+function applyLayout() {
+  for (const key of ['placebo', 'psilocybin']) {
+    const d = state.datasets[key];
+    if (!d) continue;
+    if (state.layout === 'circle') layoutCircular(d.nodes);
+    else layoutForce(d.nodes, d.edges, 150);
+  }
+}
+
+/* ============================================================
+   UI wiring
+   ============================================================ */
+document.getElementById('thr').addEventListener('input', e => {
+  state.threshold = e.target.value / 1000;
+  document.getElementById('thrVal').textContent = state.threshold.toFixed(3);
+  redrawAll();
+});
+document.getElementById('nsz').addEventListener('input', e => {
+  state.nodeSize = +e.target.value;
+  drawNetwork('placebo'); drawNetwork('psilocybin');
+});
+document.getElementById('ea').addEventListener('input', e => {
+  state.edgeAlpha = e.target.value / 100;
+  drawNetwork('placebo'); drawNetwork('psilocybin');
+});
+document.getElementById('layout').addEventListener('change', e => {
+  state.layout = e.target.value;
+  applyLayout();
+  drawNetwork('placebo'); drawNetwork('psilocybin');
+});
+document.getElementById('pdScale').addEventListener('change', e => {
+  state.pdScale = e.target.value;
+  drawPD('placebo'); drawPD('psilocybin');
+});
+document.getElementById('bcSort').addEventListener('change', e => {
+  state.bcSort = e.target.value;
+  drawBarcode('placebo'); drawBarcode('psilocybin');
+});
+document.getElementById('pScale').addEventListener('change', e => {
+  state.pScale = e.target.value;
+  drawPPi();
+});
+document.getElementById('bScale').addEventListener('change', e => {
+  state.bScale = e.target.value;
+  drawPB();
+});
+document.getElementById('speed').addEventListener('input', e => {
+  state.speed = +e.target.value;
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.threshold = 0.5;
+  document.getElementById('thr').value = 500;
+  document.getElementById('thrVal').textContent = '0.500';
+  applyLayout();
+  redrawAll();
+});
+
+let animId = null;
+document.getElementById('animBtn').addEventListener('click', () => {
+  if (state.animating) {
+    state.animating = false;
+    document.getElementById('animBtn').textContent = '▶ Animate';
+    if (animId) cancelAnimationFrame(animId);
+    return;
+  }
+  state.animating = true;
+  document.getElementById('animBtn').textContent = '⏸ Pause';
+  let t = 1.0;
+  let dir = -1;
+  const slider = document.getElementById('thr');
+  function step() {
+    if (!state.animating) return;
+    t += dir * (state.speed / 5000);
+    if (t <= 0) { t = 0; dir = 1; }
+    if (t >= 1) { t = 1; dir = -1; }
+    state.threshold = t;
+    slider.value = Math.round(t * 1000);
+    document.getElementById('thrVal').textContent = t.toFixed(3);
+    redrawAll();
+    animId = requestAnimationFrame(step);
+  }
+  step();
+});
+
+window.addEventListener('resize', () => redrawAll());
+
+/* ============================================================
+   Auto-load both datasets in parallel on page load
+   ============================================================ */
+async function init() {
+  const t0 = performance.now();
+  setStatus('Auto-loading <span class="stage">Placebo</span>...');
+  try {
+    await loadDataset('placebo');
+    setStatus('Auto-loading <span class="stage">Psilocybin</span>...');
+    await loadDataset('psilocybin');
+    setProgress(null);
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+    const pla = state.datasets.placebo;
+    const psi = state.datasets.psilocybin;
+    setStatus(`✓ Loaded in ${elapsed}s — Placebo: ${pla.nodes.length}n/${pla.filtration.cycles.length}c, Psilocybin: ${psi.nodes.length}n/${psi.filtration.cycles.length}c`);
+    redrawAll();
+  } catch (err) {
+    setStatus(`<span class="stage">ERROR</span> ${err.message}`);
+    console.error('[init] auto-load failed:', err);
+  }
+}
+init();
+</script>
+
+</body>
+</html>

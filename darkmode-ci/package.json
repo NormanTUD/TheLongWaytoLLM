@@ -1,0 +1,25 @@
+{
+    "name": "asanai-blog-darkmode-ci",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Dark-mode theme-switch and font-readability CI tester for the asanai blog.",
+    "main": "test.js",
+    "scripts": {
+        "test": "node test.js",
+        "test:fast": "WAIT_AFTER_SCROLL_MS=5000 PARALLEL=4 node test.js --wait 5000 --parallel 4",
+        "test:single": "node test.js --only",
+        "test:json": "node test.js --json",
+        "capture": "node scroll-capture.js",
+        "fix": "node autofix.js",
+        "fix:dry": "node autofix.js --dry-run",
+        "fix:critical": "node autofix.js --only-critical",
+        "fix:all": "node autofix.js --include-stuck-white"
+    },
+    "dependencies": {
+        "pngjs": "^7.0.0",
+        "puppeteer-core": "^25.0.0"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}

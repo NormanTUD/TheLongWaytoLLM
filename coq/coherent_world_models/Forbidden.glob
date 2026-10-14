@@ -1,0 +1,91 @@
+DIGEST 39752f2deb5fe1fde5b0978e41af06f0
+FForbidden
+R1802:1808 Library <> <> lib
+R1826:1831 Traces <> <> lib
+R1849:1869 AdmissibleTransitions <> <> lib
+R1887:1893 Sheaves <> <> lib
+R1911:1923 MasterDiagram <> <> lib
+ind 2346:2362 <> SilentUpgradeKind
+constr 2371:2385 <> SU_approx_to_eq
+constr 2451:2462 <> SU_iso_to_id
+constr 2531:2547 <> SU_homotopy_to_eq
+constr 2611:2626 <> SU_stat_to_proof
+constr 2691:2713 <> SU_consistency_to_truth
+R2393:2409 Forbidden <> SilentUpgradeKind:1 ind
+R2473:2489 Forbidden <> SilentUpgradeKind:1 ind
+R2553:2569 Forbidden <> SilentUpgradeKind:1 ind
+R2633:2649 Forbidden <> SilentUpgradeKind:1 ind
+R2717:2733 Forbidden <> SilentUpgradeKind:1 ind
+scheme 2346:2362 <> SilentUpgradeKind_rect
+scheme 2346:2362 <> SilentUpgradeKind_ind
+scheme 2346:2362 <> SilentUpgradeKind_rec
+scheme 2346:2362 <> SilentUpgradeKind_sind
+rec 2856:2868 <> SilentUpgrade
+proj 2877:2883 <> SU_kind
+proj 2908:2916 <> SU_source
+proj 2928:2936 <> SU_target
+proj 2948:2957 <> SU_upgrade
+proj 3027:3039 <> SU_no_witness
+R2887:2903 Forbidden <> SilentUpgradeKind ind
+R2970:2973 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R2961:2969 Forbidden <> SU_source:5 meth
+R2974:2982 Forbidden <> SU_target:6 meth
+ax 3430:3451 <> upgrade_must_be_earned
+R3470:3482 Forbidden <> SilentUpgrade rec
+binder 3465:3466 <> su:9
+R3486:3489 Coq.Init.Logic <> True ind
+rec 4145:4158 <> UnconstrainedT
+proj 4167:4171 <> UCT_T
+proj 4247:4264 <> UCT_any_arrow_in_T
+ax 4493:4531 <> coherence_vacuous_under_unconstrained_T
+R4551:4564 Forbidden <> UnconstrainedT rec
+binder 4545:4547 <> uct:15
+R4568:4571 Coq.Init.Logic <> True ind
+rec 4989:5002 <> Identification
+proj 5011:5014 <> Id_G
+proj 5026:5029 <> Id_W
+proj 5041:5045 <> Id_eq
+R5053:5055 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R5049:5052 Forbidden <> Id_G:19 meth
+R5056:5059 Forbidden <> Id_W:20 meth
+rec 5934:5946 <> CoherentModel
+proj 5955:5958 <> CM_G
+proj 6036:6039 <> CM_W
+proj 6118:6130 <> CM_identifies
+ax 6208:6231 <> identification_forbidden
+R6249:6261 Forbidden <> CoherentModel rec
+binder 6245:6245 <> m:26
+R6284:6287 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6269:6281 Forbidden <> CM_identifies proj
+R6283:6283 Forbidden <> m:26 var
+R6288:6292 Coq.Init.Logic <> False ind
+rec 7025:7041 <> MistakenCoherence
+proj 7050:7053 <> MC_G
+proj 7130:7147 <> MC_self_consistent
+proj 7159:7169 <> MC_grounded
+proj 7181:7190 <> MC_mistake
+R7216:7219 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R7198:7215 Forbidden <> MC_self_consistent:31 meth
+R7220:7221 Coq.Init.Logic <> ::type_scope:'~'_x not
+R7222:7232 Forbidden <> MC_grounded:32 meth
+ax 7322:7342 <> coherence_not_descent
+R7361:7377 Forbidden <> MistakenCoherence rec
+binder 7356:7357 <> mc:34
+R7381:7384 Coq.Init.Logic <> True ind
+rec 7880:7894 <> BorrowedAnalogy
+proj 7903:7920 <> BA_source_category
+proj 7932:7949 <> BA_target_category
+proj 7961:7970 <> BA_analogy
+proj 8026:8051 <> BA_analogy_used_as_theorem
+R7992:7995 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R7974:7991 Forbidden <> BA_source_category:38 meth
+R8014:8017 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R7996:8013 Forbidden <> BA_target_category:39 meth
+ax 8070:8088 <> analogy_not_theorem
+R8107:8121 Forbidden <> BorrowedAnalogy rec
+binder 8102:8103 <> ba:42
+R8125:8128 Coq.Init.Logic <> True ind
+def 8223:8247 <> analogy_not_theorem_boxed
+R8274:8288 Forbidden <> BorrowedAnalogy rec
+binder 8269:8270 <> ba:45
+R8292:8295 Coq.Init.Logic <> True ind

@@ -1,0 +1,252 @@
+<?php include_once("functions.php"); ?>
+<!--
+COURSE_METADATA:
+title: Positional Embeddings
+description: Why order matters, sine, cosine, and how Transformers know which token came first.
+icon: &#128255;
+part: 4
+order: 7
+color: sky
+topics: architecture, math-i, math-ii
+tags: math-heavy
+math: 55
+-->
+
+<div class="smart-quote" data-cite="vaswani2017attention" data-page=6>
+Since our model contains no recurrence and no convolution, in order for the model to make use of the
+order of the sequence, we must inject some information about the relative or absolute position of the
+tokens in the sequence. To this end, we add “positional encodings” to the input embeddings at the
+bottoms of the encoder and decoder stacks. The positional encodings have the same dimension $d_\text{model}$
+as the embeddings, so that the two can be summed.
+</div>
+
+<div class="md">
+In a Transformer, words are processed in parallel. Without **Positional Encoding (PE)**, the model would treat the sentence *“The dog bit the man”* exactly the same as *“The man bit the dog”* (and also the same as *“dog the The man bit”* and all other combinations of these words).
+
+To fix this, we **add** a unique mathematical “signature” to each word's vector based on its position ($\text{pos}$), with on sine and cosine.
+
+## The Invention of the Transformer & Positional Encoding
+The challenge of processing text in parallel (instead of word-by-word like older RNNs) required a new way to inject “time” or “order” into the model.
+
+* **The “\citetitle{vaswani2017attention}” Paper:** This landmark work by Vaswani et al. replaced sequential processing with the Transformer architecture. Since Transformers have no inherent sense of order, the authors introduced **Sinusoidal Positional Encodings**.
+* **Why Waves?** The researchers chose alternating sine and cosine functions because they allow the model to attend to relative positions. The different frequencies, ranging from “fast” wiggles to “slow” curves, act like a multi-scale clock, marking every position in a sequence with a unique, bounded mathematical signature.
+</div>
+
+<div class="md" data-mathlevel="35" data-optionaltitle="Sine and Cosine">
+## Sine and Cosine
+
+Imagine a circle with radius $1$ centered at the origin (the **unit circle**). Pick a point on it by sweeping an angle $\theta$ counter-clockwise from the right. The coordinates of that point are:
+
+$$(\cos\theta,\;\sin\theta)$$
+
+That's it: $\cos\theta$ is the horizontal position, $\sin\theta$ is the vertical position. They convert an **angle** into **coordinates**.
+
+**A note on angles:** We measure $\theta$ in **radians**, not degrees. One full circle is $2\pi$ radians (about $6.28$), so $\pi$ radians $= 180°$. Radians are simply the arc length on a unit circle for a given angle, which makes many formulas cleaner.
+</div>
+
+<!-- ─── Interactive: Unit Circle ─── -->
+<div style="background: var(--mn-surface, #fff); padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin: 20px 0;">
+    <p style="color:#64748b; font-size:0.9em;">Drag the angle and watch the point move on the unit circle. Its $x$-coordinate is $\cos\theta$ (<span style=“color:#2563eb;font-weight:bold;”>blue</span>) and its $y$-coordinate is $\sin\theta$ (<span style=“color:#ef4444;font-weight:bold;”>red</span>).</p>
+
+    <div style="margin-bottom:10px;">
+        <strong>Angle $\theta$:</strong>
+        <input type="range" id="slider-sc-theta" min="0" max="6.2832" step="0.01" value="0.78" style="width:300px;">
+        <span id="disp-sc-theta" style="font-family:monospace; font-weight:bold; color:#2563eb;">0.78</span> rad
+        (<span id="disp-sc-deg" style="font-family:monospace;">44.7°</span>)
+    </div>
+
+    <div id="sc-equation-display" style="text-align:center; font-size:1.2em; margin:10px 0; background:#f8fafc; padding:10px; border-radius:6px; min-height:50px;"></div>
+
+    <div id="plot-unit-circle" class="plot-container" style="width:100%; height:450px;"></div>
+</div>
+
+<!-- ─── Interactive: Sine & Cosine Waves ─── -->
+<div style="background: var(--mn-surface, #fff); padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin: 20px 0;">
+    <p style="color:#64748b; font-size:0.9em;">See how amplitude $A$, frequency $\omega$, and phase shift $\varphi$ change the wave: $f(\theta) = A \sin(\omega\theta + \varphi)$.</p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:20px; margin-bottom:10px;">
+        <div>
+            <strong>Amplitude $A$:</strong> <span id="disp-wave-amp" style="font-family:monospace; font-weight:bold;">1.0</span><br>
+            <input type="range" id="slider-wave-amp" min="0.1" max="3" step="0.1" value="1.0" style="width:180px;">
+        </div>
+        <div>
+            <strong>Frequency $\omega$:</strong> <span id="disp-wave-freq" style="font-family:monospace; font-weight:bold;">1.0</span><br>
+            <input type="range" id="slider-wave-freq" min="0.1" max="5" step="0.1" value="1.0" style="width:180px;">
+        </div>
+        <div>
+            <strong>Phase $\varphi$:</strong> <span id="disp-wave-phase" style="font-family:monospace; font-weight:bold;">0.0</span><br>
+            <input type="range" id="slider-wave-phase" min="0" max="6.28" step="0.05" value="0" style="width:180px;">
+        </div>
+    </div>
+
+    <div id="wave-formula" style="text-align:center; font-size:1.1em; margin:10px 0; background:#f8fafc; padding:10px; border-radius:6px; min-height:40px;"></div>
+
+    <div id="plot-sincos-wave" class="plot-container" style="width:100%; height:350px;"></div>
+</div>
+
+<div class="optional md" data-headline="History and Etymology of Sine and Cosine">
+The concept originates in ancient Indian astronomy. Indian Astronomer \citeauthor{indianastronomer} (476-550 CE) used the Sanskrit *jyā* (“bowstring”) to describe the half-chord of a circle, which is exactly what sine measures geometrically. He needed it to compute planetary positions and predict eclipses in his treatise *\citetitle{indianastronomer}* (\citetitle{indianastronomer}, ch. 1-2). Arab scholars later transliterated this as *jiba*, which, due to the lack of vowels in written Arabic, was misread as *jayb* (“pocket” or “fold”). See the paper \citetitle{indianastronomerconstruction} if you want to know how \citeauthor{indianastronomer} constructed his tables.
+
+In \citeyear{chester1145}, \citeauthor{chester1145}, who also produced the first Latin translation of \citealternativetitle{alkwarizma}'s foundational work on algebra that also inspired the term *algebra* (from 'Al-Jabr'; his personal name also inspired the term *algorithm*), translated *jayb* into the Latin ***sinus*** (“curve,” “bay,” or “fold”).
+
+**Cosine** (“complement's sine”) was later coined by \citeauthor{gunter1620} in his \citeyear{gunter1620} work \citetitle{gunter1620}. It describes the sine of the complementary angle:
+
+$$\sin(\theta) = \cos(90^\circ - \theta)$$
+
+$$\cos(\theta) = \sin\!\left(\tfrac{\pi}{2} - \theta\right)$$
+</div>
+
+<div class="md" data-mathlevel="40" data-optionaltitle="Key Properties of Sine and Cosine">
+### Key Properties of Sine and Cosine
+
+* **Periodicity:** Both repeat every $2\pi$: $\sin(\theta + 2\pi) = \sin\theta$
+* **Pythagorean Identity:** $\sin^2\theta + \cos^2\theta = 1$ (the point always lies on the unit circle)
+* **Symmetry:** $\sin$ is odd, $\cos$ is even: $\sin(-\theta) = -\sin\theta$, $\cos(-\theta) = \cos\theta$
+* **Bounded:** Both always stay between $-1$ and $1$
+* **Derivatives:** $\frac{d}{d\theta}\sin\theta = \cos\theta$, $\frac{d}{d\theta}\cos\theta = -\sin\theta$
+</div>
+
+<div class="md" data-mathlevel="40" data-optionaltitle="How are Sine and Cosine calculated?">
+### How are Sine and Cosine calculated?
+
+Computers evaluate sine and cosine using **Taylor Series** (infinite polynomial approximations):
+
+$$\sin\theta = \theta - \frac{\theta^3}{3!} + \frac{\theta^5}{5!} - \frac{\theta^7}{7!} + \dots \qquad \cos\theta = 1 - \frac{\theta^2}{2!} + \frac{\theta^4}{4!} - \frac{\theta^6}{6!} + \dots$$
+
+The more terms you include, the better the approximation. You can explore this below.
+</div>
+
+<!-- ─── Interactive: Taylor Series Approximation ─── -->
+<div style="background: var(--mn-surface, #fff); padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin: 20px 0;">
+    <p style="color:#64748b; font-size:0.9em;">Increase the number of terms to see how the polynomial converges to the true $\sin$ curve. Near $\theta = 0$ a few terms already track it well, but the match only becomes nearly perfect across the whole $[-2\pi, 2\pi]$ range once you push $N$ up toward the top of the slider — drag it up and watch the polynomial catch up at the edges!</p>
+
+    <div style="margin-bottom:10px;">
+        <strong>Number of Taylor terms $N$:</strong>
+        <input type="range" id="slider-taylor-n" min="1" max="10" step="1" value="1" style="width:250px;">
+        <span id="disp-taylor-n" style="font-family:monospace; font-weight:bold; color:#2563eb;">1</span>
+    </div>
+
+    <div id="taylor-formula" style="text-align:center; font-size:1.1em; margin:10px 0; background:#f8fafc; padding:10px; border-radius:6px; min-height:40px; overflow-x:auto; white-space:nowrap;"></div>
+
+    <div id="plot-taylor" class="plot-container" style="width:100%; height:350px;"></div>
+</div>
+
+<div class="md">
+## Positional Embeddings with Sine and Cosine
+
+The original Transformer paper (\citetitle{vaswani2017attention}) uses sine and cosine to create a unique positional fingerprint based on their position in the text:
+</div>
+
+<div class="topic-block" data-optionaltitle="The sinusoidal positional encoding formula" data-mathlevel="55">
+$$PE_{(\text{pos}, 2i)} = \sin\!\left(\frac{\text{pos}}{10000^{2i/d_\text{model}}}\right), \qquad PE_{(\text{pos}, 2i+1)} = \cos\!\left(\frac{\text{pos}}{10000^{2i/d_\text{model}}}\right)$$
+</div>
+
+<div class="md" data-mathlevel="30" data-optionaltitle="Concrete Example: Nudging the “King”">
+This gives each position a distinct pattern the model can learn to interpret.
+
+## Concrete Example: Nudging the “King”
+Let's say, the word **“king”** is represented by the vector:
+$$\text{king} = [1.688, -0.454, 0, 0]$$
+
+When “king” is at **Position 1**, we calculate a PE vector and add it. This “nudges” the king's position in 4D space.
+</div>
+
+<div class="topic-block" data-optionaltitle="Adding the PE vector to the word vector" data-mathlevel="30">
+$$\text{king}_\text{final} = \begin{pmatrix} 1.688 \\ -0.454 \\ 0 \\ 0 \end{pmatrix} + \begin{pmatrix} \text{PE}_{\text{pos}1, \text{dim}0} \\ \text{PE}_{\text{pos}1, \text{dim}1} \\ \text{PE}_{\text{pos}1, \text{dim}2} \\ \text{PE}_{\text{pos}1, \text{dim}3} \end{pmatrix}$$
+</div>
+
+<div style="margin-bottom: 20px; font-family: sans-serif;">
+    <strong>Move “king” to a different position:</strong> 
+    <input type="range" id="pe-len" min="0" max="10" value="1" oninput="PositionalLab.update(this.value)">
+    <span id="pe-val">Position 1</span>
+</div>
+
+<div id="pe-chart" style="width:100%; height:350px; margin-bottom: 20px; background: var(--mn-surface, #fff); border-radius: 8px; border: 1px solid #e2e8f0;"></div>
+
+<div id="pe-viz-container" style="overflow-x: auto; background: var(--mn-surface, white); border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px;"></div>
+
+<div class="md" data-mathlevel="50" data-optionaltitle="Why do some lines seem straight?">
+### Why do some lines seem straight?
+
+You might notice that **Dim 0** and **Dim 1** wiggle quickly, while **Dim 2** and **Dim 3** look like nearly straight lines. This is intentional:
+
+* **Frequency Scaling:** Each pair of dimensions uses a different frequency. The “speed” of the wave is set by the divisor $10000^{2i/d_\text{model}}$; the frequency $\omega$ is its reciprocal, $\omega = 10000^{-2i/d_\text{model}} = 1/\text{divisor}$, so a larger divisor makes the wave slower.
+* **The “Slow” Dimensions:** For a small $d_\text{model}$ like 4, the second pair of dimensions (indices 2 and 3) has a much larger divisor ($10000^{2/4}=100$), stretching one full cycle out to $2\pi\cdot100\approx630$ positions.
+* **The Purpose:** The fast waves help the model distinguish between immediate neighbors, while the slow waves act like a “slow clock,” helping the model track position across very long sequences.
+
+If you were to expand the slider to **Position 1000**, you would see those straight lines finally start to curve into waves!
+</div>
+
+<div class="md" data-mathlevel="55" data-optionaltitle="Positional Encoding Creates a Manifold, Not Just Labels">
+## Positional Encoding Creates a Manifold, Not Just Labels
+
+The wave plots above show each dimension's projection individually, flat curves on a screen. But the PE formula actually maps each position to a point on a **high-dimensional helix**. The visualization below reconstructs this by plotting the first three PE dimensions as 3D coordinates:
+
+- **Dims 0, 1** (fastest sin/cos pair) trace a **circle**, the cross-section of the helix
+- **Dim 2** (next slower frequency) provides **axial drift**, stretching the circle into a helix
+
+**Adjacent positions are close together.** Neighboring points sit right next to each other on the curve. The model does not memorize “position 5 is special”, nearness is encoded geometrically.
+
+**Translational symmetry.** The **blue segment** (pos 5 to 8) and the **red segment** (pos 105 to 108) have the **same length** (equal chords of the helix), even though each points in a different direction as the helix turns. A fixed offset $k$ corresponds to a fixed rotation matrix $M_k$ independent of absolute position, just like a clock face lets you compute “3 hours from now” regardless of what time it currently is.
+
+**Generalization to unseen lengths.** Because the geometry of “nearby” vs “far away” is baked into the encoding rather than memorized, Transformers can generalize to sequence lengths they were never trained on.
+
+**Try rotating the 3D plot**, from directly above you will see the circular cross-section (Dims 0, 1). From the side you will see the axial drift (Dim 2). The two colored segments always subtend the same arc.
+</div>
+
+<div id="helix-manifold" style="width:100%; height:500px; margin: 20px 0; background: var(--mn-surface, #fff); border-radius:8px; border:1px solid #e2e8f0;"></div>
+
+<div class="md" data-mathlevel="70" data-optionaltitle="The PE Rotation Group">
+## The PE Rotation Group
+
+Recall the rotation matrix for each sine-cosine pair at frequency $\omega$:
+
+$$M_k = \begin{pmatrix} \cos(k\omega) & \sin(k\omega) \\ -\sin(k\omega) & \cos(k\omega) \end{pmatrix}$$
+
+The set $\{M_k : k \in \mathbb{R}\}$ satisfies all four axioms of a **group** — closure, associativity, an identity ($M_0 = I$), and an inverse ($M_{-k}$) — so it is the **circle group** $SO(2)$, the group of all 2D rotations. (For the full four-axiom treatment and the history of the group concept, see the <a href="math_iv">Basic Math IV</a> lesson.) Since a full PE vector is a stack of independent sine-cosine pairs at different frequencies, the complete positional encoding lives in a **product of circle groups, a torus**, the same manifold we visualised as a helix above.
+
+### Why the Group Structure Matters for Attention
+
+1. **“3 apart” is always the same $M_3$**, whether you start at position 2 or position 2000.
+2. **Compositions compose predictably**: “3 forward, then 5 forward” equals “8 forward” ($M_3 \cdot M_5 = M_8$).
+3. **Reversibility**: the model can ask “what was 3 positions *before* me?” via $M_{-3}$.
+
+The attention mechanism learns these rotations through its $Q$ and $K$ linear projections. The group structure guarantees that once the model learns the “shape” of an offset, it **generalises to every position in the sequence for free**. No special circuitry, no lookup tables, just linear algebra riding on top of algebraic symmetry.
+
+**The aha-moment:** Positional encoding doesn't just *label* positions, it gives the model an **algebraic compass** that works identically everywhere in the sequence.
+
+### Reading the Compass Plot
+
+Each **filled dot** is a starting position on the unit circle (determined by its PE angle $\text{pos}\cdot\omega_0$). Each **open dot** is the result after applying $M_k$. The arrow between them is *the same rotation* in every case, the arrow length and arc angle never change, only the starting point moves. This is exactly the translation-invariance that lets a Transformer generalise “3 tokens apart” to any location it has never seen.
+</div>
+
+<div class="md">
+## The Repetition Starburst: One Word, Many Positions
+
+What happens when you repeat the same word hundreds of times in a sequence? The **semantic embedding** is identical every time, but the **positional encoding** nudges each copy to a slightly different point in space.
+
+The plot below places the **raw embedding** of “king” (with no positional encoding) at the center. From it, **hundreds of lines** radiate outward to the final embedding of “king” at each position (0 through 199). The result is a starburst that reveals the geometry of positional encoding itself:
+
+- **Short lines** mean the PE at that position barely moved the vector.
+- **The pattern of directions** shows how the sine/cosine waves systematically sweep the word through embedding space.
+- **No two endpoints are the same**: Every position is unique, even though the word is identical.
+</div>
+
+<div id="repetition-starburst" style="width:100%; height:600px; margin: 20px 0; background: var(--mn-surface, #fff); border-radius:8px; border:1px solid #e2e8f0;"></div>
+
+<div class="optional md" data-headline="History of Positional Embedding Strategies">
+
+The need to encode sequential order is as old as neural sequence modeling itself. **Recurrent networks** like the \citetitle{lstm} and \citealternativetitle{elman1990finding} encoded position *implicitly*, the hidden state accumulated positional context step by step. **Time-Delay Neural Networks** (Waibel et al., 1989) hard-coded local temporal structure through fixed delay windows. When convolutional models entered sequence tasks, \cite[Gehring et al.]{gehring2017convs2s} added learned position embeddings to compensate for convolution's shift-invariance, among the earliest *explicit, additive* position embeddings.
+
+**Sinusoidal encodings (2017).** The \citetitle{vaswani2017attention} faced a new problem: with no recurrence and no convolution, position had to be injected as a pure signal. The authors chose fixed sine/cosine functions at geometrically decreasing frequencies. Because $PE_{\text{pos}+k}$ is a linear function of $PE_{\text{pos}}$, relative offsets are implicitly representable, no learned parameters required.
+
+**Learned absolute embeddings (2018–2019).** \citealternativetitle{firstgpt}, \citealternativetitle{bert}, and \citealternativetitle{gpt2} replaced sinusoids with a trainable embedding matrix. Simple and effective, but unable to generalize beyond the maximum trained length.
+
+**Relative position encodings (2018).** Shaw et al. (\citetitle{shaw2018relative}) argued that what matters is the *distance* between tokens, not their absolute index. A learned bias based on $(i - j)$ is injected into attention logits before softmax, extending the dynamic alignment intuition of \citeauthor{bahdanau2014} to position itself.
+
+**RoPE (2021).** Su et al. (\citetitle{rope2021}) encode absolute position as a **rotation** in the complex plane applied to query and key vectors. Since the dot product of two rotated vectors depends only on the *angle difference*, absolute information naturally yields a relative signal. Now the dominant scheme in open-weight LLMs.
+
+**ALiBi (2022).** Press et al. (\citetitle{alibi2022}) use no positional embeddings at all, just a fixed **linear penalty** proportional to query-key distance, with a different slope per head. Zero learned parameters, strong length extrapolation.
+
+**Length extension.** Techniques like **Position Interpolation** and **YaRN** allow models trained on 4K tokens to operate over 100K+ without retraining, by rescaling or frequency-adjusting existing positional schemes.
+</div>

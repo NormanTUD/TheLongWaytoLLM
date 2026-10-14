@@ -1,0 +1,471 @@
+DIGEST 879f71d6b405de67cbba7477e01735e2
+FNotionsOfSameness
+R2943:2949 Library <> <> lib
+R2967:2972 Traces <> <> lib
+R2999:3008 Coq.Lists.List <> <> lib
+R3018:3030 Coq.Lists.List ListNotations <> mod
+def 3543:3553 <> LiteralSame
+binder 3556:3556 <> A:1
+R3573:3573 NotionsOfSameness <> A:1 var
+binder 3567:3567 <> x:2
+binder 3569:3569 <> y:3
+R3587:3589 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R3586:3586 NotionsOfSameness <> x:2 var
+R3590:3590 NotionsOfSameness <> y:3 var
+def 3604:3618 <> literal_witness
+binder 3621:3621 <> A:4
+R3636:3636 NotionsOfSameness <> A:4 var
+binder 3632:3632 <> x:5
+R3641:3651 NotionsOfSameness <> LiteralSame def
+R3653:3653 NotionsOfSameness <> A:4 var
+R3655:3655 NotionsOfSameness <> x:5 var
+R3657:3657 NotionsOfSameness <> x:5 var
+R3662:3668 Coq.Init.Logic <> eq_refl constr
+def 3930:3944 <> IsomorphismSame
+binder 3947:3947 <> A:6
+binder 3949:3949 <> B:7
+R3969:3976 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R3988:3990 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R3981:3983 Library <> Iso rec
+R3985:3985 NotionsOfSameness <> A:6 var
+R3987:3987 NotionsOfSameness <> B:7 var
+R3991:3994 Coq.Init.Logic <> True ind
+def 4499:4510 <> HomotopySame
+binder 4513:4513 <> A:8
+binder 4515:4515 <> B:9
+R4535:4542 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R4564:4566 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R4547:4559 Library <> HomotopyEquiv rec
+R4561:4561 NotionsOfSameness <> A:8 var
+R4563:4563 NotionsOfSameness <> B:9 var
+R4567:4570 Coq.Init.Logic <> True ind
+rec 4909:4921 <> ApproxWitness
+proj 4992:5006 <> approx_d_le_eps
+binder 4924:4924 <> A:10
+R4940:4943 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4939:4939 NotionsOfSameness <> A:10 var
+R4945:4948 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4944:4944 NotionsOfSameness <> A:10 var
+binder 4935:4935 <> d:11
+binder 4956:4958 <> eps:12
+R4975:4975 NotionsOfSameness <> A:10 var
+binder 4969:4969 <> x:13
+binder 4971:4971 <> y:14
+R5010:5010 NotionsOfSameness <> d:11 var
+R5014:5014 NotionsOfSameness <> y:14 var
+R5012:5012 NotionsOfSameness <> x:13 var
+def 5191:5200 <> ApproxSame
+binder 5203:5203 <> A:17
+R5219:5222 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5218:5218 NotionsOfSameness <> A:17 var
+R5224:5227 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5223:5223 NotionsOfSameness <> A:17 var
+binder 5214:5214 <> d:18
+binder 5235:5237 <> eps:19
+R5254:5254 NotionsOfSameness <> A:17 var
+binder 5248:5248 <> x:20
+binder 5250:5250 <> y:21
+R5269:5281 NotionsOfSameness <> ApproxWitness rec
+R5283:5283 NotionsOfSameness <> A:17 var
+R5285:5285 NotionsOfSameness <> d:18 var
+R5287:5289 NotionsOfSameness <> eps:19 var
+R5291:5291 NotionsOfSameness <> x:20 var
+R5293:5293 NotionsOfSameness <> y:21 var
+def 5637:5644 <> StatSame
+binder 5647:5648 <> D1:22
+binder 5650:5651 <> D2:23
+binder 5653:5653 <> M:24
+R5673:5692 Library <> StatisticalAgreement ind
+R5694:5695 NotionsOfSameness <> D1:22 var
+R5697:5698 NotionsOfSameness <> D2:23 var
+R5700:5700 NotionsOfSameness <> M:24 var
+def 5960:5977 <> ModelTheoreticSame
+R5988:5991 Coq.Init.Datatypes <> list ind
+R5993:5998 Library <> Theory rec
+binder 5980:5984 <> S_all:25
+R6013:6020 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R6042:6044 Coq.Init.Logic <> ::type_scope:'exists'_x_'..'_x_','_x not
+R6025:6035 Library <> CommonModel rec
+R6037:6041 NotionsOfSameness <> S_all:25 var
+R6045:6048 Coq.Init.Logic <> True ind
+prf 6555:6571 <> eq_to_iso_witness
+binder 6583:6583 <> A:26
+R6600:6600 NotionsOfSameness <> A:26 var
+binder 6594:6594 <> x:27
+binder 6596:6596 <> y:28
+R6625:6628 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6608:6618 NotionsOfSameness <> LiteralSame def
+R6620:6620 NotionsOfSameness <> A:26 var
+R6622:6622 NotionsOfSameness <> x:27 var
+R6624:6624 NotionsOfSameness <> y:28 var
+R6629:6643 NotionsOfSameness <> IsomorphismSame def
+R6645:6645 NotionsOfSameness <> A:26 var
+R6647:6647 NotionsOfSameness <> A:26 var
+R6687:6692 Library <> iso_to proj
+R6687:6692 Library <> iso_to proj
+R6687:6692 Library <> iso_to proj
+R6701:6708 Library <> iso_from proj
+R6701:6708 Library <> iso_from proj
+R6729:6739 Library <> iso_to_from proj
+R6729:6739 Library <> iso_to_from proj
+R6774:6784 Library <> iso_from_to proj
+R6774:6784 Library <> iso_from_to proj
+R6697:6698 Coq.Init.Datatypes <> id def
+R6713:6714 Coq.Init.Datatypes <> id def
+R6753:6759 Coq.Init.Logic <> eq_refl constr
+R6798:6804 Coq.Init.Logic <> eq_refl constr
+R6687:6692 Library <> iso_to proj
+R6687:6692 Library <> iso_to proj
+R6687:6692 Library <> iso_to proj
+R6701:6708 Library <> iso_from proj
+R6701:6708 Library <> iso_from proj
+R6729:6739 Library <> iso_to_from proj
+R6729:6739 Library <> iso_to_from proj
+R6774:6784 Library <> iso_from_to proj
+R6774:6784 Library <> iso_from_to proj
+R6697:6698 Coq.Init.Datatypes <> id def
+R6713:6714 Coq.Init.Datatypes <> id def
+R6753:6759 Coq.Init.Logic <> eq_refl constr
+R6798:6804 Coq.Init.Logic <> eq_refl constr
+R6818:6818 Coq.Init.Logic <> I constr
+R6818:6818 Coq.Init.Logic <> I constr
+prf 6916:6938 <> iso_to_homotopy_witness
+binder 6950:6950 <> A:29
+binder 6952:6952 <> B:30
+R6986:6989 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6967:6981 NotionsOfSameness <> IsomorphismSame def
+R6983:6983 NotionsOfSameness <> A:29 var
+R6985:6985 NotionsOfSameness <> B:30 var
+R6990:7001 NotionsOfSameness <> HomotopySame def
+R7003:7003 NotionsOfSameness <> A:29 var
+R7005:7005 NotionsOfSameness <> B:30 var
+R7090:7094 Library <> he_to proj
+R7090:7094 Library <> he_to proj
+R7090:7094 Library <> he_to proj
+R7103:7109 Library <> he_from proj
+R7103:7109 Library <> he_from proj
+R7132:7145 Library <> he_homotopy_to proj
+R7132:7145 Library <> he_homotopy_to proj
+R7171:7186 Library <> he_homotopy_from proj
+R7171:7186 Library <> he_homotopy_from proj
+R7090:7094 Library <> he_to proj
+R7090:7094 Library <> he_to proj
+R7090:7094 Library <> he_to proj
+R7103:7109 Library <> he_from proj
+R7103:7109 Library <> he_from proj
+R7132:7145 Library <> he_homotopy_to proj
+R7132:7145 Library <> he_homotopy_to proj
+R7171:7186 Library <> he_homotopy_from proj
+R7171:7186 Library <> he_homotopy_from proj
+R7211:7211 Coq.Init.Logic <> I constr
+R7211:7211 Coq.Init.Logic <> I constr
+prf 7870:7895 <> homotopy_to_approx_witness
+binder 7907:7907 <> A:31
+R7923:7926 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R7922:7922 NotionsOfSameness <> A:31 var
+R7928:7931 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R7927:7927 NotionsOfSameness <> A:31 var
+binder 7918:7918 <> d:32
+binder 7985:7987 <> eps:33
+R8004:8004 NotionsOfSameness <> A:31 var
+binder 7998:7998 <> x:34
+binder 8000:8000 <> y:35
+R8017:8020 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R8012:8012 NotionsOfSameness <> d:32 var
+R8016:8016 NotionsOfSameness <> y:35 var
+R8014:8014 NotionsOfSameness <> x:34 var
+R8021:8030 NotionsOfSameness <> ApproxSame def
+R8032:8032 NotionsOfSameness <> A:31 var
+R8034:8034 NotionsOfSameness <> d:32 var
+R8036:8038 NotionsOfSameness <> eps:33 var
+R8040:8040 NotionsOfSameness <> x:34 var
+R8042:8042 NotionsOfSameness <> y:35 var
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+R8087:8101 NotionsOfSameness <> approx_d_le_eps proj
+prf 8206:8227 <> approx_to_stat_witness
+binder 8239:8239 <> A:36
+R8255:8258 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R8254:8254 NotionsOfSameness <> A:36 var
+R8260:8263 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R8259:8259 NotionsOfSameness <> A:36 var
+binder 8250:8250 <> d:37
+binder 8312:8314 <> eps:38
+R8331:8331 NotionsOfSameness <> A:36 var
+binder 8325:8325 <> x:39
+binder 8327:8327 <> y:40
+R8361:8364 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R8339:8348 NotionsOfSameness <> ApproxSame def
+R8350:8350 NotionsOfSameness <> A:36 var
+R8352:8352 NotionsOfSameness <> d:37 var
+R8354:8356 NotionsOfSameness <> eps:38 var
+R8358:8358 NotionsOfSameness <> x:39 var
+R8360:8360 NotionsOfSameness <> y:40 var
+R8365:8372 NotionsOfSameness <> StatSame def
+R8374:8374 NotionsOfSameness <> A:36 var
+R8376:8376 NotionsOfSameness <> A:36 var
+R8378:8378 NotionsOfSameness <> A:36 var
+R8423:8430 Library <> sa_intro constr
+R8438:8438 Coq.Init.Logic <> I constr
+R8423:8430 Library <> sa_intro constr
+R8438:8438 Coq.Init.Logic <> I constr
+prf 8934:8954 <> stat_to_model_witness
+binder 8966:8967 <> D1:41
+binder 8969:8970 <> D2:42
+binder 8972:8972 <> M:43
+R8991:8994 Coq.Init.Datatypes <> list ind
+R8996:9001 Library <> Theory rec
+binder 8983:8987 <> S_all:44
+R9025:9028 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9009:9016 NotionsOfSameness <> StatSame def
+R9018:9019 NotionsOfSameness <> D1:41 var
+R9021:9022 NotionsOfSameness <> D2:42 var
+R9024:9024 NotionsOfSameness <> M:43 var
+R9029:9046 NotionsOfSameness <> ModelTheoreticSame def
+R9048:9052 NotionsOfSameness <> S_all:44 var
+def 9166:9187 <> hierarchy_implications
+R9201:9201 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R9256:9262 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+binder 9209:9209 <> A:45
+binder 9211:9211 <> x:46
+binder 9213:9213 <> y:47
+R9233:9236 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9216:9226 NotionsOfSameness <> LiteralSame def
+R9228:9228 NotionsOfSameness <> A:45 var
+R9230:9230 NotionsOfSameness <> x:46 var
+R9232:9232 NotionsOfSameness <> y:47 var
+R9237:9251 NotionsOfSameness <> IsomorphismSame def
+R9253:9253 NotionsOfSameness <> A:45 var
+R9255:9255 NotionsOfSameness <> A:45 var
+R9263:9263 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R9315:9321 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+binder 9271:9271 <> A:48
+binder 9273:9273 <> B:49
+R9295:9298 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9276:9290 NotionsOfSameness <> IsomorphismSame def
+R9292:9292 NotionsOfSameness <> A:48 var
+R9294:9294 NotionsOfSameness <> B:49 var
+R9299:9310 NotionsOfSameness <> HomotopySame def
+R9312:9312 NotionsOfSameness <> A:48 var
+R9314:9314 NotionsOfSameness <> B:49 var
+R9322:9322 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R9387:9393 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+binder 9330:9330 <> A:50
+binder 9332:9332 <> B:51
+binder 9334:9334 <> d:52
+binder 9336:9338 <> eps:53
+binder 9340:9340 <> x:54
+binder 9342:9342 <> y:55
+R9361:9364 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9345:9356 NotionsOfSameness <> HomotopySame def
+R9358:9358 NotionsOfSameness <> A:50 var
+R9360:9360 NotionsOfSameness <> B:51 var
+R9365:9374 NotionsOfSameness <> ApproxSame def
+R9376:9376 NotionsOfSameness <> A:50 var
+R9378:9378 NotionsOfSameness <> d:52 var
+R9380:9382 NotionsOfSameness <> eps:53 var
+R9384:9384 NotionsOfSameness <> x:54 var
+R9386:9386 NotionsOfSameness <> y:55 var
+R9394:9394 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R9455:9462 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+R9529:9529 Coq.Init.Logic <> ::type_scope:x_'/\'_x not
+binder 9402:9402 <> A:56
+binder 9404:9404 <> d:57
+binder 9406:9408 <> eps:58
+binder 9410:9410 <> x:59
+binder 9412:9412 <> y:60
+R9437:9440 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9415:9424 NotionsOfSameness <> ApproxSame def
+R9426:9426 NotionsOfSameness <> A:56 var
+R9428:9428 NotionsOfSameness <> d:57 var
+R9430:9432 NotionsOfSameness <> eps:58 var
+R9434:9434 NotionsOfSameness <> x:59 var
+R9436:9436 NotionsOfSameness <> y:60 var
+R9441:9448 NotionsOfSameness <> StatSame def
+R9450:9450 NotionsOfSameness <> A:56 var
+R9452:9452 NotionsOfSameness <> A:56 var
+R9454:9454 NotionsOfSameness <> A:56 var
+binder 9470:9471 <> D1:61
+binder 9473:9474 <> D2:62
+binder 9476:9476 <> M:63
+binder 9478:9482 <> S_all:64
+R9501:9504 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R9485:9492 NotionsOfSameness <> StatSame def
+R9494:9495 NotionsOfSameness <> D1:61 var
+R9497:9498 NotionsOfSameness <> D2:62 var
+R9500:9500 NotionsOfSameness <> M:63 var
+R9505:9522 NotionsOfSameness <> ModelTheoreticSame def
+R9524:9528 NotionsOfSameness <> S_all:64 var
+ind 10037:10054 <> SilentUpgradeError
+constr 10063:10083 <> SU_treat_approx_as_eq
+constr 10117:10140 <> SU_treat_iso_as_identity
+constr 10171:10192 <> SU_treat_stat_as_proof
+constr 10225:10253 <> SU_treat_consistency_as_truth
+R10094:10111 NotionsOfSameness <> SilentUpgradeError:65 ind
+R10148:10165 NotionsOfSameness <> SilentUpgradeError:65 ind
+R10202:10219 NotionsOfSameness <> SilentUpgradeError:65 ind
+R10256:10273 NotionsOfSameness <> SilentUpgradeError:65 ind
+scheme 10037:10054 <> SilentUpgradeError_rect
+scheme 10037:10054 <> SilentUpgradeError_ind
+scheme 10037:10054 <> SilentUpgradeError_rec
+scheme 10037:10054 <> SilentUpgradeError_sind
+def 10770:10785 <> approx_is_not_eq
+binder 10788:10788 <> A:67
+R10804:10807 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R10803:10803 NotionsOfSameness <> A:67 var
+R10809:10812 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R10808:10808 NotionsOfSameness <> A:67 var
+binder 10799:10799 <> d:68
+binder 10820:10822 <> eps:69
+R10869:10869 NotionsOfSameness <> A:67 var
+binder 10863:10863 <> x:70
+binder 10865:10865 <> y:71
+R10877:10886 NotionsOfSameness <> ApproxSame def
+R10888:10888 NotionsOfSameness <> A:67 var
+R10890:10890 NotionsOfSameness <> d:68 var
+R10892:10894 NotionsOfSameness <> eps:69 var
+R10896:10896 NotionsOfSameness <> x:70 var
+R10898:10898 NotionsOfSameness <> y:71 var
+binder 10873:10873 <> H:72
+R11143:11144 Coq.Init.Logic <> ::type_scope:'~'_x not
+R11145:11155 NotionsOfSameness <> LiteralSame def
+R11157:11157 NotionsOfSameness <> A:67 var
+R11159:11159 NotionsOfSameness <> x:70 var
+R11161:11161 NotionsOfSameness <> y:71 var
+rec 11413:11427 <> IsoCoinsExample
+proj 11436:11445 <> IC_carrier
+proj 11457:11468 <> IC_two_coins
+proj 11535:11554 <> IC_indistinguishable
+proj 11614:11628 <> IC_not_identity
+R11482:11485 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R11472:11481 NotionsOfSameness <> IC_carrier:74 meth
+R11496:11499 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R11486:11495 NotionsOfSameness <> IC_carrier:74 meth
+R11573:11582 NotionsOfSameness <> IC_carrier:74 meth
+binder 11565:11566 <> c1:76
+binder 11568:11569 <> c2:77
+R11585:11587 Library <> Iso rec
+R11589:11598 NotionsOfSameness <> IC_carrier:74 meth
+R11600:11609 NotionsOfSameness <> IC_carrier:74 meth
+R11647:11656 NotionsOfSameness <> IC_carrier:74 meth
+binder 11639:11640 <> c1:79
+binder 11642:11643 <> c2:80
+R11666:11669 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R11661:11663 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R11659:11660 NotionsOfSameness <> c1:79 var
+R11664:11665 NotionsOfSameness <> c2:80 var
+R11670:11674 Coq.Init.Logic <> False ind
+rec 12085:12097 <> StatAgreement
+proj 12106:12115 <> SA_studies
+proj 12132:12137 <> SA_H_0
+proj 12211:12223 <> SA_rejections
+proj 12271:12291 <> SA_assumptions_differ
+R12119:12122 Coq.Init.Datatypes <> list ind
+binder 12234:12234 <> s:85
+R12259:12262 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R12244:12245 Coq.Lists.List <> In def
+R12249:12258 NotionsOfSameness <> SA_studies:83 meth
+R12247:12247 NotionsOfSameness <> s:85 var
+binder 12307:12308 <> s1:87
+binder 12310:12311 <> s2:88
+R12344:12347 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R12328:12329 Coq.Lists.List <> In def
+R12334:12343 NotionsOfSameness <> SA_studies:83 meth
+R12331:12332 NotionsOfSameness <> s1:87 var
+R12364:12367 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R12348:12349 Coq.Lists.List <> In def
+R12354:12363 NotionsOfSameness <> SA_studies:83 meth
+R12351:12352 NotionsOfSameness <> s2:88 var
+rec 12705:12720 <> ModelConsistency
+proj 12729:12739 <> MC_theories
+proj 12758:12772 <> MC_common_model
+proj 12803:12814 <> MC_wrongness
+R12743:12746 Coq.Init.Datatypes <> list ind
+R12748:12753 Library <> Theory rec
+R12776:12786 Library <> CommonModel rec
+R12788:12798 NotionsOfSameness <> MC_theories:91 meth
+rec 13870:13891 <> TransformationTriangle
+proj 13900:13904 <> TT_RA
+proj 13920:13924 <> TT_RB
+proj 13940:13943 <> TT_Z
+proj 13960:13964 <> TT_TA
+proj 13987:13991 <> TT_TB
+proj 14014:14022 <> TT_TA_src
+proj 14053:14061 <> TT_TA_tgt
+proj 14091:14099 <> TT_TB_src
+proj 14130:14138 <> TT_TB_tgt
+R13908:13915 Library <> Codomain rec
+R13928:13935 Library <> Codomain rec
+R13948:13955 Library <> Codomain rec
+R13968:13982 Library <> ViewTranslation rec
+R13995:14009 Library <> ViewTranslation rec
+R14041:14043 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R14026:14034 Library <> VT_source proj
+R14036:14040 NotionsOfSameness <> TT_TA:98 meth
+R14044:14048 NotionsOfSameness <> TT_RA:95 meth
+R14080:14082 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R14065:14073 Library <> VT_target proj
+R14075:14079 NotionsOfSameness <> TT_TA:98 meth
+R14083:14086 NotionsOfSameness <> TT_Z:97 meth
+R14118:14120 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R14103:14111 Library <> VT_source proj
+R14113:14117 NotionsOfSameness <> TT_TB:99 meth
+R14121:14125 NotionsOfSameness <> TT_RB:96 meth
+R14157:14159 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R14142:14150 Library <> VT_target proj
+R14152:14156 NotionsOfSameness <> TT_TB:99 meth
+R14160:14163 NotionsOfSameness <> TT_Z:97 meth
+ax 14336:14368 <> difference_informative_when_known
+R14387:14408 NotionsOfSameness <> TransformationTriangle rec
+binder 14382:14383 <> tt:104
+rec 14998:15013 <> SenseDataExample
+proj 15020:15029 <> sd_carrier
+rec 15048:15065 <> MeasurementExample
+proj 15072:15080 <> m_carrier
+rec 15099:15109 <> MathExample
+proj 15116:15127 <> math_carrier
+rec 15232:15242 <> EqualityRow
+proj 15251:15263 <> ER_sense_data
+proj 15329:15342 <> ER_measurement
+proj 15407:15413 <> ER_math
+R15268:15283 NotionsOfSameness <> SenseDataExample rec
+R15346:15363 NotionsOfSameness <> MeasurementExample rec
+R15424:15434 NotionsOfSameness <> MathExample rec
+rec 15579:15592 <> IsomorphismRow
+proj 15601:15615 <> IsoR_sense_data
+proj 15680:15695 <> IsoR_measurement
+proj 15759:15767 <> IsoR_math
+R15620:15635 NotionsOfSameness <> SenseDataExample rec
+R15699:15716 NotionsOfSameness <> MeasurementExample rec
+R15778:15788 NotionsOfSameness <> MathExample rec
+rec 15932:15942 <> HomotopyRow
+proj 15951:15965 <> HomR_sense_data
+proj 16029:16044 <> HomR_measurement
+proj 16107:16115 <> HomR_math
+R15970:15985 NotionsOfSameness <> SenseDataExample rec
+R16048:16065 NotionsOfSameness <> MeasurementExample rec
+R16126:16136 NotionsOfSameness <> MathExample rec
+rec 16280:16288 <> ApproxRow
+proj 16297:16311 <> AppR_sense_data
+proj 16376:16391 <> AppR_measurement
+proj 16454:16462 <> AppR_math
+R16316:16331 NotionsOfSameness <> SenseDataExample rec
+R16395:16412 NotionsOfSameness <> MeasurementExample rec
+R16473:16483 NotionsOfSameness <> MathExample rec
+rec 16626:16632 <> StatRow
+proj 16641:16656 <> StatR_sense_data
+proj 16720:16736 <> StatR_measurement
+proj 16799:16808 <> StatR_math
+R16661:16676 NotionsOfSameness <> SenseDataExample rec
+R16740:16757 NotionsOfSameness <> MeasurementExample rec
+R16819:16829 NotionsOfSameness <> MathExample rec
+rec 16972:16979 <> ModelRow
+proj 16988:17002 <> ModR_sense_data
+proj 17066:17081 <> ModR_measurement
+proj 17144:17152 <> ModR_math
+R17007:17022 NotionsOfSameness <> SenseDataExample rec
+R17085:17102 NotionsOfSameness <> MeasurementExample rec
+R17163:17173 NotionsOfSameness <> MathExample rec

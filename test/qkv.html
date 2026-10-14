@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention — Watch It Work</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/Temml-Latin.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/temml.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0b0b14;
+            color: #ccc;
+            padding: 20px;
+        }
+        .page { max-width: 1100px; margin: 0 auto; }
+        h1 { color: #aab; font-size: 1.4em; margin-bottom: 6px; }
+        .premise { color: #888; margin-bottom: 30px; font-size: 0.95em; }
+        .scene {
+            position: relative;
+            background: #0e0e1c;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        canvas { display: block; }
+        .panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(10,10,20,0.85);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.8em;
+            max-width: 240px;
+        }
+        .panel .math-line {
+            margin: 4px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid #222;
+        }
+        .panel .math-line:last-child { border: none; }
+        .controls-bar {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 10px 14px;
+            background: #111122;
+            border-top: 1px solid #222;
+            font-size: 0.82em;
+        }
+        .controls-bar label { color: #777; }
+        .controls-bar input[type="range"] { width: 90px; accent-color: #667eea; vertical-align: middle; }
+        .controls-bar select { background: #1a1a2e; color: #ccc; border: 1px solid #333; padding: 2px 6px; border-radius: 3px; }
+        .controls-bar .v { color: #8af; font-family: monospace; min-width: 28px; display: inline-block; }
+        .story {
+            color: #999;
+            font-size: 0.88em;
+            padding: 8px 14px;
+            background: #0d0d1a;
+            border-top: 1px solid #1a1a2a;
+            line-height: 1.5;
+        }
+        .story b { color: #bbc; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <h1>Attention: watch the information flow</h1>
+    <p class="premise">Forget definitions. Here are tokens. Watch how one token decides what to absorb from the others.</p>
+
+    <!-- THE ONE SCENE -->
+    <div class="scene">
+        <canvas id="main" width="1100" height="600"></canvas>
+        <div class="panel" id="mathPanel"></div>
+        <div class="controls-bar">
+            <label>Who's asking?</label>
+            <select id="who" onchange="render()">
+                <option value="0">she</option>
+                <option value="1">threw</option>
+                <option value="2">the</option>
+                <option value="3">ball</option>
+                <option value="4">far</option>
+            </select>
+            <label>W_Q twist:</label>
+            <input type="range" min="-90" max="90" value="15" id="qTwist" oninput="render()">
+            <span class="v" id="qTwist-v"></span>
+            <label>W_K twist:</label>
+            <input type="range" min="-90" max="90" value="-10" id="kTwist" oninput="render()">
+            <span class="v" id="kTwist-v"></span>
+            <label>W_V twist:</label>
+            <input type="range" min="-90" max="90" value="40" id="vTwist" oninput="render()">
+            <span class="v" id="vTwist-v"></span>
+            <label>Focus:</label>
+            <input type="range" min="0.2" max="4" step="0.1" value="1" id="focus" oninput="render()">
+            <span class="v" id="focus-v"></span>
+        </div>
+        <div class="story" id="storyText"></div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('main');
+const ctx = canvas.getContext('2d');
+
+// Tokens with hand-picked 2D embeddings that make semantic sense
+const toks = [
+    { word: 'she',   emb: [2.0, 0.3],  hue: 0 },
+    { word: 'threw', emb: [0.5, -1.8], hue: 200 },
+    { word: 'the',   emb: [-0.3, 0.1], hue: 50 },
+    { word: 'ball',  emb: [1.2, 1.6],  hue: 120 },
+    { word: 'far',   emb: [-1.5, -1.2], hue: 280 }
+];
+
+function color(hue, sat=70, lit=60, alpha=1) {
+    return `hsla(${hue},${sat}%,${lit}%,${alpha})`;
+}
+
+function rot(v, deg) {
+    const r = deg * Math.PI / 180;
+    const c = Math.cos(r), s = Math.sin(r);
+    return [v[0]*c - v[1]*s, v[0]*s + v[1]*c];
+}
+function dot(a, b) { return a[0]*b[0] + a[1]*b[1]; }
+function len(v) { return Math.sqrt(v[0]*v[0]+v[1]*v[1]); }
+function norm(v) { const l = len(v); return l > 0 ? [v[0]/l, v[1]/l] : [0,0]; }
+function lerp(a, b, t) { return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]; }
+function softmax(arr, temp) {
+    const s = arr.map(x => x/temp);
+    const mx = Math.max(...s);
+    const e = s.map(x => Math.exp(x-mx));
+    const sum = e.reduce((a,b)=>a+b);
+    return e.map(x => x/sum);
+}
+
+function render() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const qi = parseInt(document.getElementById('who').value);
+    const qTwist = parseFloat(document.getElementById('qTwist').value);
+    const kTwist = parseFloat(document.getElementById('kTwist').value);
+    const vTwist = parseFloat(document.getElementById('vTwist').value);
+    const focus = parseFloat(document.getElementById('focus').value);
+
+    document.getElementById('qTwist-v').textContent = qTwist + '°';
+    document.getElementById('kTwist-v').textContent = kTwist + '°';
+    document.getElementById('vTwist-v').textContent = vTwist + '°';
+    document.getElementById('focus-v').textContent = focus.toFixed(1);
+
+    // Compute Q, K, V
+    const Q = toks.map(t => rot(t.emb, qTwist));
+    const K = toks.map(t => rot(t.emb, kTwist));
+    const V = toks.map(t => rot(t.emb, vTwist));
+
+    // Scores and weights for selected query
+    const scores = K.map(k => dot(Q[qi], k) / 1.4);
+    const weights = softmax(scores, focus);
+
+    // Output
+    let output = [0, 0];
+    for (let i = 0; i < toks.length; i++) {
+        output[0] += weights[i] * V[i][0];
+        output[1] += weights[i] * V[i][1];
+    }
+
+    // === LAYOUT: Three zones ===
+    // Left: embedding + Q/K space (the "matching" side)
+    // Right: V space + output (the "reading" side)
+    // Middle: the flow of weights connecting them
+
+    const leftCx = 200, leftCy = 300, sc = 70;
+    const rightCx = 880, rightCy = 300;
+    const midX = 540;
+
+    // --- Draw left zone: Q and K vectors ---
+    // Subtle zone label
+    ctx.fillStyle = '#333';
+    ctx.font = '11px system-ui';
+    ctx.fillText('MATCHING (Q·K)', leftCx - 50, 22);
+
+    // Grid
+    drawZoneGrid(leftCx, leftCy, sc, 3.5);
+
+    // Draw all K vectors (muted)
+    toks.forEach((t, i) => {
+        const kp = w2c(K[i], leftCx, leftCy, sc);
+        // K as a small circle at the tip
+        ctx.beginPath();
+        ctx.arc(kp[0], kp[1], i === qi ? 4 : 6, 0, Math.PI*2);
+        ctx.fillStyle = color(t.hue, 50, 50, i === qi ? 0.3 : 0.7);
+        ctx.fill();
+        // thin line from origin
+        ctx.beginPath();
+        ctx.moveTo(leftCx, leftCy);
+        ctx.lineTo(kp[0], kp[1]);
+        ctx.strokeStyle = color(t.hue, 40, 40, 0.3);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // label
+        ctx.fillStyle = color(t.hue, 40, 60, 0.8);
+        ctx.font = '11px system-ui';
+        ctx.fillText('k:' + t.word, kp[0]+8, kp[1]+4);
+    });
+
+    // Draw the query vector (bold, from the selected token)
+    const qp = w2c(Q[qi], leftCx, leftCy, sc);
+    ctx.beginPath();
+    ctx.moveTo(leftCx, leftCy);
+    ctx.lineTo(qp[0], qp[1]);
+    ctx.strokeStyle = color(toks[qi].hue, 80, 65);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    drawArrowTip(ctx, leftCx, leftCy, qp[0], qp[1], color(toks[qi].hue, 80, 65));
+    ctx.fillStyle = color(toks[qi].hue, 80, 70);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Q:' + toks[qi].word, qp[0]+8, qp[1]-6);
+
+    // Show angle arcs between Q and each K
+    toks.forEach((t, i) => {
+        if (i === qi) return;
+        const kp2 = w2c(K[i], leftCx, leftCy, sc);
+        const angleQ = Math.atan2(-(Q[qi][1]), Q[qi][0]);
+        const angleK = Math.atan2(-(K[i][1]), K[i][0]);
+        // Draw a small arc showing the angle
+        const arcR = 25 + i * 8;
+        ctx.beginPath();
+        ctx.arc(leftCx, leftCy, arcR, Math.min(angleQ, angleK), Math.max(angleQ, angleK));
+        ctx.strokeStyle = color(t.hue, 50, 55, 0.4 + weights[i] * 0.6);
+        ctx.lineWidth = 1 + weights[i] * 3;
+        ctx.stroke();
+    });
+
+    // --- Draw right zone: V vectors and output ---
+    ctx.fillStyle = '#333';
+    ctx.font = '11px system-ui';
+    ctx.fillText('READING (V)', rightCx - 30, 22);
+
+    drawZoneGrid(rightCx, rightCy, sc, 3.5);
+
+    // V vectors
+    toks.forEach((t, i) => {
+        const vp = w2c(V[i], rightCx, rightCy, sc);
+        ctx.beginPath();
+        ctx.moveTo(rightCx, rightCy);
+        ctx.lineTo(vp[0], vp[1]);
+        ctx.strokeStyle = color(t.hue, 50, 55, 0.3 + weights[i] * 0.7);
+        ctx.lineWidth = 1 + weights[i] * 4;
+        ctx.stroke();
+        // circle sized by weight
+        ctx.beginPath();
+        ctx.arc(vp[0], vp[1], 4 + weights[i] * 18, 0, Math.PI*2);
+        ctx.fillStyle = color(t.hue, 60, 55, 0.2 + weights[i] * 0.6);
+        ctx.fill();
+        ctx.strokeStyle = color(t.hue, 60, 60, 0.8);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = color(t.hue, 50, 70);
+        ctx.font = '11px system-ui';
+        ctx.fillText(t.word, vp[0]+10+weights[i]*12, vp[1]+4);
+    });
+
+    // Output vector
+    const op = w2c(output, rightCx, rightCy, sc);
+    ctx.beginPath();
+    ctx.moveTo(rightCx, rightCy);
+    ctx.lineTo(op[0], op[1]);
+    ctx.strokeStyle = '#d4a0ff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    drawArrowTip(ctx, rightCx, rightCy, op[0], op[1], '#d4a0ff');
+    ctx.beginPath();
+    ctx.arc(op[0], op[1], 8, 0, Math.PI*2);
+    ctx.fillStyle = '#d4a0ff';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('output', op[0]+12, op[1]+4);
+
+    // --- Draw middle: the flow (weights as streams) ---
+    // Show each token as a horizontal band, with a "pipe" whose thickness = weight
+    const bandH = H / (toks.length + 1);
+    toks.forEach((t, i) => {
+        const y = bandH * (i + 0.8);
+        const w = weights[i];
+
+        // Left dot (K side)
+        const kp = w2c(K[i], leftCx, leftCy, sc);
+        // Right dot (V side)
+        const vp = w2c(V[i], rightCx, rightCy, sc);
+
+        // Draw a flowing curve from K position to V position through the middle
+        const thickness = 1 + w * 20;
+        ctx.beginPath();
+        ctx.moveTo(kp[0], kp[1]);
+        ctx.bezierCurveTo(
+            midX - 60, kp[1],
+            midX + 60, vp[1],
+            vp[0], vp[1]
+        );
+        ctx.strokeStyle = color(t.hue, 55, 55, 0.15 + w * 0.7);
+        ctx.lineWidth = thickness;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // Weight label in the middle
+        if (w > 0.05) {
+            const labelX = midX;
+            const labelY = (kp[1] + vp[1]) / 2;
+            ctx.fillStyle = color(t.hue, 40, 70, 0.6 + w * 0.4);
+            ctx.font = `${10 + w * 6}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.fillText((w * 100).toFixed(0) + '%', labelX, labelY);
+            ctx.textAlign = 'left';
+        }
+    });
+
+    // --- Token word list in the center top ---
+    ctx.fillStyle = '#555';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('"' + toks.map(t => t.word).join('  ') + '"', midX, H - 15);
+    ctx.textAlign = 'left';
+
+    // --- Update math panel ---
+    updateMathPanel(qi, scores, weights, output);
+
+    // --- Update story ---
+    const topIdx = weights.indexOf(Math.max(...weights));
+    const storyEl = document.getElementById('storyText');
+    storyEl.innerHTML = `<b>"${toks[qi].word}"</b> is asking: "who's relevant to me?" → ` +
+        `Its Q vector aligns most with <b>"${toks[topIdx].word}"</b>'s K vector (angle is smallest). ` +
+        `So the output is pulled mostly toward <b>"${toks[topIdx].word}"</b>'s V vector ` +
+        `(${(weights[topIdx]*100).toFixed(0)}% weight). ` +
+        `Twist the W_Q/W_K knobs to change <i>what counts as relevant</i>. Twist W_V to change <i>what gets read</i>.`;
+}
+
+function drawZoneGrid(cx, cy, sc, range) {
+    ctx.strokeStyle = '#181830';
+    ctx.lineWidth = 0.5;
+    for (let i = -Math.floor(range); i <= Math.floor(range); i++) {
+        ctx.beginPath(); ctx.moveTo(cx + i*sc, cy - range*sc); ctx.lineTo(cx + i*sc, cy + range*sc); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - range*sc, cy + i*sc); ctx.lineTo(cx + range*sc, cy + i*sc); ctx.stroke();
+    }
+    ctx.strokeStyle = '#2a2a45';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, cy - range*sc); ctx.lineTo(cx, cy + range*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - range*sc, cy); ctx.lineTo(cx + range*sc, cy); ctx.stroke();
+}
+
+function w2c(v, cx, cy, sc) {
+    return [cx + v[0]*sc, cy - v[1]*sc];
+}
+
+function drawArrowTip(ctx, x1, y1, x2, y2, col) {
+    const angle = Math.atan2(y2-y1, x2-x1);
+    const hl = 10;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - hl*Math.cos(angle-0.35), y2 - hl*Math.sin(angle-0.35));
+    ctx.lineTo(x2 - hl*Math.cos(angle+0.35), y2 - hl*Math.sin(angle+0.35));
+    ctx.fill();
+}
+
+function updateMathPanel(qi, scores, weights, output) {
+    const panel = document.getElementById('mathPanel');
+    let html = '';
+    html += `<div class="math-line" id="mp1"></div>`;
+    html += `<div class="math-line" id="mp2"></div>`;
+    html += `<div class="math-line" style="font-family:monospace;font-size:0.85em;color:#8af;">`;
+    html += `scores: [${scores.map(s=>s.toFixed(2)).join(', ')}]<br>`;
+    html += `weights: [${weights.map(w=>(w*100).toFixed(1)+'%').join(', ')}]<br>`;
+    html += `output: [${output[0].toFixed(2)}, ${output[1].toFixed(2)}]`;
+    html += `</div>`;
+    panel.innerHTML = html;
+
+    try {
+        temml.render(String.raw`\alpha_j = \text{softmax}\!\left(\frac{\mathbf{q} \cdot \mathbf{k}_j}{\sqrt{d_k}}\right)`, document.getElementById('mp1'), {displayMode:false});
+        temml.render(String.raw`\mathbf{o} = \textstyle\sum_j \alpha_j \mathbf{v}_j`, document.getElementById('mp2'), {displayMode:false});
+    } catch(e) {}
+}
+
+// Init
+window.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>

@@ -1,0 +1,941 @@
+3. perceptronimagewiring (Zeile 2968)
+   URL: https://lcc-cit.github.io/CS123-CourseMaterials/LectureNotes/CS123-Topic04-1-History.html
+   Problem: Die Vorlesungsnotizen selbst sind CC-BY-SA 4.0 lizenziert, ABER das 
+            konkrete Bild "Frank Rosenblatt working on wiring for a perceptron" 
+            hat KEINE klare Lizenzangabe. Fotograf: "Unknown Photographer" (1960).
+            Cornell Aeronautical Laboratory-Foto, vermutlich proprietär.
+   Status: UNCLEAR - Lizenz des Bildes selbst nicht eindeutig geklärt.
+
+4. mccullochpittsimage (Zeile 2501)
+   URL: https://www.historyofinformation.com/detail.php?id=3908
+   Problem: Die Webseite historyofinformation.com (Jeremy Norman) ist © 2004-2026 
+            und enthält keine CC-Lizenz. Die tatsächlichen Bilder sind extern 
+            (infoproc.blogspot.com, alchetron.com). Die Quellenbilder sind nicht 
+            klar lizenziert.
+   Status: UNCLEAR - Lizenz der tatsächlichen Bilder nicht eindeutig.
+
+=== ⚠ EMPFEHLUNG: KRITISCHE EINTRÄGE ÜBERPRÜFEN ===
+==================================================
+
+Folgende Keys sollten vor Verwendung nochmal geprüft oder ersetzt werden:
+
+3. perceptronimagewiring -> Lizenz des Bildes klären, ggf. anderes Foto verwenden
+4. mccullochpittsimage   -> Originalbilder direkt suchen und lizenzieren
+
+=== METHODE ===
+=============
+Jede URL wurde via Wikimedia Commons / Wikipedia Schnittstelle geprüft.
+Lizenzangaben stammen direkt von den File-Pages auf commons.wikimedia.org
+und en.wikipedia.org (Stand: August 2026).
+
+=== ORIGIN OF LIFE (untold_history.php, Stand: September 2026) ===
+====================================================================
+5. img_miller_urey_apparatus
+   URL: https://commons.wikimedia.org/wiki/File:Miller-Urey_experiment-en.svg
+   Lizenz: CC BY-SA 3.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: YassineMrabet
+   Lokal: miller_urey_apparatus.png (SVG via Inkscape nach PNG konvertiert, 1200x1117)
+   Status: OK - Lizenz klar (CC BY-SA 3.0)
+
+6. img_hammerhead_ribozyme
+   URL: https://commons.wikimedia.org/wiki/File:Full_length_hammerhead_ribozyme.png
+   Lizenz: CC BY-SA 3.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: William G. Scott
+   Lokal: hammerhead_ribozyme.png (402x668)
+   Status: OK - Lizenz klar (CC BY-SA 3.0)
+
+7. vestonice_wolf_bone
+   URL: https://commons.wikimedia.org/wiki/File:Vl%C4%8D%C3%AD_radius.jpg
+   Lizenz: CC BY-SA 3.0 (via Commons, bibliographiert in literature.js als wolfbonephoto)
+   Autor: J3n6
+   Lokal: vestonice_wolf_bone.jpg (800x502)
+   Status: OK - Lizenz klar (CC BY-SA 3.0)
+
+=== MESOZOIC / K-PG (untold_history.php, Stand: Oktober 2026) ===
+=========================================================
+1. img_tyrannosaurus_rex_mount
+   URL: https://commons.wikimedia.org/wiki/File:Palais_de_la_Decouverte_Tyrannosaurus_rex_p1050042.jpg
+   Lizenz: CC BY-SA 3.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: David Monniaux
+   Lokal: tyrannosaurus_rex_mount.jpg (2400x1552)
+   Genutzt in: untold_history.php § The Age of Dinosaurs and the Shifting Continents
+   Status: OK - Lizenz klar (CC BY-SA 3.0)
+
+2. img_archaeopteryx_durbed
+   URL: https://commons.wikimedia.org/wiki/File:Archaeopteryx_lithographica_by_durbed.jpg
+   Lizenz: CC BY-SA 3.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: Durbed
+   Lokal: archaeopteryx_durbed.jpg (3509x2550)
+   Genutzt in: untold_history.php § The Age of Dinosaurs and the Shifting Continents
+   Status: OK - Lizenz klar (CC BY-SA 3.0)
+
+3. img_pangaea_200ma
+   URL: https://commons.wikimedia.org/wiki/File:Pangaea_200Ma.jpg
+   Lizenz: CC BY-SA 4.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: Fama Clamosa
+   Lokal: pangaea_200ma.jpg (1519x759)
+   Genutzt in: untold_history.php § The Age of Dinosaurs and the Shifting Continents
+   Status: OK - Lizenz klar (CC BY-SA 4.0)
+
+4. img_chicxulub_impact_artist
+   URL: https://commons.wikimedia.org/wiki/File:Chicxulub_impact_-_artist_impression.jpg
+   Lizenz: Public domain (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: Donald E. Davis
+   Lokal: chicxulub_impact_artist.jpg (2785x2228)
+   Genutzt in: untold_history.php § The Meteor That Ended the Age of Dinosaurs
+   Status: OK - Lizenz klar (Public domain)
+
+5. img_kpge_iridium_anomaly
+   URL: https://commons.wikimedia.org/wiki/File:Cretaceous_paleogene_iridium_anomaly_3.png
+   Lizenz: CC BY-SA 4.0 (via Commons API extmetadata, Feld LicenseShortName)
+   Autor: Merikanto
+   Lokal: kpge_iridium_anomaly.png (1421x722)
+   Genutzt in: untold_history.php § The Meteor That Ended the Age of Dinosaurs
+   Status: OK - Lizenz klar (CC BY-SA 4.0)
+
+=== MARGINNOTE IMAGES (September 2026) ===
+=============================================
+Vier \marginfig-Bilder, neu hinzugefügt zu security_inference / evaluation /
+law_regulation / reasoning. Alle via Commons-API geprüft (Feld
+LicenseShortName), Stand September 2026. (Zwei weitere — Zauberlehrling und
+Blondin — wurden nachträglich wieder entfernt.)
+
+8. procession_trojan_horse
+   URL: https://commons.wikimedia.org/wiki/File:Giovanni_Domenico_Tiepolo_-_The_Procession_of_the_Trojan_Horse_in_Troy_-_WGA22382.jpg
+   Lizenz: Public domain (Gemälde von Giovanni Domenico Tiepolo, 1773)
+   Autor: Giovanni Domenico Tiepolo (1727–1804)
+   Lokal: procession_trojan_horse.jpg (1280px-Thumb)
+   Genutzt in: security_inference.php § Data Poisoning
+   Status: OK - Public domain
+
+9. canary_coal_mine
+   URL: https://commons.wikimedia.org/wiki/File:Canary_coal_mine.jpg
+   Lizenz: Public domain (U.S. Bureau of Mines, 1928)
+   Autor: George McCaa, U.S. Bureau of Mines
+   Lokal: canary_coal_mine.jpg (1000x750)
+   Genutzt in: evaluation.php § Benchmark Contamination (canary strings)
+   Status: OK - Public domain
+
+10. justitia_statue
+    URL: https://commons.wikimedia.org/wiki/File:Schwetzingen_Garten_Hauptachse_Statue-Justitia_20240402_152904.jpg
+    Lizenz: CC BY-SA 4.0 (Attribution: Rigorius)
+    Autor: Rigorius (Upload), Foto 2024
+    Lokal: justitia_statue.jpg (1280px-Thumb, Hochformat)
+    Genutzt in: law_regulation.php (Justitia)
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption vorhanden
+
+11. theseus_minotaur_mosaic
+    URL: https://commons.wikimedia.org/wiki/File:Theseus_and_the_Minotaur_mosaic_Room_42_(Mau-Overbeck_1884_plans)_House_of_the_Labyrinth_Pompeii.jpg
+    Lizenz: Public domain (röm. Mosaik, Casa del Labirinto, Pompeji)
+    Autor: antike Künstler, Pompeji (Foto 19. Jh.-Reproduktion)
+    Lokal: theseus_minotaur_mosaic.jpg (1280px-Thumb)
+    Genutzt in: reasoning.php § Tree of Thoughts
+    Status: OK - Public domain
+
+=== MARGINNOTE IMAGES, ROUND 2 (September 2026) ===
+=====================================================
+Vier weitere \marginfig-Bilder für speech_audio / hallucinations /
+rag / vectorsearch. Alle via Commons-API geprüft (Feld LicenseShortName),
+Stand September 2026. Ziel: Bilder, die das Verständnis wirklich fördern
+(echtes Spektrogramm, Pareidolie-Beispiel, externes Gedächtnis, Embedding-Raum).
+
+12. spectrogram_speech_open
+    URL: https://commons.wikimedia.org/wiki/File:Long-window_reassigned_spectrogram_of_speech.png
+    Lizenz: CC BY-SA 3.0 (via Commons API)
+    Autor: Kelly Fitz
+    Lokal: spectrogram_speech_open.png (1076x759, Original)
+    Genutzt in: speech_audio.php § 1. Spectrograms (and Mel-spectrograms)
+    Status: OK - CC BY-SA 3.0, Namensnennung im Caption + Commons-Link
+
+13. pareidolia_jupiter_face
+    URL: https://commons.wikimedia.org/wiki/File:Just_in_Time_for_Halloween,_NASA%27s_Juno_Mission_Spots_Eerie_%22Face%22_on_Jupiter_(PIA25727).jpg
+    Lizenz: Public domain (NASA/JPL, PIA25727)
+    Autor: NASA/JPL-Caltech/SwRI/MSSS; Farbbearbeitung Vladimir Tarasov
+    Lokal: pareidolia_jupiter_face.jpg (1280px-Thumb, Hochformat)
+    Genutzt in: hallucinations.php § The Problem: Why AI Lies to You
+    Status: OK - Public domain (Bildverarbeitung im Caption genannt)
+
+14. library_card_catalog
+    URL: https://commons.wikimedia.org/wiki/File:Card_catalog_at_the_Indiana_State_Library_-_interior_view_of_catalog_cards.jpg
+    Lizenz: CC BY-SA 4.0 (via Commons API)
+    Autor: TBurmeister (WMF)
+    Lokal: library_card_catalog.jpg (1280px-Thumb, Hochformat)
+    Genutzt in: rag.php § What is RAG?
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption + Commons-Link
+
+15. word2vec_embedding_tsne
+    URL: https://commons.wikimedia.org/wiki/File/2016_02_mini_embedding.png
+    Lizenz: CC BY-SA 4.0 (via Commons API)
+    Autor: Ewulczyn (WMF)
+    Lokal: word2vec_embedding_tsne.png (864x864, Original)
+    Genutzt in: vectorsearch.php § 2. Semantic Search (Dense Vector Search)
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption + Commons-Link
+
+=== FOLD-CUT BEISPIEL (origami.php, September 2026) ===
+====================================================
+16. foldedkoch_img
+    URL: https://commons.wikimedia.org/wiki/File:FoldedKoch.gif
+    Lizenz: CC BY-SA 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: Greg Egan (Upload 2023-07-19, "own work")
+    Lokal: folded_koch.gif (506x506, 302 Frames, 2.0 MB)
+    Genutzt in: origami.php § The Fold-and-Cut Theorem (optionaler Block)
+    Status: OK - Lizenz klar (CC BY-SA 4.0), Namensnennung im Caption
+            (Autor + Lizenz + Commons-Link über literature.js)
+    Hinweis: Ursprünglich war der Schwan-GIF von erikdemaine.org/foldcut
+            hotgelinkt; die Seite enthält KEINE Lizenzangabe (Default:
+            "all rights reserved"). Durch dieses freie Bild ersetzt.
+
+=== INCEPTIONISM / DECONV / RNN (September 2026) ===
+=====================================================
+Bilder für die neuen Lektionen inceptionism.php / deconvolution.php /
+recurrent_networks.php. Alle per HTTP-200 + Lizenzangabe der Quellseite
+geprüft; Inline-Attribution im jeweiligen Figure-Caption.
+
+17. inceptionism_noise_to_banana
+    URL: https://research.google/blog/inceptionism-going-deeper-into-neural-networks/
+    Lizenz: CC BY 4.0 (Google Inc.; Blog-Update 13.07.2015)
+    Lokal: noise_to_banana.png (640x259)
+    Genutzt in: inceptionism.php § Gradient Ascent on a Class
+    Status: OK - CC BY 4.0, attribuiert im Caption
+
+18. inceptionism_ibis / sky_arrow / funny_animals / noise_to_banana /
+    classvis / dumbbells / dream_map
+    URL: wie 17 (gleiche Seite, eigene Abbildungen)
+    Lizenz: CC BY 4.0 (Google Inc.)
+    Lokal: inceptionism_classvis.png (640x375), inceptionism_dumbbells.png
+           (490x118), inceptionism_dream_map.png (640x534), noise_to_banana.png
+           (640x259), inceptionism_ibis.png (640x216),
+           inceptionism_sky_arrow.png (640x172),
+           inceptionism_funny_animals.png (640x172)
+    Genutzt in: inceptionism.php (Class-Visualizations-Grid, Dumbbells-marginfig,
+                Dream Map, noise-to-banana, Layer-by-Layer [ibis],
+                Cloud-Feedback [sky_arrow], Feature-Remix [funny_animals])
+    Status: OK - CC BY 4.0, attribuiert via \cite[...]{mordvintsev2015inceptionism}
+            im Caption. HINWEIS: MIT-Places-Bilder der Seite sind bewusst NICHT
+            verwendet. ibis.png ist ein Composite: Originalfoto von Zachi Evenor,
+            Verarbeitung von Günther Noack — beide im Caption genannt.
+
+19. deconv_style_artifacts / style_clean / deepdream_jitter
+    URL: https://distill.pub/2016/deconv-checkerboard/
+    Lizenz: CC BY 2.0 (eigene Abbildungen der Distill-Autoren; "figures reused
+            from other sources" fallen NICHT unter diese Lizenz)
+    Lokal: deconv_style_artifacts.png (246x70), deconv_style_clean.png (246x72),
+           deconv_deepdream_jitter.png (448x224)
+    Genutzt in: deconvolution.php (Style-Transfer-Vergleich, DeepDream-Jitter)
+    Status: OK - CC BY 2.0, attribuiert im Caption
+    Hinweis: fix_*_boat.png / fix_*_deer.png sind nur 32x32 px und wurden
+            verworfen; im_sample_* der Radford/Dosovitskiy-Figures sind fremde
+            Abbildungen und wurden bewusst NICHT übernommen.
+
+20. rnn_unrolled
+    URL: https://commons.wikimedia.org/wiki/File:Recurrent_neural_network_unfold.svg
+    Lizenz: CC BY-SA 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: fdeloche
+    Lokal: rnn_unrolled.svg
+    Genutzt in: recurrent_networks.php § Unrolling: One Network, Many Copies
+    Status: OK - CC BY-SA 4.0, Autor + Commons-Link im Caption
+
+21. perceptron_smithsonian
+    URL: https://ronkowitz.blogspot.com/2017/11/perceptron.html
+    Lizenz: UNCLEAR - Foto des Mark I Perceptron im Smithsonian (National Museum
+             of History and Technology, März 1968), republiciert auf dem Blog
+             "One-Page Schoolhouse" (Ron Kowitz, 2017). EXIF-Beschreibung:
+             "Artificial neural network, Mark I Perceptron on exhibition at the
+             National Museum of History and Technology, March 1968. 1987.0".
+             Auf der Blogseite kein CC-Lizenzhinweis.
+    Lokal: perceptron_smithsonian.jpg (1600x853)
+    Genutzt in: history.php § The Perceptron and the First AI Winter (Hype 1958)
+    Status: UNCLEAR - Quellseite via \cite[Kowitz, 2017]{ronkowitz2017perceptron}
+             im Caption zitiert; Original-Smithsonian-Lizenz vor Weiterverwendung
+             ggf. klären.
+
+22. cosmic_web_foam
+    URL: https://commons.wikimedia.org/wiki/File:Cosmic_web.jpg
+    Lizenz: CC BY-SA 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: Volker Springel / Max-Planck-Institute for Astrophysics (MPA Garching)
+    Hinweis: Frame aus den Data-Visualization-Movies "Movies of large-scale
+             structure in the Universe" (https://wwwmpa.mpa-garching.mpg.de/galform/data_vis/,
+             geprüft HTTP 200). Commons-Upload-Datum 2019-12-13 (Jahr im
+             literature.js-Eintrag cosmic_web_foam_image).
+    Lokal: cosmic_web_foam.jpg (678x452)
+    Genutzt in: atlas.php § The Atlas (flaches Foto im "Cosmic web"-Zoom der
+             Cosmic journey)
+    Status: OK - CC BY-SA 4.0, Autor + Commons-Link im Credit (atlas.php Intro),
+             Quelle via \cite{cosmic_web_foam_image} zitiert.
+
+23. transformer_architecture
+    URL (Quelle): https://arxiv.org/abs/1706.03762 (geprüft HTTP 200)
+    URL (Datei):  https://commons.wikimedia.org/wiki/File:Attention_Is_All_You_Need_-_Encoder-decoder_Architecture.png (geprüft HTTP 200)
+    Lizenz: CC BY-SA 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: Ashish Vaswani et al. (Google)
+    Hinweis: Figur 1 (Encoder-Decoder-Architektur) aus dem Paper "Attention
+             Is All You Need" (arXiv:1706.03762, 2017). Commons-Credit:
+             "Provided proper attribution is provided, Google hereby grants
+             permission to reproduce the tables and figures in this paper
+             solely for use in journalistic or scholarly works."
+    Lokal: transformer_architecture.png (1520x2239)
+    Genutzt in: atlas.php § The Atlas (Bild im "The transformer"-Stopp der
+             Cosmic journey)
+    Status: OK - CC BY-SA 4.0, Autor (Google) + Commons-Link im Credit
+             (atlas.php Intro), Quelle via \cite{transformer_attention_figure}
+             zitiert.
+
+24. starfield_eso
+    URL (Quelle): https://www.eso.org/public/images/eso0932a/ (geprüft HTTP 200)
+    URL (Datei):  https://commons.wikimedia.org/wiki/File:ESO_-_Milky_Way.jpg (geprüft HTTP 200)
+    Lizenz: CC BY 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: ESO / S. Brunier
+    Hinweis: 360°-Aitoff-Panorama der gesamten Himmelskugel (Milky-Way-Band
+             quer über das Bild), Teil des GigaGalaxy-Zoom-Projekts (IYA2009).
+             ESO-Lizenz: Abbildungen frei nutzbar mit klarer, sichtbarer
+             Quellenangabe. Lokale Datei ist von 6000x3000 auf 2048x1024
+             heruntergerechnet (Hintergrundtextur, kleineres Dateivolumen).
+    Lokal: starfield_eso.jpg (2048x1024)
+    Genutzt in: atlas.php § The Atlas (scene.background — Sternenhimmel als
+             Hintergrund statt flachem Schwarz)
+    Status: OK - CC BY 4.0, Autor (ESO/S. Brunier) + Commons-Link im Credit
+             (atlas.php Intro), Quelle via \cite{starfield_eso_image} zitiert.
+
+25. solsys_planet_textures
+    URL (Quelle): https://www.solarsystemscope.com/textures/ (geprüft HTTP 200)
+    Dateien (Commons, je geprüft HTTP 200): Solarsystemscope texture 2k
+             <planet>.jpg — mercury, venus_surface, earth_daymap, mars,
+             jupiter, saturn, uranus, neptune
+    Lizenz: CC BY 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: Solar System Scope (basierend auf NASA-Impact-/Elevationsdaten)
+    Hinweis: Äquirektangulare 2K-Oberflächentexturen (2048x1024) der acht
+             Planeten. Lokale Dateien von 2048x1024 auf 1024x512
+             heruntergerechnet (kleineres Dateivolumen; Planeten sind in der
+             Solar-System-Ansicht klein). Sonne bleibt Glow-Sprite. Der
+              Hauptglobus (Erde + Mond) nutzt inzwischen earth_texture.jpg /
+              moon_texture.png, s. Eintrag 27.
+    Lokal: solsys_{mercury,venus,earth,mars,jupiter,saturn,uranus,neptune}.jpg
+             (je 1024x512)
+    Genutzt in: atlas.js § buildCelestial (Material-Map der acht Planeten)
+    Status: OK - CC BY 4.0, Quelle via \cite{solsys_planet_textures} im
+             Credit (atlas.php Intro) zitiert.
+
+27. earth_moon_cc_textures (Hauptglobus: Erde + Mond)
+    URL (Quelle): https://www.solarsystemscope.com/textures/ (geprüft HTTP 200)
+    Dateien (geprüft HTTP 200): 8k_earth_daymap.jpg, 2k_moon.jpg
+    Lizenz: CC BY 4.0 (Solar System Scope, basierend auf NASA-Daten)
+    Autor: Solar System Scope
+    Hinweis: Äquirektangulare Oberflächentexturen. Lokale Dateien:
+             earth_texture.jpg (4096x2048, aus der 8k-Quelle 8192x4096
+             heruntergerechnet, High-Quality-JPEG ~1 MB) und moon_texture.png
+             (1024x512, von 2048x1024 heruntergerechnet; der Mond ist klein im
+             Bild). Ersetzen die frühere prozedurale Erd-Karte
+             (drawEarthCanvas, entfernt) bzw. ranger7_moon.jpg.
+    Lokal: earth_texture.jpg, moon_texture.png
+    Genutzt in: atlas.js § buildEarth (Erde) + § buildMoon (Mond)
+     Status: OK - CC BY 4.0, Quelle via \cite{earth_moon_cc_textures} im
+              Credit (atlas.php, Sektion unter der Karte) zitiert.
+
+28. earth_night_lights (Erd-Tags/Nachts-Zyklus: Stadtlichter)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:City_Lights_2012_-_Flat_map.jpg
+    Lizenz: Public Domain (NASA VIIRS Day/Night Band, 2012-Composite)
+    Autor: NASA / NOAA
+    Hinweis: Äquirektanguläre Nachtlicht-Karte (12150x6075, lokal auf
+             4096x2048 heruntergerechnet). Wird in atlas.js § buildEarth als
+             nightMap im ShaderMaterial geladen; blendet mit der Tag-Textur
+             basierend auf der Sonnenrichtung (UTC-synchronisiert).
+    Lokal: earth_night.jpg (4096x2048)
+    Genutzt in: atlas.js § buildEarth (ShaderMaterial nightMap)
+    Status: OK - Public Domain (NASA), keine Lizenz-Zitation erforderlich.
+
+29. galaxy_photos (Galaxien-Sprites im Weltraum)
+    Quellen (alle via Wikimedia Commons, geprüft HTTP 200):
+      - NGC 2683: NASA/ESA Hubble (Public Domain)
+      - NGC 55: ESO 0914a (CC BY 4.0)
+      - NGC 2403: NASA/ESA Hubble (Public Domain)
+      - NGC 1300: NASA/ESA Hubble (Public Domain)
+      - NGC 300: ESO (CC BY 4.0)
+    Hinweis: Äquirektangulare/Quadratische Galaxienfotos, lokal auf 512x512
+             heruntergerechnet. Werden in atlas.js § buildCelestial als
+             Sprite-Texturen mit AdditiveBlending geladen (5 Bilder für 9
+             Sprites, zyklisch). Fallback: prozedurale Spiral-Textur.
+    Lokal: galaxy_1.jpg … galaxy_5.jpg (je 512x512)
+    Genutzt in: atlas.js § buildCelestial (Galaxien-Sprites)
+    Status: OK - Public Domain (NASA) / CC BY 4.0 (ESO).
+
+30. m87_blackhole_image (Event Horizon Telescope: Schwarzes Loch M87*)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Black_hole_-_Messier_87.jpg
+    Lizenz: CC BY 4.0 (Event Horizon Telescope Collaboration)
+    Autor: Event Horizon Telescope Collaboration
+    Hinweis: Erstes direktes Bild eines Schwarzen-Loch-Schattens (2019).
+             Wird in atlas.js § tickBlackHole als Crossfade-Ziel am Ende der
+             Stern-Todes-Phase gezeigt.
+    Lokal: m87_real.jpg (2,4 MB)
+    Genutzt in: atlas.js § tickBlackHole (Crossfade-Phase)
+    Status: OK - CC BY 4.0, Quelle via \cite{m87_blackhole_image} im
+             Credit (atlas.php) zitiert.
+
+31. crab_nebula_image (Krabbennebula, Überrest von SN 1054)
+    URL (Quelle): https://en.wikipedia.org/wiki/SN_1054
+    Lizenz: Public Domain (NASA / ESA / Hubble Space Telescope)
+    Autor: NASA / ESA / Hubble Space Telescope
+    Hinweis: Supernova-Überrest von SN 1054 (beobachtet 1054 n. Chr.).
+             Wird in atlas.js § tickBlackHole am Ende der Supernova-Phase
+             gezeigt, um den sichtbaren Überrest eines Sterns darzustellen.
+    Lokal: crab_nebula.jpg (14 MB)
+    Genutzt in: atlas.js § tickBlackHole (Supernova-Überrest-Phase)
+    Status: OK - Public Domain (NASA), keine Lizenz-Zitation erforderlich.
+
+=== AI MUSIC & VIDEO GENERATION (music_video_generation.php, Stand: September 2026) ===
+====================================================================
+32. midi_keyboard_img (Alesis Q25 MIDI-Controller)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Alesis_Q25_MIDI_Controller.jpg
+    Lizenz: CC BY-SA 4.0
+    Autor: Melissa Ursula Dawn Goldsmith
+    Lokal: midi_keyboard.jpg (auf 1280px verkleinert, ~150 KB)
+    Genutzt in: music_video_generation.php (MIDI = Musik als Daten)
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption via \cite{midi_keyboard_img}
+
+33. oscilloscope_waveform_img (Oszilloskop-Wellenform)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Oscilloscope_sine_square.jpg
+    Lizenz: Public Domain
+    Autor: Xato
+    Lokal: oscilloscope_waveform.jpg (auf 1280px verkleinert, ~205 KB)
+    Genutzt in: music_video_generation.php (PCM / Wellenform)
+    Status: OK - Public Domain
+
+34. cd_compact_disc_img (Compact Disc)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Compact_Disc.png
+    Lizenz: Public Domain
+    Autor: liamz2r
+    Lokal: cd_compact_disc.jpg (PNG-Scan 5662x5680 -> JPG 1000px, ~100 KB)
+    Genutzt in: music_video_generation.php (CD / Red Book / 44,1 kHz)
+    Status: OK - Public Domain
+
+35. audio_spectrogram_img (Audio-Spektrogramm)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Audio_spectrogram_sonic_visualiser.png
+    Lizenz: CC BY-SA 4.0
+    Autor: Sagenat2
+    Lokal: audio_spectrogram.png (1101x569, ~263 KB)
+    Genutzt in: music_video_generation.php (MP3 / psychoakustisch / MDCT)
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption via \cite{audio_spectrogram_img}
+
+36. vinyl_lp_record_img (12-Zoll-Vinyl-LP)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:12in-Vinyl-LP-Record-Angle.jpg
+    Lizenz: Public Domain
+    Autor: Evan-Amos
+    Lokal: vinyl_lp_record.jpg (auf 1280px verkleinert, ~142 KB)
+    Genutzt in: music_video_generation.php (analoge Audioformate)
+    Status: OK - Public Domain
+
+37. film_strip_35mm_img (35-mm-Filmstreifen)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:35mm_Polyester_Film_Strip_Stock.jpg
+    Lizenz: CC BY 3.0
+    Autor: mannyisdead (DeviantArt)
+    Lokal: film_strip_35mm.jpg (auf 1400px verkleinert, ~491 KB)
+    Genutzt in: music_video_generation.php (analoges Video / Kino)
+    Status: OK - CC BY 3.0, Namensnennung im Caption via \cite{film_strip_35mm_img}
+
+38. vhs_cassette_img (VHS-Videokassette)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:VHS_videocassette_-_front.jpg
+    Lizenz: CC BY-SA 4.0
+    Autor: LoMit
+    Lokal: vhs_cassette.jpg (auf 1280px verkleinert, ~112 KB)
+    Genutzt in: music_video_generation.php (VHS / analoges Heimvideo)
+    Status: OK - CC BY-SA 4.0, Namensnennung im Caption via \cite{vhs_cassette_img}
+
+39. h264_coding_structure_img (H.264/AVC-Codierstruktur)
+    URL (Quelle): https://commons.wikimedia.org/wiki/File:Vcl_structure.jpg
+    Lizenz: Public Domain
+    Autor: Alexandre Rebollal Lucas
+    Lokal: h264_coding_structure.jpg (~69 KB)
+    Genutzt in: music_video_generation.php (Wie Videocodecs funktionieren)
+    Status: OK - Public Domain
+
+=== ALCHEMY (untold_history.php, Stand: September 2026) ===
+====================================================================
+Sechs Bilder für den neuen Abschnitt "#### Alchemy: The Displaced Root of
+Chemistry" (unter "### The Chemistry of Computation"). Alle via
+Commons-API (Feld LicenseShortName) geprüft, Stand September 2026.
+
+40. img_paracelsus_portrait
+    URL: https://commons.wikimedia.org/wiki/File:Paracelsus-03.jpg
+    Lizenz: Public Domain (via Commons API extmetadata, Feld LicenseShortName)
+    Autor: A. Hirschvogel
+    Lokal: paracelsus_portrait.jpg (662x999, Original)
+    Genutzt in: untold_history.php § Alchemy (Paracelsus)
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+41. img_jabir_alembic
+    URL: https://commons.wikimedia.org/wiki/File:Drawing_and_description_of_Alembic_,_by_Jabir_Ibn_Hayyan_in_8th_century.jpg
+    Lizenz: Public Domain (via Commons API)
+    Autor: Jabir ibn Hayyan
+    Lokal: jabir_alembic.jpg (567x442, Original)
+    Genutzt in: untold_history.php § Alchemy (Islamische Golden Age)
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+42. img_alchemist_studio
+    URL: https://commons.wikimedia.org/wiki/File:An_Alchemist_in_His_Studio_-_DPLA_-_6d56eba7861bee9e66825fc5590aa1b3.jpg
+    Lizenz: Public Domain (via Commons API)
+    Autor: Thomas Wyck (attr.), ca. 1616–1677
+    Lokal: alchemist_in_his_studio.jpg (5842x6636 -> 1280x1454, ~363 KB)
+    Genutzt in: untold_history.php § Alchemy (Das Labor / Glas)
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+43. img_libavius_alembics
+    URL: https://commons.wikimedia.org/wiki/File:Alembics_from_Andreas_Libavius_Alchymia.png
+    Lizenz: Public Domain (via Commons API)
+    Autor: Andreas Libavius (Alchymia, 1597)
+    Lokal: libavius_alembics.png (729x973, Original)
+    Genutzt in: untold_history.php § Alchemy (Das Glas des Labors)
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+44. img_flaming_heart
+    URL: https://commons.wikimedia.org/wiki/File:The_Flaming_Heart_(Alchemical_and_rosicrucian_compendium,_c._1760).png
+    Lizenz: Public Domain (via Commons API)
+    Autor: Anonymous (verschiedene Mitwirkende)
+    Lokal: flaming_heart_alchemical.jpg (1217x1215, PNG->JPG ~470 KB)
+    Genutzt in: untold_history.php § Alchemy (Der Great Work / Philosophers Stone)
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+45. img_merlin_enchanteur
+    URL: https://commons.wikimedia.org/wiki/File:Merlin_(illustration_from_middle_ages).jpg
+    Lizenz: Public Domain (via Commons API, Feld LicenseShortName)
+    Autor: Unknown (französische Miniatur, 13. Jh.; Robert de Boron, Merlin en prose)
+    Lokal: merlin_enchanteur.jpg (642x700, Original)
+    Genutzt in: untold_history.php § Alchemy (Einleitung / "failed magic")
+    Status: OK - Public Domain, Namensnennung im Caption via literature.js
+
+46. cosmic_web_texture
+    URL: https://commons.wikimedia.org/wiki/File:Cosmic_web_texture_(10_Gly_span).png (geprüft HTTP 200)
+    Lizenz: CC BY-SA 4.0 (via Commons API, Feld LicenseShortName)
+    Autor: Unmismoobjetivo
+    Hinweis: "Cosmic web texture (10 Gly span)" - Visualisierung der großräumigen
+             Struktur (Filamente aus Dunkler Materie + Galaxien über 10
+             Gigalightjahre). Commons-Upload-Datum 2025-08-09 (Jahr im
+             literature.js-Eintrag cosmic_web_texture_image). Original 15000x15000
+             (quadratisch); hier auf den zentralen 2:1-Streifen 2048x1024
+             zugeschnitten, weil die Kugel-Skybox eine quadratische Textur sonst
+             2:1 strecken würde.
+    Lokal: cosmic_web_texture.png (2048x1024, PNG)
+    Genutzt in: atlas.php § The Atlas (Skybox im "Cosmic web"-Zoom der Cosmic journey)
+    Status: OK - CC BY-SA 4.0, Autor + Commons-Link im Credit (atlas.php Intro),
+             Quelle via \cite{cosmic_web_texture_image} zitiert.
+
+47. ranger7_impact
+    URL: https://commons.wikimedia.org/wiki/File:Photograph_from_Ranger_VII_Spacecraft_Just_before_Impact_on_the_Moon_-_DPLA_-_b9de03ac9d95d193a4343e9c06b84cc8.jpg (geprüft HTTP 200)
+    Lizenz: Public Domain (via Commons API, Feld LicenseShortName)
+    Autor: U.S. Senate, Committee on Aeronautical and Space Sciences (via Digital
+             Public Library of America)
+    Hinweis: Ranger-7-Fotografie der Mondoberfläche kurz vor dem Aufprall
+             (31. Juli 1964) - das höchste-aufgelöste Mondbild seiner Zeit.
+             Original 4052x3274; hier 1920x1551.
+    Lokal: ranger7_impact.jpg (1920x1551, JPG)
+    Genutzt in: untold_history.php § From the Moon to the GPU (Space Image Processing)
+    Status: OK - Public Domain, Autor + Commons-Link im Caption,
+             Quelle via \cite{img_ranger7_impact} zitiert.
+
+48. ranger7_guericke
+    URL: https://commons.wikimedia.org/wiki/File:Guericke_Crater_as_seen_by_Ranger_7.jpg (geprüft HTTP 200)
+    Lizenz: Public Domain (via Commons API, Feld LicenseShortName)
+    Autor: NASA / JPL-Caltech
+    Hinweis: Ranger-7-B-Camera-Aufnahme des Guericke-Kraters (11.5 S, 14.1 W,
+             63 km) aus 1335 km Distanz, 8,5 min vor dem Aufprall (31. Juli 1964);
+             dunkler, flacher Boden von Mare Nubium. Schwarz-Weiß (Original).
+    Lokal: ranger7_guericke.jpg (685x720, JPG, s/w)
+    Genutzt in: untold_history.php § From the Moon to the GPU (Space Image Processing)
+    Status: OK - Public Domain, Autor + Commons-Link im Caption,
+             Quelle via \cite{img_ranger7_guericke} zitiert.
+
+49. budassi_universe
+    URL: https://commons.wikimedia.org/wiki/File:Logarhitmic_radial_photo_of_the_universe_by_pablo_budassi_9MFK.jpg (geprüft HTTP 200)
+    Lizenz: CC BY-SA 3.0 (via Commons API, Feld LicenseShortName)
+    Autor: Pablo Carlos Budassi (Own work)
+    Hinweis: Künstlerische Darstellung des observable Universums in logarithmischem
+             radialen Maßstab: Sonnenzentrum (innere/äußere Planeten, Kuipergürtel,
+             Oort-Wolke), dann Alpha Centauri, Perseus-Arm, Milchstraße, Andromeda,
+             nahe Galaxien, Cosmic Web, am Rand CMB + Big Bang. Commons-Upload-Datum
+             2012-12-21 (Jahr im literature.js-Eintrag budassi_universe_image).
+             Original 4288x4288; hier 2048x2048.
+    Lokal: universe_radial_budassi.jpg (2048x2048, JPG)
+    Genutzt in: atlas.php § The Atlas (Big-Bang-Stop der Cosmic journey) und
+              untold_history.php
+    Status: OK - CC BY-SA 3.0, Autor + Commons-Link im Credit,
+             Quelle via \cite{budassi_universe_image} zitiert.
+
+=== LOSS LANDSCAPE (loss_landscape.php, Stand: Oktober 2026) ===
+====================================================================
+50. titan_topo (titan_contour_map)
+    URL: https://commons.wikimedia.org/wiki/File:First_topographic_map_of_Titan-CassiniNASA-PIA16849.jpg (geprüft HTTP 200)
+    Lizenz: Public Domain (via Commons API, Feld LicenseShortName)
+    Autor: NASA/JPL-Caltech/ASI/JHUAPL/Cornell/Weizmann
+    Hinweis: Erste Topografie-Konturkarte des Saturnmonds Titan (Cassini, 2013).
+             Dient als Metapher für die "Landschaft" = Höhenlinien des Verlusts.
+    Lokal: titan_topo.jpg (2197x2197, JPG)
+    Genutzt in: loss_landscape.php § hero / "What is a loss landscape"
+    Status: OK - Public Domain, Autor + Commons-Link im Caption,
+             Quelle via \cite{titan_contour_map} zitiert.
+
+51. saddle_hyperbolic_paraboloid (hyperbolic_paraboloid_saddle)
+    URL: https://commons.wikimedia.org/wiki/File:Hyperbolic_paraboloid_quadric.png (geprüft HTTP 200)
+    Lizenz: CC0 (via Commons API, Feld LicenseShortName)
+    Autor: Rectas
+    Hinweis: Hyperbolisches Paraboloid z = x^2 - y^2 — die kanonische
+             "Sattelfläche". Genau die Form, an der man Sattelpunkte
+             im 2-D-Verlust abliest (Aufwölbung in x, Einbeulung in y).
+    Lokal: saddle_hyperbolic_paraboloid.png (1080x1080, PNG)
+    Genutzt in: loss_landscape.php § saddle points
+    Status: OK - CC0 (Public Domain), Autor + Commons-Link im Caption,
+             Quelle via \cite{hyperbolic_paraboloid_saddle} zitiert.
+
+52. paraboloids_comparison
+    URL: https://commons.wikimedia.org/wiki/File:Hyperbolic_vs_elliptic_paraboloid.png (geprüft HTTP 200)
+    Lizenz: CC BY-SA 3.0 (via Commons API, Feld LicenseShortName)
+    Autor: Snorri95 (Wikimedia Commons)
+    Hinweis: Elliptisches (Becken/Minimum) vs. hyperbolisches (Sattel)
+             Paraboloid nebeneinander — der visuelle Kern von "Minimum vs. Sattel".
+    Lokal: paraboloids_comparison.png (929x281, PNG)
+    Genutzt in: loss_landscape.php § saddle points (Marginfigur)
+    Status: OK - CC BY-SA 3.0, Autor + Commons-Link im Caption.
+             (Kein eigener literature.js-Key; die Sattelfläche wird via
+              \cite{hyperbolic_paraboloid_saddle} zitiert, die Bildquelle im
+              Marginfig-Caption als Commons-Link genannt.)
+
+53. loss_landscape_resnet56_noskip (Li et al., 2018 — Figure 1a)
+    URL: https://github.com/tomgoldstein/loss-landscape (arXiv HTML mirror:
+         https://arxiv.org/html/1712.09913v3/figures/surf/noshortLogRotatedLower.png)
+    Lizenz: MIT (für Code+Figures-Repo tomgoldstein/loss-landscape; die
+            Figuren wurden zur Veröffentlichung in NeurIPS 2018 unter
+            CC-BY-Attribution gestellt; arXiv HTML spiegelt die Figuren
+            unter perpetual non-exclusive distribution).
+    Autor: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer, Tom Goldstein
+    Hinweis: Figure 1a — Loss-Oberfläche ResNet-56 OHNE Skip-Connections
+             (chaotisches Terrain, Testfehler ~13% auf CIFAR-10).
+             Filter-normalisierte 2-D-Richtungsprojektion.
+    Lokal: loss_landscape_resnet56_noskip.png
+    Genutzt in: loss_landscape.php § hero figure (without-skip panel)
+    Status: OK - MIT/CC-BY-Attribution, Quelle via
+             \cite{li2018losslandscape} zitiert, Autoren + Repo-Link im Caption.
+
+54. loss_landscape_resnet56_skip (Li et al., 2018 — Figure 1b)
+    URL: https://github.com/tomgoldstein/loss-landscape (arXiv HTML mirror:
+         https://arxiv.org/html/1712.09913v3/figures/surf/shortHighResLog.png)
+    Lizenz: MIT (Repo) / CC-BY-Attribution (NeurIPS 2018 proceedings).
+    Autor: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer, Tom Goldstein
+    Hinweis: Figure 1b — Loss-Oberfläche ResNet-56 MIT Skip-Connections
+             (eine glatte konvexe Becken-Struktur, Testfehler ~6%).
+             Identische Architektur + Training wie Figur 1a; einziger
+             Unterschied = An-/Abwesenheit der Skip-Connections.
+    Lokal: loss_landscape_resnet56_skip.png
+    Genutzt in: loss_landscape.php § hero figure (with-skip panel)
+    Status: OK - MIT/CC-BY-Attribution, Quelle via
+             \cite{li2018losslandscape} zitiert, Autoren + Repo-Link im Caption.
+
+55. loss_landscape_resnet110_noskip (Li et al., 2018 — Figure 4a)
+    URL: https://github.com/tomgoldstein/loss-landscape (arXiv HTML mirror:
+         https://arxiv.org/html/1712.09913v3/figures/surf/notresnet110.png)
+    Lizenz: MIT (Repo) / CC-BY-Attribution (NeurIPS 2018 proceedings).
+    Autor: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer, Tom Goldstein
+    Hinweis: Figure 4a — Loss-Oberfläche ResNet-110 OHNE Skip-Connections.
+             Zeigt wie das Terrain mit der Tiefe vollständig in "chaotic
+             behavior" kollabiert.
+    Lokal: loss_landscape_resnet110_noskip.png
+    Genutzt in: loss_landscape.php § Aha #4 — Skip-Verbindungen als
+             topologische Chirurgie
+    Status: OK - MIT/CC-BY-Attribution, Quelle via
+             \cite{li2018losslandscape} zitiert.
+
+56. loss_landscape_densenet121 (Li et al., 2018 — Figure 4b)
+    URL: https://github.com/tomgoldstein/loss-landscape (arXiv HTML mirror:
+         https://arxiv.org/html/1712.09913v3/figures/surf/densenet121.png)
+    Lizenz: MIT (Repo) / CC-BY-Attribution (NeurIPS 2018 proceedings).
+    Autor: Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer, Tom Goldstein
+    Hinweis: Figure 4b — Loss-Oberfläche DenseNet-121 (alle Schichten
+             skip-connected). Glatt und ohne erkennbare Non-Convexity,
+             bestätigt Li et al.s Befund, dass Skip-Verbindungen jede
+             Art von Tiefe "reparieren".
+    Lokal: loss_landscape_densenet121.png
+    Genutzt in: loss_landscape.php § Aha #4 (alternativer Beleg, DenseNet)
+    Status: OK - MIT/CC-BY-Attribution, Quelle via
+             \cite{li2018losslandscape} zitiert.
+
+=== QAI / NILSSON BILDER (history.php + untold_history.php, Stand: Oktober 2026) ===
+==================================================
+Quelle-Text: Nils J. Nilsson, "The Quest for Artificial Intelligence"
+(https://ai.stanford.edu/~nilsson/QAI/qai.pdf, \cite{nilsson1984qai}).
+Alle Bilder via Commons-API geprüft (Feld LicenseShortName), Stand Oktober 2026.
+
+57. img_walter_tortoise
+   URL: https://commons.wikimedia.org/wiki/File:Cybernetic_Tortoise_by_William_Grey_Walter_c_1950_(Ank_Kumar).jpg
+   Lizenz: CC BY-SA 4.0
+   Autor: Ank Kumar (Foto des Science-Museum-Group-Objekts, c. 1950)
+   Lokal: grey_walter_tortoise.jpg (1000x750)
+   Genutzt in: history.php § "The Electric Tortoise: Machina speculatrix (1936)"
+   Status: OK - Lizenz klar (CC BY-SA 4.0)
+
+58. img_kirsch_baby
+   URL: https://commons.wikimedia.org/wiki/File:NBSFirstScanImage.jpg
+   Lizenz: Public domain
+   Autor: Russell A. Kirsch (NBS, 1957; Scan seines Sohnes Walden, 176x176)
+   Lokal: kirsch_baby_1957.jpg (821x1000)
+   Genutzt in: untold_history.php § "From a Baby's Face to the GPU"
+   Status: OK - Public Domain (US-Bundesbehörde, NBS/NIST)
+
+59. img_widrow_adaline
+   URL: https://commons.wikimedia.org/wiki/File:Bernard_Widrow_with_ADALINE.jpg
+   Lizenz: Public domain
+   Autor: Stanford Today magazine, (c) 1963 by the Board of Trustees of Leland Stanford Junior University
+   Lokal: widrow_adaline.jpg (1000x689)
+   Genutzt in: history.php § "The ADALINE: An Engineer's Neural Network (1959)"
+   Status: OK - Public Domain
+
+60. img_warren_weaver
+   URL: https://commons.wikimedia.org/wiki/File:Warren_Weaver.jpg
+   Lizenz: Public domain
+   Autor: Donald Cooksey (1940, Cooksey-142)
+   Lokal: warren_weaver.jpg (800x640)
+   Genutzt in: history.php § "Machine Translation: The Longest-Running Bet"
+   Status: OK - Public Domain
+
+=== FRÜHE KI-VORLÄUFER (history.php, Stand: Oktober 2026) ===
+=================================================
+Quelle-Text: Wikipedia (Brazen head / Mechanical Turk / Zhang Heng / Pygmalion) +
+Thomas Browne, Pseudodoxia Epidemica VII.xvii (penelope.uchicago.edu).
+Alle Bilder via Commons-API geprüft (Feld LicenseShortName), Stand Oktober 2026.
+
+61. img_brazen_head
+   URL: https://commons.wikimedia.org/wiki/File:Friar_Bacon's_Brazen_Head.png
+   Lizenz: Public domain
+   Autor: Anonymous (English woodblock engraver), aus Robert Greene's The Honorable Historie of Frier Bacon (1630)
+   Lokal: brazen_head.jpg (1200x778)
+   Genutzt in: history.php § "The Brazen Head: the first question-answering machine (c. 1125)"
+   Status: OK - Public Domain (Holzschnitt, 17. Jh.)
+
+62. img_brazen_head_pub
+   URL: https://commons.wikimedia.org/wiki/File:The_Brazen_Head_pub_exterior.jpg
+   Lizenz: CC BY-SA 4.0
+   Autor: Matthewvetter (2022)
+   Lokal: brazen_head_pub.jpg (500x667)
+   Genutzt in: history.php § "The Brazen Head" (Pub, Dublin)
+   Status: OK - Lizenz klar (CC BY-SA 4.0)
+
+63. img_pygmalion_galatea
+   URL: https://commons.wikimedia.org/wiki/File:Pygmalion_and_Galatea_by_Jean-Léon_Gérôme_(Metropolitan_Museum_of_Art).jpg
+   Lizenz: CC BY-SA 4.0
+   Autor: Jean-Léon Gérôme (Gemälde, c. 1890); Foto: Chris Olszewski (Kgbo, 2021), Metropolitan Museum of Art
+   Lokal: pygmalion_galatea.jpg (700x904)
+   Genutzt in: history.php § "Pygmalion and Galatea: the dream of the created being (c. 8 BCE)"
+   Status: OK - Lizenz klar (CC BY-SA 4.0)
+
+64. img_mechanical_turk
+   URL: https://commons.wikimedia.org/wiki/File:Racknitz_-_The_Turk_3.jpg
+   Lizenz: Public domain (PD-Art, 1789)
+   Autor: Joseph Racknitz (1789), aus Buch über Kempelens Schachautomaten (Humboldt University Library)
+   Lokal: mechanical_turk.jpg (1200x1093)
+   Genutzt in: history.php § "The Mechanical Turk: the chess machine that fooled the world (1770)"
+   Status: OK - Public Domain (PD-Art)
+
+65. img_zhang_heng_seismoscope
+    URL: https://commons.wikimedia.org/wiki/File:PSM_V29_D320_Ancient_chinese_choko_seismoscope_from_136_a_d.jpg
+    Lizenz: Public domain (PD-US, 1886)
+    Autor: Illustration aus Popular Science Monthly, Vol. 29 (1886)
+    Lokal: zhang_heng_seismoscope.jpg (600x716)
+    Genutzt in: history.php § "Zhang Heng's seismoscope: the first instrument that sensed the world (132 CE)"
+    Status: OK - Public Domain (1886 Illustration)
+
+=== MEMORY PALACE / MNEMONICS (memorypalace.php, Stand: Oktober 2026) ===
+================================================================================
+
+66. giordano_bruno_mnemonic
+    URL: https://commons.wikimedia.org/wiki/File:GiordanoBrunomnemonic.gif
+    Lizenz: Public domain (PD-Art / PD-old-100, aus Cantus Circæus, Paris 1582)
+    Autor: Diagramm aus Giordano Brunos Cantus Circæus (Paris, 1582)
+    Lokal: giordano_bruno_mnemonic.gif (496x685)
+    Genutzt in: memorypalace.php § "The method of loci"
+    Status: OK - Public Domain (1582 Diagramm)
+
+67. giordano_bruno_portrait
+    URL: https://commons.wikimedia.org/wiki/File:Earlierbruno.jpg
+    Lizenz: Public domain (PD-Art / PDM, 1715 Stich)
+    Autor: Stich aus N. H. Gundling, Neue Bibliothec (Frankfurt & Leipzig, 1715), Fig. 38
+    Lokal: giordano_bruno_portrait.jpg (383x503)
+    Genutzt in: memorypalace.php § "Giordano Bruno: memory made three-dimensional"
+    Status: OK - Public Domain (1715 Stich)
+
+68. frances_yates
+    URL: https://commons.wikimedia.org/wiki/File:Frances_Yates_1924.jpg
+    Lizenz: Public domain (PD-UK, Foto 1924)
+    Autor: unbekannter Fotograf (1924)
+    Lokal: frances_yates.jpg (474x465)
+    Genutzt in: memorypalace.php § "Frances Yates: the scholarly spine"
+    Status: OK - Public Domain (1924 Foto)
+
+=== ALGORITHM AS A CONCEPT (algorithm_concept.php, Stand: Oktober 2026) ===
+================================================================================
+
+69. euclid_thevet
+    URL: https://commons.wikimedia.org/wiki/File:Euclid_by_Andre_Thevet_1584.webp
+    Lizenz: Public domain (PD-Art / PD-old-70, 1584 Zeichnung)
+    Autor: André Thevet (1584)
+    Lokal: euclid_thevet.webp (1039x1600)
+    Genutzt in: algorithm_concept.php § "The first non-trivial algorithm: Euclid (c. 300 BC)"
+    Status: OK - Public Domain (1584 Zeichnung)
+
+70. eratosthenes
+    URL: https://commons.wikimedia.org/wiki/File:Eratosthenes.jpg
+    Lizenz: Public domain (PD-Art / PD-old-70, laterer Stich)
+    Autor: unbekannter Stichkünstler
+    Lokal: eratosthenes.jpg (2495x3614)
+    Genutzt in: algorithm_concept.php § "Another shape of algorithm: the Sieve of Eratosthenes (c. 240 BC)"
+    Status: OK - Public Domain (Stich)
+
+71. hilbert_1907
+    URL: https://commons.wikimedia.org/wiki/File:David_Hilbert,_1907.jpg
+    Lizenz: Public domain (Foto, aus Amer. J. of Math. 1907)
+    Autor: unbekannter Fotograf (1907)
+    Lokal: hilbert_1907.jpg (1185x1695)
+    Genutzt in: algorithm_concept.php § "The question that built everything: the Entscheidungsproblem (1928)"
+    Status: OK - Public Domain (1907 Foto)
+
+72. turing_machine_2a
+    URL: https://commons.wikimedia.org/wiki/File:Turing_machine_2a.svg
+    Lizenz: Public domain (Diagramm, nach Kleene 1952)
+    Autor: User:Nynexman4464 (en.wikipedia), abgeleitet von Kleene (1952)
+    Lokal: turing_machine_2a.svg (vektor)
+    Genutzt in: algorithm_concept.php § "1936: two machines, one answer"
+    Status: OK - Public Domain (Diagramm)
+
+=== MARKET FOR INFORMATION (information_market.php, Stand: Oktober 2026) ===
+================================================================================
+
+73. relation_1609
+    URL: https://commons.wikimedia.org/wiki/File:Relation_Aller_Fuernemmen_und_gedenckwuerdigen_Historien_(1609).jpg
+    Lizenz: Public domain (PD-old, Scan der Universitätsbibliothek Heidelberg)
+    Autor: Original Johann Carolus (Straßburg, 1605/1609); Scan UB Heidelberg
+    Lokal: relation_1609.jpg (1024x1235)
+    Genutzt in: information_market.php § "News becomes a commodity: the Fugger network (16th c.)"
+    Status: OK - Public Domain (Anmerkung: Straßburger Relation 1609, nicht selbst ein Fugger-Blatt — im Text als "das Genre" benannt)
+
+74. coffee_house_1674
+    URL: https://commons.wikimedia.org/wiki/File:A_coffee_house_in_the_time_of_Charles_II,_1474.png
+    Lizenz: Public domain (PD-old-70, Stich 1674)
+    Autor: unbekannter Stichkünstler (1674)
+    Lokal: coffee_house_1674.png (900x600)
+    Genutzt in: information_market.php § "The coffee-house public sphere"
+    Status: OK - Public Domain (1674 Stich)
+
+75. encyclopedie_title
+    URL: https://commons.wikimedia.org/wiki/File:Encyclopedie_de_D'Alembert_et_Diderot_-_Premiere_Page_-_ENC_1-NA5.jpg
+    Lizenz: Public domain (PD-old-100, Scan)
+    Autor: Diderot & d'Alembert (Hrsg.); Beiträger
+    Lokal: encyclopedie_title.jpg (3133x5120)
+    Genutzt in: information_market.php § "The Encyclopédie: the first attempt to compile everything"
+    Status: OK - Public Domain (1751 Titelblatt)
+
+76. paul_otlet
+    URL: https://commons.wikimedia.org/wiki/File:Paul_Otlet_à_son_bureau.jpg
+    Lizenz: Public domain (PD-old, Foto 1937)
+    Autor: Mundaneum
+    Lokal: paul_otlet.jpg (1353x905)
+    Genutzt in: information_market.php § "Paul Otlet and the Mundaneum: the library that wanted to be the world"
+    Status: OK - Public Domain (1937 Foto)
+
+77. palais_mondial_1930
+    URL: https://commons.wikimedia.org/wiki/File:Paul_Otlet_et_Henri_La_Fontaine_devant_les_portes_du_Palais_Mondial.jpg
+    Lizenz: Public domain (PD-Art, Foto 1930)
+    Autor: Mundaneum
+    Lokal: palais_mondial_1930.jpg (847x1194)
+    Genutzt in: information_market.php § "1934: the paper internet"
+    Status: OK - Public Domain (1930 Foto)
+
+=== MEMEX CHAIN (untold_history.php § "The pre-history: the Memex and hypertext (1945–1968)", Stand: Oktober 2026) ===
+================================================================================
+
+78. memex_diagram
+    URL: https://commons.wikimedia.org/wiki/File:The_Memex_(3002477109).jpg
+    Lizenz: Public domain (PD, laut Commons File-Page; Life-Magazin-Illustration, Sept 1945)
+    Autor: Time Inc. (Illustration für Life, Vol. 19 No. 11, p. 112, 1945)
+    Lokal: memex_diagram.jpg (2697x2241)
+    Genutzt in: untold_history.php § "The pre-history: the Memex and hypertext (1945–1968)"
+    Status: OK - PD laut File-Page (Anmerkung: 1945er Life/Time-Inc.-Illustration, PD-Tag stammt vom Commons-File-Page; bei striktem Audit ggf. nachprüfen)
+
+79. vannevar_bush_portrait
+    URL: https://commons.wikimedia.org/wiki/File:Vannevar_Bush_portrait.jpg
+    Lizenz: Public domain (PD-US, US-Treasury / Library of Congress)
+    Autor: unbekannt (1940–1944)
+    Lokal: vannevar_bush_portrait.jpg (3333x2667)
+    Genutzt in: untold_history.php § "The pre-history: the Memex and hypertext (1945–1968)"
+    Status: OK - Public Domain (US-Treasury/LoC)
+
+80. sri_computer_mouse_1968
+    URL: https://commons.wikimedia.org/wiki/File:SRI_Computer_Mouse.jpg
+    Lizenz: CC BY-SA 3.0
+    Autor: SRI International
+    Lokal: sri_computer_mouse_1968.jpg (600x360)
+    Genutzt in: untold_history.php § "The pre-history: the Memex and hypertext (1945–1968)"
+    Status: OK - CC BY-SA 3.0 (Attribution: SRI International, in Caption)
+
+81. ted_nelson
+    URL: https://commons.wikimedia.org/wiki/File:Ted_Nelson_cropped.jpg
+    Lizenz: CC BY-SA 3.0
+    Autor: Dgies (Eigenes Werk, 2011, "Präsentation über Project Xanadu")
+    Lokal: ted_nelson.jpg (2108x2526)
+    Genutzt in: untold_history.php § "The pre-history: the Memex and hypertext (1945–1968)"
+    Status: OK - CC BY-SA 3.0 (Attribution: Dgies, in Caption)
+
+=== STATE-TECHNIK + EXPERIMENT (statistics_i.php, Stand: Oktober 2026) ===
+================================================================================
+
+82. john_graunt
+    URL: https://commons.wikimedia.org/wiki/File:JohnGraunt.png
+    Lizenz: Public domain (PD-anon-auto; Illustration aus einem 1936er Buch)
+    Autor: T. O'Donnell, History of Life Insurance in its Formative Years (Chicago, 1936)
+    Lokal: john_graunt.png (530x770)
+    Genutzt in: statistics_i.php § "Statistics as a state technique"
+    Status: OK - Public Domain (Anmerkung: 20.-Jh.-Illustration, kein authentisches Porträt; einziger nutzbarer Kandidat)
+
+83. adolphe_quetelet
+    URL: https://commons.wikimedia.org/wiki/File:Adolphe_Quételet_by_Joseph-Arnold_Demannez.jpg
+    Lizenz: Public domain (PD-old-100, Stahlstich 1875)
+    Autor: Joseph-Arnold Demannez (1825–1902)
+    Lokal: adolphe_quetelet.jpg (937x1517)
+    Genutzt in: statistics_i.php § "Statistics as a state technique"
+    Status: OK - Public Domain (1875er Stahlstich)
+
+84. sir_francis_galton
+    URL: https://commons.wikimedia.org/wiki/File:Sir_Francis_Galton_by_Octavius_Oakley.jpg
+    Lizenz: Public domain (PD-Old; Aquarell 1840, National Portrait Gallery)
+    Autor: Octavius Oakley
+    Lokal: sir_francis_galton.jpg (1205x1536)
+    Genutzt in: statistics_i.php § "Statistics as a state technique"
+    Status: OK - Public Domain (NPG Aquarell)
+
+85. james_lind
+    URL: https://commons.wikimedia.org/wiki/File:James_Lind_by_Chalmers.jpg
+    Lizenz: Public domain (PD-Old; Gemälde 1783)
+    Autor: George Chalmers (1720–1791)
+    Lokal: james_lind.jpg (468x551)
+    Genutzt in: statistics_i.php § "The controlled experiment: from scurvy to ablation"
+    Status: OK - Public Domain (1783er Gemälde)
+
+=== KOGNITIVE EVOLUTION + INSTITUTIONEN (human_mind.php, Stand: Oktober 2026) ===
+================================================================================
+
+86. mental_rotation
+    URL: https://commons.wikimedia.org/wiki/File:Mental_rotation_task_(diagram)_(cropped).jpg
+    Lizenz: Public domain (PD-author; vom Uploader freigegeben)
+    Autor: Jennifer Oneske (TeamMentalRotation), für Wikipedia erstellt
+    Lokal: mental_rotation.jpg (289x157)
+    Genutzt in: human_mind.php § "Mental Imagery: Turning Things in the Head"
+    Status: OK - Public Domain (Wikipedia-Diagramm)
+
+87. ancient_pergamon
+    URL: https://commons.wikimedia.org/wiki/File:View_of_ancient_Pergamon.jpg
+    Lizenz: Public domain (PD-old + CC PD-Mark; 19.-Jh.-Zeichnung)
+    Autor: deutsche Archäologen (19. Jh.), gescannt aus Pergamon-Museum-Heft
+    Lokal: ancient_pergamon.jpg (1024x514)
+    Genutzt in: human_mind.php § "Institutions that outlive their founders"
+    Status: OK - Public Domain (19.-Jh.-Rekonstruktion)
+
+88. university_of_bologna
+    URL: https://commons.wikimedia.org/wiki/File:Universität_Bologna_Deutsche_Nation.jpg
+    Lizenz: Public domain (PD-old-100-expired; 1497 Miniatur)
+    Autor: anonym, Miniatur 1497 (Natio Germanica Bononiae)
+    Lokal: university_of_bologna.jpg (574x550)
+    Genutzt in: human_mind.php § "Institutions that outlive their founders"
+    Status: OK - Public Domain (1497 Miniatur)

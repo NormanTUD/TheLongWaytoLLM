@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformer Residual Stream Dynamics – Interaktiv</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/Temml-Latin-Modern.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/temml.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.7;
+            padding: 2rem;
+        }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #58a6ff; }
+        h2 { font-size: 1.5rem; margin: 2rem 0 1rem; color: #79c0ff; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }
+        h3 { font-size: 1.2rem; margin: 1.5rem 0 0.8rem; color: #a5d6ff; }
+        p, li { margin-bottom: 0.8rem; font-size: 1rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .formula {
+            background: #1c2128;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-size: 1.3rem;
+            overflow-x: auto;
+        }
+        .interactive-box {
+            background: #1c2128;
+            border: 2px solid #388bfd;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .interactive-box label {
+            display: block;
+            margin: 0.5rem 0 0.3rem;
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 0.3rem 0;
+            accent-color: #58a6ff;
+        }
+        input[type="number"] {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            width: 100px;
+            font-size: 1rem;
+        }
+        .slider-value {
+            color: #58a6ff;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .plot-container {
+            width: 100%;
+            height: 400px;
+            margin: 1rem 0;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        @media (max-width: 800px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .highlight { color: #ffa657; font-weight: bold; }
+        .key-finding {
+            background: linear-gradient(135deg, #1a2332, #1c2128);
+            border-left: 4px solid #f0883e;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        canvas {
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            display: block;
+            margin: 1rem auto;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            color: #e6edf3;
+            font-size: 0.95rem;
+        }
+        input[type="checkbox"] {
+            accent-color: #58a6ff;
+            width: 18px;
+            height: 18px;
+        }
+        .tag {
+            display: inline-block;
+            background: #388bfd22;
+            border: 1px solid #388bfd;
+            color: #58a6ff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 0.2rem;
+        }
+        .result-display {
+            font-size: 1.4rem;
+            color: #7ee787;
+            text-align: center;
+            padding: 1rem;
+            font-weight: bold;
+        }
+        select {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .anno { font-size: 0.85rem; color: #8b949e; font-style: italic; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>🧠 Dynamics of the Transformer Residual Stream</h1>
+<p class="anno">Fernando & Guitchounts, Mai 2026 – Interaktive Erklärung</p>
+
+<!-- ============ SECTION 1: GRUNDIDEE ============ -->
+<h2>1. Die Grundidee</h2>
+
+<div class="card">
+<p>Große Sprachmodelle (LLMs) wie Llama, OLMo oder Gemma bestehen aus vielen <span class="highlight">Transformer-Blöcken</span>, die nacheinander auf einen gemeinsamen Datenstrom wirken – den <span class="highlight">Residual Stream</span>.</p>
+
+<p>Die Kernidee des Papers: Behandle die <b>Tiefe</b> (Layer-Nummer) als <b>diskrete Zeit</b> und den Residual Stream als ein <b>dynamisches System</b>. Jeder Layer ist ein Zeitschritt:</p>
+
+<div class="formula" id="formula-basic"></div>
+
+<p>Der <b>Jacobian</b> <span id="formula-jacobian-inline"></span> beschreibt, wie sich eine kleine Störung am Eingang eines Layers auf den Ausgang auswirkt – die lokale lineare Beschreibung der Dynamik.</p>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Residual Stream Simulator</h3>
+<p>Stell dir vor, ein Signal fließt durch Layer. Jeder Layer addiert eine Transformation:</p>
+
+<div class="grid-2">
+<div>
+    <label>Anzahl Layer: <span class="slider-value" id="numLayersVal">8</span></label>
+    <input type="range" id="numLayers" min="2" max="32" value="8" oninput="updateResidualSim()">
+
+    <label>Stärke der Transformation (‖f‖): <span class="slider-value" id="fStrengthVal">0.5</span></label>
+    <input type="range" id="fStrength" min="0" max="100" value="50" oninput="updateResidualSim()">
+
+    <label>Rotationsanteil: <span class="slider-value" id="rotFracVal">0.7</span></label>
+    <input type="range" id="rotFrac" min="0" max="100" value="70" oninput="updateResidualSim()">
+</div>
+<div>
+    <div class="formula" id="formula-residual-sim"></div>
+    <p class="anno">Die Formel ändert sich live mit deinen Reglern!</p>
+</div>
+</div>
+
+<div class="plot-container" id="plot-residual-stream"></div>
+</div>
+
+<!-- ============ SECTION 2: JACOBIAN & EIGENWERTE ============ -->
+<h2>2. Was der Jacobian verrät: Eigenwerte als Spiralen</h2>
+
+<div class="card">
+<p>Das Paper findet: <span class="highlight">~98% aller Eigenwerte</span> des Jacobians kommen als <b>komplex-konjugierte Paare</b>. Das bedeutet: Information wird nicht einfach gestreckt oder gestaucht, sondern <b>rotiert</b> – wie Spiralen in einem 2D-Unterraum.</p>
+
+<div class="key-finding">
+<b>Kernfinding #1:</b> Trainierte Transformer routen Information durch gekoppelte Rotationsmoden auf jeder Tiefe. Das ist unsichtbar für SVD-Analysen, die nur Singulärwerte betrachten.
+</div>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Eigenwert-Explorer: Komplex-konjugierte Paare</h3>
+<p>Ein Eigenwert λ = a + bi und sein Konjugat λ* = a − bi bilden eine Spirale. Spiele mit den Werten:</p>
+
+<div class="grid-2">
+<div>
+    <label>Realteil a (Streckung): <span class="slider-value" id="eigRealVal">0.95</span></label>
+    <input type="range" id="eigReal" min="10" max="200" value="95" oninput="updateEigenSpiral()">
+
+    <label>Imaginärteil b (Rotation): <span class="slider-value" id="eigImagVal">0.30</span></label>
+    <input type="range" id="eigImag" min="0" max="100" value="30" oninput="updateEigenSpiral()">
+
+    <label>Zeitschritte (Layer): <span class="slider-value" id="eigStepsVal">20</span></label>
+    <input type="range" id="eigSteps" min="2" max="50" value="20" oninput="updateEigenSpiral()">
+</div>
+<div>
+    <div class="formula" id="formula-eigenvalue"></div>
+    <div class="result-display" id="eigenMagnitude"></div>
+    <p class="anno">|λ| > 1 → expandierend (Signal wächst)<br>|λ| < 1 → kontrahierend (Signal schrumpft)</p>
+</div>
+</div>
+
+<div class="plot-container" id="plot-eigen-spiral"></div>
+</div>
+
+<!-- ============ SECTION 3: DREI REGIMES ============ -->
+<h2>3. Drei Tiefenregimes: Rotation → Kontraktion → Symmetrie</h2>
+
+<div class="card">
+<p>Das Paper entdeckt, dass sich die Layer in <b>drei Regimes</b> aufteilen:</p>
+<ul>
+    <li><span class="tag">Early (0–4)</span> Stark anisotrop, fast reine Rotatoren (Self-Alignment ~0.04)</li>
+    <li><span class="tag">Mid (5–19)</span> Konditionszahl sinkt, immer noch nicht-normal</li>
+    <li><span class="tag">Late (20–31)</span> Fast symmetrisch (Self-Alignment ~0.55–0.70)</li>
+</ul>
+
+<div class="key-finding">
+<b>Kernfinding #2:</b> Es gibt einen <b>monotonen Non-Normalitäts-Gradienten</b> durch die Tiefe – von rotationsdominiert (früh) zu fast-symmetrisch (spät). Dieser Gradient wird durch Training installiert!
+</div>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Non-Normalitäts-Gradient Visualizer</h3>
+<p>Vergleiche die Operatortypen über die Tiefe. Wähle Metriken:</p>
+
+<div class="checkbox-group">
+    <label><input type="checkbox" id="showSelfAlign" checked onchange="updateRegimePlot()"> Self-Alignment</label>
+    <label><input type="checkbox" id="showHenrici" checked onchange="updateRegimePlot()"> Henrici Departure</label>
+    <label><input type="checkbox" id="showCondNum" onchange="updateRegimePlot()"> Condition Number (log)</label>
+    <label><input type="checkbox" id="showExpanding" onchange="updateRegimePlot()"> Frac. Expanding Modes</label>
+</div>
+
+<label>Modell:
+<select id="modelSelect" onchange="updateRegimePlot()">
+    <option value="llama">Llama 3.1 8B</option>
+    <option value="olmo_trained">OLMo 3 7B (trained)</option>
+    <option value="olmo_init">OLMo 3 7B (step 0 – untrainiert)</option>
+    <option value="gemma">Gemma 4 E4B</option>
+</select>
+</label>
+
+<div class="plot-container" id="plot-regimes"></div>
+<p class="anno">Beachte: Bei OLMo step 0 (untrainiert) sind fast alle Layer symmetrisch – der Gradient fehlt!</p>
+</div>
+
+<!-- ============ SECTION 4: DIMENSIONALER FLASCHENHALS ============ -->
+<h2>4. Der dimensionale Flaschenhals</h2>
+
+<div class="card">
+<p>Wenn man die Jacobians aller Layer <b>multipliziert</b> (kumulatives Produkt), sieht man, wie viele unabhängige Richtungen von Anfang bis Ende überleben:</p>
+
+<div class="formula" id="formula-cumulative"></div>
+
+<p>Von 4.096 Eingabedimensionen überleben nur <span class="highlight">~7 effektive Dimensionen</span> end-to-end in Llama! Das ist ein gelernter Flaschenhals – bei Initialisierung (OLMo step 0) bleiben ~326 Dimensionen erhalten.</p>
+
+<div class="key-finding">
+<b>Kernfinding #3:</b> Training installiert einen kumulativen Low-Rank-Flaschenhals. Die Sensitivität des Netzwerks auf seinen eigenen Input ist auf einen Unterraum beschränkt, der <b>drei Größenordnungen kleiner</b> ist als der Residual Stream.
+</div>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Flaschenhals-Simulator</h3>
+<p>Simuliere, wie der effektive Rang mit der Tiefe kollabiert:</p>
+
+<div class="grid-2">
+<div>
+    <label>Dimensionen d: <span class="slider-value" id="dimVal">4096</span></label>
+    <input type="range" id="dimSlider" min="64" max="4096" step="64" value="4096" oninput="updateBottleneck()">
+
+    <label>Anzahl Layer L: <span class="slider-value" id="layerBottleVal">32</span></label>
+    <input type="range" id="layerBottle" min="2" max="42" value="32" oninput="updateBottleneck()">
+
+    <label>Kompressionsfaktor pro Layer: <span class="slider-value" id="compressVal">0.75</span></label>
+    <input type="range" id="compressSlider" min="30" max="99" value="75" oninput="updateBottleneck()">
+
+    <label>Non-Normalitäts-Stärke: <span class="slider-value" id="nonNormVal">0.8</span></label>
+    <input type="range" id="nonNormSlider" min="0" max="100" value="80" oninput="updateBottleneck()">
+</div>
+<div>
+    <div class="result-display" id="bottleneckResult"></div>
+    <p class="anno">Effektiver Rang = exp(−Σ pᵢ log pᵢ), wobei pᵢ = σᵢ² / Σσⱼ²</p>
+    <div class="formula" id="formula-erank"></div>
+</div>
+</div>
+
+<div class="plot-container" id="plot-bottleneck"></div>
+</div>
+
+<!-- ============ SECTION 5: SCHUR SURGERY ============ -->
+<h2>5. Schur-Chirurgie: Woher kommt der Flaschenhals?</h2>
+
+<div class="card">
+<p>Jeder Jacobian lässt sich in Schur-Form zerlegen:</p>
+<div class="formula" id="formula-schur"></div>
+<p>Dabei ist Λ diagonal (Eigenwerte) und N strikt obere Dreiecksmatrix (die "nicht-normale" Komponente). Das Paper skaliert N mit einem Faktor c:</p>
+
+<div class="key-finding">
+<b>Kernfinding #4:</b> Entfernt man die nicht-normale Komponente (c=0), löst sich der Flaschenhals weitgehend auf (6-7× mehr effektive Dimensionen). Der Kollaps ist also eine Eigenschaft der <b>trainierten oberen Dreiecksstruktur</b>, nicht des Spektrums!
+</div>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Schur-Dosis-Experiment</h3>
+<p>Skaliere die Non-Normalität und beobachte den Effekt auf den effektiven Rang:</p>
+
+<label>Dosis c (0 = normal, 1 = trainiert, 2 = verstärkt): <span class="slider-value" id="schurDoseVal">1.0</span></label>
+<input type="range" id="schurDose" min="0" max="200" value="100" oninput="updateSchurPlot()">
+
+<div class="checkbox-group">
+    <label><input type="checkbox" id="showLlama" checked onchange="updateSchurPlot()"> Llama 3.1 8B</label>
+    <label><input type="checkbox" id="showOlmoTrained" checked onchange="updateSchurPlot()"> OLMo (trained)</label>
+    <label><input type="checkbox" id="showOlmoInit" checked onchange="updateSchurPlot()"> OLMo (step 0)</label>
+    <label><input type="checkbox" id="showGemma" checked onchange="updateSchurPlot()"> Gemma 4 E4B</label>
+</div>
+
+<div class="plot-container" id="plot-schur"></div>
+<div class="result-display" id="schurResult"></div>
+</div>
+
+<!-- ============ SECTION 6: COMMUNITY TOPOLOGY ============ -->
+<h2>6. Netzwerk-Topologie trifft Dynamik</h2>
+
+<div class="card">
+<p>Die Autoren bauen <b>Aktivierungs-Korrelationsgraphen</b>: Welche Residual-Stream-Einheiten korrelieren miteinander? Diese Graphen zeigen <b>Community-Struktur</b> (Cluster von stark verbundenen Einheiten).</p>
+
+<p>Die Schlüsselfrage: Werden Einheiten, die <b>zwischen Communities brücken</b> (hoher Partizipationskoeffizient), vom Jacobian anders behandelt?</p>
+
+<div class="formula" id="formula-participation"></div>
+
+<div class="key-finding">
+<b>Kernfinding #5:</b> Ja! Boundary-Nodes werden in <b>fast-symmetrischen Layern verstärkt</b> und in <b>nicht-normalen Layern unterdrückt</b>. Dieser Zusammenhang ist <b>gelernt</b> (fehlt bei Initialisierung) und entsteht monoton über das Training.
+</div>
+</div>
+
+<div class="interactive-box">
+<h3>🎮 Community-Boundary Coupling Explorer</h3>
+<p>Simuliere den Zusammenhang zwischen Partizipationskoeffizient und Jacobian-Verstärkung:</p>
+
+<div class="grid-2">
+<div>
+    <label>Self-Alignment des Layers (Operatortyp): <span class="slider-value" id="selfAlignVal">0.5</span></label>
+    <input type="range" id="selfAlignSlider" min="0" max="100" value="50" oninput="updateCommunityPlot()">
+
+    <label>Trainingsfortschritt: <span class="slider-value" id="trainProgressVal">100%</span></label>
+    <input type="range" id="trainProgress" min="0" max="100" value="100" oninput="updateCommunityPlot()">
+
+    <label>Anzahl Communities: <span class="slider-value" id="numCommVal">12</span></label>
+    <input type="range" id="numComm" min="3" max="50" value="12" oninput="updateCommunityPlot()">
+</div>
+<div>
+    <div class="result-display" id="communityResult"></div>
+    <p class="anno">Cohen's d > 0: Boundary-Nodes werden verstärkt<br>Cohen's d < 0: Boundary-Nodes werden unterdrückt</p>
+</div>
+</div>
+
+<div class="plot-container" id="plot-community"></div>
+</div>
+
+<!-- ============ SECTION 7: CANVAS VISUALIZATION ============ -->
+<h2>7. Das Gesamtbild: Residual Stream als dynamisches System</h2>
+
+<div class="interactive-box">
+<h3>🎮 Transformer-Dynamik Live-Canvas</h3>
+<p>Beobachte, wie ein Perturbationsvektor durch die Layer fließt. Farbe = Regime, Größe = Amplitude:</p>
+
+<div class="grid-2">
+<div>
+    <label>Perturbations-Dimension: <span class="slider-value" id="pertDimVal">2</span></label>
+    <input type="range" id="pertDim" min="1" max="10" value="2" oninput="updateCanvas()">
+
+    <label>Animations-Geschwindigkeit: <span class="slider-value" id="animSpeedVal">1.0</span></label>
+    <input type="range" id="animSpeed" min="1" max="50" value="10" oninput="updateCanvas()">
+
+    <div class="checkbox-group">
+        <label><input type="checkbox" id="showRotation" checked onchange="updateCanvas()"> Rotation zeigen</label>
+        <label><input type="checkbox" id="showCompression" checked onchange="updateCanvas()"> Kompression zeigen</label>
+        <label><input type="checkbox" id="showTrails" checked onchange="updateCanvas()"> Spuren zeigen</label>
+    </div>
+</div>
+<div>
+    <p class="anno">
+        <span style="color:#ff7b72">● Early Layer</span> = starke Rotation, nicht-normal<br>
+        <span style="color:#ffa657">● Mid Layer</span> = Übergang<br>
+        <span style="color:#7ee787">● Late Layer</span> = fast symmetrisch, Verstärkung
+    </p>
+</div>
+</div>
+
+<canvas id="dynamicsCanvas" width="1100" height="450"></canvas>
+</div>
+
+<!-- ============ SECTION 8: ZUSAMMENFASSUNG ============ -->
+<h2>8. Zusammenfassung</h2>
+
+<div class="card">
+<table style="width:100%; border-collapse: collapse;">
+<tr style="border-bottom: 1px solid #30363d;">
+    <th style="padding: 0.8rem; text-align: left; color: #58a6ff;">Finding</th>
+    <th style="padding: 0.8rem; text-align: left; color: #58a6ff;">Architektur oder Training?</th>
+</tr>
+<tr style="border-bottom: 1px solid #21262d;">
+    <td style="padding: 0.8rem;">~98% komplex-konjugierte Eigenwertpaare</td>
+    <td style="padding: 0.8rem;"><span class="tag">Training</span></td>
+</tr>
+<tr style="border-bottom: 1px solid #21262d;">
+    <td style="padding: 0.8rem;">Drei Tiefenregimes (Early/Mid/Late)</td>
+    <td style="padding: 0.8rem;"><span class="tag">Architektur</span> (teilweise)</td>
+</tr>
+<tr style="border-bottom: 1px solid #21262d;">
+    <td style="padding: 0.8rem;">Non-Normalitäts-Gradient</td>
+    <td style="padding: 0.8rem;"><span class="tag">Training</span></td>
+</tr>
+<tr style="border-bottom: 1px solid #21262d;">
+    <td style="padding: 0.8rem;">Kumulativer Low-Rank-Flaschenhals (~7 von 4096 Dim.)</td>
+    <td style="padding: 0.8rem;"><span class="tag">Training</span></td>
+</tr>
+<tr style="border-bottom: 1px solid #21262d;">
+    <td style="padding: 0.8rem;">Community-Struktur in Aktivierungen</td>
+    <td style="padding: 0.8rem;"><span class="tag">Architektur</span> (teilweise)</td>
+</tr>
+<tr>
+    <td style="padding: 0.8rem;">Boundary-Node ↔ Jacobian Coupling</td>
+    <td style="padding: 0.8rem;"><span class="tag">Training</span></td>
+</tr>
+</table>
+</div>
+
+</div><!-- end container -->
+
+<script>
+// ============ RENDER STATIC FORMULAS ============
+function renderFormulas() {
+    temml.render("h_{\\ell+1} = h_\\ell + f_\\ell(h_\\ell)", document.getElementById('formula-basic'));
+    temml.render("J_\\ell = \\frac{\\partial h_{\\ell+1}}{\\partial h_\\ell} = I + \\frac{\\partial f_\\ell}{\\partial h_\\ell}", document.getElementById('formula-jacobian-inline'));
+    temml.render("P_\\ell = J_{L-1} \\cdots J_\\ell \\quad \\text{(kumulatives Jacobian-Produkt)}", document.getElementById('formula-cumulative'));
+    temml.render("J_\\ell = Q_\\ell(\\Lambda_\\ell + c \\cdot N_\\ell)Q_\\ell^*", document.getElementById('formula-schur'));
+    temml.render("p_i = 1 - \\sum_c \\left(\\frac{k_{ic}}{k_i}\\right)^2", document.getElementById('formula-participation'));
+    temml.render("\\text{erank}(P) = \\exp\\!\\left(-\\sum_i p_i \\ln p_i\\right), \\quad p_i = \\frac{\\sigma_i^2}{\\sum_j \\sigma_j^2}", document.getElementById('formula-erank'));
+}
+
+// ============ SECTION 1: RESIDUAL STREAM SIMULATOR ============
+function updateResidualSim() {
+    const L = parseInt(document.getElementById('numLayers').value);
+    const fStr = parseInt(document.getElementById('fStrength').value) / 100;
+    const rotFrac = parseInt(document.getElementById('rotFrac').value) / 100;
+
+    document.getElementById('numLayersVal').textContent = L;
+    document.getElementById('fStrengthVal').textContent = fStr.toFixed(2);
+    document.getElementById('rotFracVal').textContent = rotFrac.toFixed(2);
+
+    // Update formula
+    temml.render(`h_{${L}} = h_0 + \\sum_{\\ell=0}^{${L-1}} f_\\ell(h_\\ell), \\quad \\|f\\| \\approx ${fStr.toFixed(2)}`, document.getElementById('formula-residual-sim'));
+
+    // Simulate 2D residual stream trajectory
+    let x = [1], y = [0];
+    let cx = 1, cy = 0;
+    const angle = rotFrac * Math.PI / 4;
+
+    for (let l = 0; l < L; l++) {
+        const phase = angle * (1 + 0.3 * Math.sin(l * 0.5));
+        const dx = fStr * (Math.cos(phase + l * 0.3) - rotFrac * Math.sin(phase + l * 0.2));
+        const dy = fStr * (Math.sin(phase + l * 0.3) + rotFrac * Math.cos(phase + l * 0.2));
+        cx += dx;
+        cy += dy;
+        x.push(cx);
+        y.push(cy);
+    }
+
+    const colors = x.map((_, i) => {
+        if (i / L < 0.15) return '#ff7b72';
+        if (i / L < 0.6) return '#ffa657';
+        return '#7ee787';
+    });
+
+    Plotly.react('plot-residual-stream', [{
+        x: x, y: y, mode: 'lines+markers',
+        marker: { color: colors, size: 8 },
+        line: { color: '#58a6ff', width: 2 },
+        text: x.map((_, i) => `Layer ${i}`),
+        hoverinfo: 'text'
+    }], {
+        title: { text: 'Residual Stream Trajektorie (2D Projektion)', font: { color: '#e6edf3' } },
+        xaxis: { title: 'Dimension 1', color: '#8b949e', gridcolor: '#30363d' },
+        yaxis: { title: 'Dimension 2', color: '#8b949e', gridcolor: '#30363d' },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        showlegend: false
+    }, { responsive: true });
+}
+
+// ============ SECTION 2: EIGENVALUE SPIRAL ============
+function updateEigenSpiral() {
+    const a = parseInt(document.getElementById('eigReal').value) / 100;
+    const b = parseInt(document.getElementById('eigImag').value) / 100;
+    const steps = parseInt(document.getElementById('eigSteps').value);
+
+    document.getElementById('eigRealVal').textContent = a.toFixed(2);
+    document.getElementById('eigImagVal').textContent = b.toFixed(2);
+    document.getElementById('eigStepsVal').textContent = steps;
+
+    const mag = Math.sqrt(a * a + b * b);
+    const angle = Math.atan2(b, a);
+
+    temml.render(`\\lambda = ${a.toFixed(2)} + ${b.toFixed(2)}i, \\quad |\\lambda| = ${mag.toFixed(3)}, \\quad \\theta = ${(angle * 180 / Math.PI).toFixed(1)}°`, document.getElementById('formula-eigenvalue'));
+
+    const status = mag > 1 ? '📈 EXPANDIEREND' : mag < 1 ? '📉 KONTRAHIEREND' : '⚖️ NEUTRAL';
+    document.getElementById('eigenMagnitude').textContent = `|λ| = ${mag.toFixed(4)} → ${status}`;
+    document.getElementById('eigenMagnitude').style.color = mag > 1 ? '#ffa657' : mag < 1 ? '#79c0ff' : '#7ee787';
+
+    // Generate spiral trajectory
+    let x = [1], y = [0], z = [0];
+    for (let t = 1; t <= steps; t++) {
+        const r = Math.pow(mag, t);
+        const theta = angle * t;
+        x.push(r * Math.cos(theta));
+        y.push(r * Math.sin(theta));
+        z.push(t);
+    }
+
+    // 2D spiral view
+    const trace1 = {
+        x: x, y: y, mode: 'lines+markers',
+        marker: { color: z, colorscale: 'Viridis', size: 6 },
+        line: { color: '#58a6ff', width: 2 },
+        text: z.map(t => `Layer ${t}`),
+        hoverinfo: 'text+x+y'
+    };
+
+    // Unit circle
+    const circX = [], circY = [];
+    for (let i = 0; i <= 100; i++) {
+        circX.push(Math.cos(2 * Math.PI * i / 100));
+        circY.push(Math.sin(2 * Math.PI * i / 100));
+    }
+    const trace2 = {
+        x: circX, y: circY, mode: 'lines',
+        line: { color: '#30363d', width: 1, dash: 'dash' },
+        hoverinfo: 'skip'
+    };
+
+    Plotly.react('plot-eigen-spiral', [trace2, trace1], {
+        title: { text: `Spirale: λ^t für t = 0..${steps}`, font: { color: '#e6edf3' } },
+        xaxis: { title: 'Re', color: '#8b949e', gridcolor: '#30363d', scaleanchor: 'y' },
+        yaxis: { title: 'Im', color: '#8b949e', gridcolor: '#30363d' },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        showlegend: false
+    }, { responsive: true });
+}
+
+// ============ SECTION 3: REGIME PLOT ============
+function updateRegimePlot() {
+    const model = document.getElementById('modelSelect').value;
+    const showSA = document.getElementById('showSelfAlign').checked;
+    const showH = document.getElementById('showHenrici').checked;
+    const showC = document.getElementById('showCondNum').checked;
+    const showE = document.getElementById('showExpanding').checked;
+
+    // Simulated data based on paper findings
+    const models = {
+        llama: { layers: 32, sa: null, henrici: null, cond: null, expanding: null },
+        olmo_trained: { layers: 32, sa: null, henrici: null, cond: null, expanding: null },
+        olmo_init: { layers: 32, sa: null, henrici: null, cond: null, expanding: null },
+        gemma: { layers: 42, sa: null, henrici: null, cond: null, expanding: null }
+    };
+
+    // Generate realistic data based on paper's reported values
+    const L = models[model].layers;
+    const layers = Array.from({length: L}, (_, i) => i);
+
+    let sa, henrici, cond, expanding;
+
+    if (model === 'llama') {
+        sa = layers.map(l => 0.04 + 0.66 * Math.pow(l / (L-1), 1.5) + 0.02 * Math.sin(l * 0.5));
+        henrici = layers.map(l => 0.91 - 0.44 * Math.pow(l / (L-1), 1.2) + 0.02 * Math.cos(l * 0.3));
+        cond = layers.map(l => {
+            if (l < 5) return 5 + Math.random() * 1;
+            if (l < 20) return 2 + 0.5 * Math.random();
+            return 4.5 + 1.5 * (l - 20) / 12 + Math.random() * 0.5;
+        });
+        expanding = layers.map(l => {
+            if (l < 5) return 0.55 + 0.1 * Math.random();
+            if (l < 20) return 0.17 + 0.13 * Math.random();
+            return 0.3 + 0.15 * (l - 20) / 12;
+        });
+    } else if (model === 'olmo_trained') {
+        sa = layers.map(l => 0.43 * (l < 5 ? 1 : 0) + 0.65 * (l >= 5 && l < 20 ? 1 : 0) * (0.5 + 0.5 * (l-5)/15) + 0.86 * (l >= 20 ? 1 : 0) * (0.8 + 0.2 * (l-20)/12));
+        sa = layers.map(l => 0.28 + 0.58 * Math.pow(l / (L-1), 1.3) + 0.02 * Math.sin(l * 0.4));
+        henrici = layers.map(l => 0.85 - 0.45 * Math.pow(l / (L-1), 1.1));
+        cond = layers.map(l => {
+            if (l < 5) return 4 + Math.random();
+            if (l < 20) return 2.5 + Math.random() * 0.5;
+            return 3.5 + (l - 20) / 12 + Math.random() * 0.5;
+        });
+        expanding = layers.map(l => 0.2 + 0.4 * Math.pow(l / (L-1), 0.8) + 0.05 * Math.sin(l * 0.3));
+    } else if (model === 'olmo_init') {
+        sa = layers.map(l => l === 0 ? 0.016 : 0.95 + 0.03 * (l / L));
+        henrici = layers.map(l => l === 0 ? 0.9 : 0.05 + 0.02 * Math.random());
+        cond = layers.map(l => l === 0 ? 5 : 1.5 + 0.3 * Math.random());
+        expanding = layers.map(l => 0.48 + 0.04 * Math.random());
+    } else { // gemma
+        sa = layers.map(l => 0.005 + 0.655 * Math.pow(l / (L-1), 2.0) + 0.01 * Math.sin(l * 0.3));
+        henrici = layers.map(l => 0.99 - 0.5 * Math.pow(l / (L-1), 1.5));
+        cond = layers.map(l => {
+            if (l < 8) return 6 + Math.random();
+            if (l < 28) return 2.5 + Math.random();
+            return 4 + 2 * (l - 28) / 14;
+        });
+        expanding = layers.map(l => {
+            if (l < 8) return 0.6 + 0.1 * Math.random();
+            if (l < 28) return 0.15 + 0.1 * Math.random();
+            return 0.25 + 0.2 * (l - 28) / 14;
+        });
+    }
+
+    const traces = [];
+    if (showSA) traces.push({ x: layers, y: sa, name: 'Self-Alignment', line: { color: '#ffa657', width: 3 }, mode: 'lines+markers', marker: { size: 4 } });
+    if (showH) traces.push({ x: layers, y: henrici, name: 'Henrici Departure', line: { color: '#79c0ff', width: 3 }, mode: 'lines+markers', marker: { size: 4 } });
+    if (showC) traces.push({ x: layers, y: cond.map(c => c / Math.max(...cond)), name: 'Cond. Number (norm.)', line: { color: '#f0883e', width: 2, dash: 'dash' }, mode: 'lines' });
+    if (showE) traces.push({ x: layers, y: expanding, name: 'Frac. Expanding', line: { color: '#7ee787', width: 2, dash: 'dot' }, mode: 'lines' });
+
+    // Add regime shading
+    const shapes = [];
+    const earlyEnd = model === 'gemma' ? 8 : 5;
+    const lateStart = model === 'gemma' ? 28 : 20;
+
+    shapes.push({ type: 'rect', x0: 0, x1: earlyEnd, y0: 0, y1: 1, fillcolor: '#ff7b7215', line: { width: 0 } });
+    shapes.push({ type: 'rect', x0: earlyEnd, x1: lateStart, y0: 0, y1: 1, fillcolor: '#ffa65715', line: { width: 0 } });
+    shapes.push({ type: 'rect', x0: lateStart, x1: L, y0: 0, y1: 1, fillcolor: '#7ee78715', line: { width: 0 } });
+
+    Plotly.react('plot-regimes', traces, {
+        title: { text: `Tiefenregimes: ${model.replace('_', ' ')}`, font: { color: '#e6edf3' } },
+        xaxis: { title: 'Layer', color: '#8b949e', gridcolor: '#30363d' },
+        yaxis: { title: 'Wert (normalisiert)', color: '#8b949e', gridcolor: '#30363d', range: [0, 1.05] },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        legend: { x: 0.02, y: 0.98, bgcolor: '#161b2288' },
+        shapes: shapes,
+        annotations: [
+            { x: earlyEnd / 2, y: 1.02, text: 'EARLY', showarrow: false, font: { color: '#ff7b72', size: 11 } },
+            { x: (earlyEnd + lateStart) / 2, y: 1.02, text: 'MID', showarrow: false, font: { color: '#ffa657', size: 11 } },
+            { x: (lateStart + L) / 2, y: 1.02, text: 'LATE', showarrow: false, font: { color: '#7ee787', size: 11 } }
+        ]
+    }, { responsive: true });
+}
+
+// ============ SECTION 4: BOTTLENECK ============
+function updateBottleneck() {
+    const d = parseInt(document.getElementById('dimSlider').value);
+    const L = parseInt(document.getElementById('layerBottle').value);
+    const compress = parseInt(document.getElementById('compressSlider').value) / 100;
+    const nonNorm = parseInt(document.getElementById('nonNormSlider').value) / 100;
+
+    document.getElementById('dimVal').textContent = d;
+    document.getElementById('layerBottleVal').textContent = L;
+    document.getElementById('compressVal').textContent = compress.toFixed(2);
+    document.getElementById('nonNormVal').textContent = nonNorm.toFixed(2);
+
+    // Simulate effective rank collapse
+    const layers = Array.from({length: L}, (_, i) => i);
+    const eranks = [];
+    let currentRank = d;
+
+    for (let l = L - 1; l >= 0; l--) {
+        const layerCompress = compress * (1 + nonNorm * (1 - l / L));
+        currentRank = Math.max(1, currentRank * Math.pow(layerCompress, 1 + nonNorm * 0.5));
+        eranks.unshift(currentRank);
+    }
+
+    const finalRank = eranks[0];
+    document.getElementById('bottleneckResult').textContent =
+        `Effektiver Rang: ${d} → ${finalRank.toFixed(1)} (${(finalRank/d*100).toFixed(2)}% überleben)`;
+    document.getElementById('bottleneckResult').style.color = finalRank < 50 ? '#ff7b72' : finalRank < 500 ? '#ffa657' : '#7ee787';
+
+    temml.render(`\\text{erank}(P_0) = ${finalRank.toFixed(1)} \\quad \\text{von } d = ${d}`, document.getElementById('formula-erank'));
+
+    Plotly.react('plot-bottleneck', [{
+        x: layers.map(l => L - 1 - l),
+        y: eranks,
+        mode: 'lines+markers',
+        fill: 'tozeroy',
+        fillcolor: 'rgba(88, 166, 255, 0.1)',
+        line: { color: '#58a6ff', width: 3 },
+        marker: { size: 5, color: layers.map(l => {
+            if (l / L < 0.15) return '#ff7b72';
+            if (l / L < 0.6) return '#ffa657';
+            return '#7ee787';
+        })},
+        text: layers.map(l => `Injection Layer ${L-1-l}: erank = ${eranks[l].toFixed(1)}`),
+        hoverinfo: 'text'
+    }], {
+        title: { text: 'Effektiver Rang des kumulativen Jacobians P_ℓ', font: { color: '#e6edf3' } },
+        xaxis: { title: 'Kompositionstiefe (Anzahl Layer im Produkt)', color: '#8b949e', gridcolor: '#30363d' },
+        yaxis: { title: 'Effective Rank', type: 'log', color: '#8b949e', gridcolor: '#30363d' },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        showlegend: false,
+        annotations: [{
+            x: L - 1, y: Math.log10(finalRank),
+            text: `erank = ${finalRank.toFixed(1)}`,
+            showarrow: true, arrowcolor: '#ff7b72',
+            font: { color: '#ff7b72', size: 13 }
+        }]
+    }, { responsive: true });
+}
+
+// ============ SECTION 5: SCHUR SURGERY ============
+function updateSchurPlot() {
+    const dose = parseInt(document.getElementById('schurDose').value) / 100;
+    document.getElementById('schurDoseVal').textContent = dose.toFixed(2);
+
+    const showLlama = document.getElementById('showLlama').checked;
+    const showOlmoT = document.getElementById('showOlmoTrained').checked;
+    const showOlmoI = document.getElementById('showOlmoInit').checked;
+    const showGemma = document.getElementById('showGemma').checked;
+
+    // Based on paper: erank at c=0 vs c=1 ratios
+    // Llama: 45.4 → 7.12 → 2.53 (c=0, 1, 2)
+    // OLMo trained: 314 → 55.5 → 12.4
+    // OLMo init: ~flat at ~326
+    // Gemma: 39.3 → 5.92 → 1.60
+
+    function erankCurve(e0, e1, e2, flat) {
+        const doses = [];
+        for (let c = 0; c <= 200; c += 2) {
+            const cv = c / 100;
+            doses.push(cv);
+        }
+        const eranks = doses.map(c => {
+            if (flat) return e0 * (1 - 0.05 * c); // nearly flat for untrained
+            // Interpolate: exponential decay
+            if (c <= 1) {
+                return e0 * Math.pow(e1 / e0, c);
+            } else {
+                return e1 * Math.pow(e2 / e1, c - 1);
+            }
+        });
+        return { doses, eranks };
+    }
+
+    const traces = [];
+    const doseValues = Array.from({length: 101}, (_, i) => i * 2 / 100);
+
+    if (showLlama) {
+        const data = erankCurve(45.4, 7.12, 2.53, false);
+        traces.push({ x: data.doses, y: data.eranks, name: 'Llama 3.1 8B', line: { color: '#ff7b72', width: 3 }, mode: 'lines' });
+    }
+    if (showOlmoT) {
+        const data = erankCurve(314, 55.5, 12.4, false);
+        traces.push({ x: data.doses, y: data.eranks, name: 'OLMo (trained)', line: { color: '#d2a8ff', width: 3 }, mode: 'lines' });
+    }
+    if (showOlmoI) {
+        const data = erankCurve(326, 310, 295, true);
+        traces.push({ x: data.doses, y: data.eranks, name: 'OLMo (step 0)', line: { color: '#8b949e', width: 3, dash: 'dash' }, mode: 'lines' });
+    }
+    if (showGemma) {
+        const data = erankCurve(39.3, 5.92, 1.60, false);
+        traces.push({ x: data.doses, y: data.eranks, name: 'Gemma 4 E4B', line: { color: '#7ee787', width: 3 }, mode: 'lines' });
+    }
+
+    // Add vertical line at current dose
+    const shapes = [{
+        type: 'line', x0: dose, x1: dose, y0: 0, y1: 1000,
+        line: { color: '#ffa657', width: 2, dash: 'dot' }
+    }];
+
+    // Calculate current values for display
+    function getErankAtDose(e0, e1, e2, flat, c) {
+        if (flat) return e0 * (1 - 0.05 * c);
+        if (c <= 1) return e0 * Math.pow(e1 / e0, c);
+        return e1 * Math.pow(e2 / e1, c - 1);
+    }
+
+    const llamaVal = getErankAtDose(45.4, 7.12, 2.53, false, dose);
+    const olmoTVal = getErankAtDose(314, 55.5, 12.4, false, dose);
+    const olmoIVal = getErankAtDose(326, 310, 295, true, dose);
+    const gemmaVal = getErankAtDose(39.3, 5.92, 1.60, false, dose);
+
+    document.getElementById('schurResult').innerHTML =
+        `Bei c = ${dose.toFixed(2)}: Llama erank ≈ ${llamaVal.toFixed(1)} | OLMo(trained) ≈ ${olmoTVal.toFixed(1)} | Gemma ≈ ${gemmaVal.toFixed(1)}`;
+
+    Plotly.react('plot-schur', traces, {
+        title: { text: 'Schur-Chirurgie: Effektiver Rang vs. Non-Normalitäts-Dosis c', font: { color: '#e6edf3' } },
+        xaxis: { title: 'Dosis c (0 = normal, 1 = trainiert)', color: '#8b949e', gridcolor: '#30363d' },
+        yaxis: { title: 'Effective Rank (log)', type: 'log', color: '#8b949e', gridcolor: '#30363d' },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        legend: { x: 0.6, y: 0.98, bgcolor: '#161b2288' },
+        shapes: shapes,
+        annotations: [
+            { x: 1, y: Math.log10(7.12), text: 'trainiert', showarrow: true, ax: 40, ay: -20, font: { color: '#ffa657', size: 11 }, arrowcolor: '#ffa657' },
+            { x: 0, y: Math.log10(45.4), text: 'normal (c=0)', showarrow: true, ax: -50, ay: 20, font: { color: '#7ee787', size: 11 }, arrowcolor: '#7ee787' }
+        ]
+    }, { responsive: true });
+}
+
+// ============ SECTION 6: COMMUNITY PLOT ============
+function updateCommunityPlot() {
+    const selfAlign = parseInt(document.getElementById('selfAlignSlider').value) / 100;
+    const trainProg = parseInt(document.getElementById('trainProgress').value) / 100;
+    const numComm = parseInt(document.getElementById('numComm').value);
+
+    document.getElementById('selfAlignVal').textContent = selfAlign.toFixed(2);
+    document.getElementById('trainProgressVal').textContent = (trainProg * 100).toFixed(0) + '%';
+    document.getElementById('numCommVal').textContent = numComm;
+
+    // Cohen's d depends on self-alignment and training progress
+    // Paper: SA < 0.1 → d < 0 (de-amplification), SA > 0.5 → d > 0 (amplification)
+    const cohensD = trainProg * (selfAlign - 0.3) * 1.5;
+
+    const status = cohensD > 0.1 ? '✅ Boundary-Nodes VERSTÄRKT' :
+                   cohensD < -0.1 ? '❌ Boundary-Nodes UNTERDRÜCKT' :
+                   '⚖️ Kein signifikanter Effekt';
+    document.getElementById('communityResult').innerHTML =
+        `Cohen's d = ${cohensD.toFixed(3)}<br>${status}`;
+    document.getElementById('communityResult').style.color =
+        cohensD > 0.1 ? '#7ee787' : cohensD < -0.1 ? '#ff7b72' : '#8b949e';
+
+    // Generate scatter: participation coefficient vs column norm
+    const n = 200;
+    const participation = Array.from({length: n}, () => 0.3 + 0.6 * Math.random());
+    const colNorms = participation.map(p => {
+        const baseline = 0.9 + 0.2 * Math.random();
+        const effect = cohensD * 0.3 * (p - 0.6);
+        return baseline + effect + 0.05 * (Math.random() - 0.5);
+    });
+
+    // Color by participation quantile
+    const sorted = [...participation].sort((a, b) => a - b);
+    const p10 = sorted[Math.floor(n * 0.1)];
+    const p90 = sorted[Math.floor(n * 0.9)];
+    const colors = participation.map(p => p < p10 ? '#79c0ff' : p > p90 ? '#ffa657' : '#8b949e');
+
+    const trace = {
+        x: participation, y: colNorms, mode: 'markers',
+        marker: { color: colors, size: 6, opacity: 0.7 },
+        text: participation.map((p, i) => `P = ${p.toFixed(2)}, ‖J‖ = ${colNorms[i].toFixed(3)}`),
+        hoverinfo: 'text'
+    };
+
+    // Trend line
+    const xFit = [0.3, 0.9];
+    const slope = cohensD * 0.4;
+    const yFit = xFit.map(x => 1.0 + slope * (x - 0.6));
+    const trendTrace = {
+        x: xFit, y: yFit, mode: 'lines',
+        line: { color: '#f0883e', width: 3, dash: 'dash' },
+        hoverinfo: 'skip'
+    };
+
+    Plotly.react('plot-community', [trace, trendTrace], {
+        title: { text: `Partizipationskoeffizient vs. Jacobian-Spaltennorm (SA=${selfAlign.toFixed(2)}, Training=${(trainProg*100).toFixed(0)}%)`, font: { color: '#e6edf3', size: 12 } },
+        xaxis: { title: 'Partizipationskoeffizient', color: '#8b949e', gridcolor: '#30363d' },
+        yaxis: { title: '‖J_{:,i}‖ (Spaltennorm)', color: '#8b949e', gridcolor: '#30363d' },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        font: { color: '#e6edf3' },
+        showlegend: false
+    }, { responsive: true });
+}
+
+// ============ SECTION 7: CANVAS ANIMATION ============
+let animFrame = null;
+let canvasTime = 0;
+
+function updateCanvas() {
+    const pertDim = parseInt(document.getElementById('pertDim').value);
+    const speed = parseInt(document.getElementById('animSpeed').value) / 10;
+    const showRot = document.getElementById('showRotation').checked;
+    const showComp = document.getElementById('showCompression').checked;
+    const showTrails = document.getElementById('showTrails').checked;
+
+    document.getElementById('pertDimVal').textContent = pertDim;
+    document.getElementById('animSpeedVal').textContent = speed.toFixed(1);
+
+    const canvas = document.getElementById('dynamicsCanvas');
+    const ctx = canvas.getContext('2d');
+
+    if (animFrame) cancelAnimationFrame(animFrame);
+
+    const L = 32;
+    const particles = [];
+
+    // Initialize particles
+    for (let i = 0; i < pertDim * 3; i++) {
+        particles.push({
+            x: 50 + Math.random() * 20,
+            y: 100 + Math.random() * 250,
+            vx: 2 + Math.random(),
+            vy: (Math.random() - 0.5) * 2,
+            trail: [],
+            hue: Math.random() * 360
+        });
+    }
+
+    function animate() {
+        ctx.fillStyle = 'rgba(13, 17, 23, 0.15)';
+        if (!showTrails) ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw layer boundaries
+        const layerWidth = (canvas.width - 100) / L;
+        for (let l = 0; l < L; l++) {
+            const x = 50 + l * layerWidth;
+            let color;
+            if (l < 5) color = 'rgba(255, 123, 114, 0.15)';
+            else if (l < 20) color = 'rgba(255, 166, 87, 0.1)';
+            else color = 'rgba(126, 231, 135, 0.1)';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(x, 20, layerWidth, canvas.height - 40);
+
+            if (l % 4 === 0) {
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '10px monospace';
+                ctx.fillText(`L${l}`, x + 2, canvas.height - 5);
+            }
+        }
+
+        // Update and draw particles
+        canvasTime += 0.016 * speed;
+
+        for (const p of particles) {
+            // Determine which layer the particle is in
+            const layerIdx = Math.floor((p.x - 50) / layerWidth);
+            const clampedLayer = Math.max(0, Math.min(L - 1, layerIdx));
+
+            // Self-alignment increases with depth
+            const selfAlign = 0.04 + 0.66 * Math.pow(clampedLayer / (L-1), 1.5);
+
+            // Rotation strength (inverse of self-alignment)
+            const rotStrength = showRot ? (1 - selfAlign) * 0.08 * speed : 0;
+
+            // Compression (stronger in early layers)
+            const compStrength = showComp ? (1 - selfAlign) * 0.002 * speed : 0;
+
+            // Apply rotation
+            const angle = rotStrength * Math.sin(canvasTime + p.hue * 0.01);
+            const newVx = p.vx * Math.cos(angle) - p.vy * Math.sin(angle);
+            const newVy = p.vx * Math.sin(angle) + p.vy * Math.cos(angle);
+            p.vx = newVx + 0.5;
+            p.vy = newVy;
+
+            // Apply compression toward center
+            const centerY = canvas.height / 2;
+            p.vy += (centerY - p.y) * compStrength;
+
+            // Damping in late layers (more symmetric = less chaotic)
+            if (clampedLayer > 20) {
+                p.vy *= 0.98;
+            }
+
+            // Move
+            p.x += p.vx * speed * 0.3;
+            p.y += p.vy * speed * 0.3;
+
+            // Store trail
+            if (showTrails) {
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > 80) p.trail.shift();
+            }
+
+            // Wrap around
+            if (p.x > canvas.width - 30) {
+                p.x = 50 + Math.random() * 20;
+                p.y = 100 + Math.random() * 250;
+                p.trail = [];
+            }
+            if (p.y < 20) p.y = 20;
+            if (p.y > canvas.height - 20) p.y = canvas.height - 20;
+
+            // Draw trail
+            if (showTrails && p.trail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                for (let t = 1; t < p.trail.length; t++) {
+                    ctx.lineTo(p.trail[t].x, p.trail[t].y);
+                }
+                ctx.strokeStyle = `hsla(${p.hue}, 70%, 60%, 0.3)`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Draw particle
+            const size = 3 + (1 - selfAlign) * 4;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+
+            let color;
+            if (clampedLayer < 5) color = `hsl(0, 70%, 65%)`;
+            else if (clampedLayer < 20) color = `hsl(30, 80%, 60%)`;
+            else color = `hsl(140, 60%, 60%)`;
+
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        // Draw labels
+        ctx.fillStyle = '#e6edf3';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('EARLY (non-normal, rotation)', 60, 15);
+        ctx.fillText('MID (transition)', canvas.width * 0.35, 15);
+        ctx.fillText('LATE (near-symmetric)', canvas.width * 0.7, 15);
+
+        animFrame = requestAnimationFrame(animate);
+    }
+
+    animate();
+}
+
+// ============ INITIALIZATION ============
+document.addEventListener('DOMContentLoaded', () => {
+    renderFormulas();
+    updateResidualSim();
+    updateEigenSpiral();
+    updateRegimePlot();
+    updateBottleneck();
+    updateSchurPlot();
+    updateCommunityPlot();
+    updateCanvas();
+});
+</script>
+
+</body>
+</html>

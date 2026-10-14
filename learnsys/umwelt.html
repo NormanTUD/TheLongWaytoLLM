@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Umwelten – Uexküll meets AI</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{overflow:hidden;font-family:'Segoe UI',Arial,sans-serif}
+
+  #ui-overlay{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;z-index:10;
+  }
+
+  #scene-label{
+    position:fixed;top:16px;left:50%;transform:translateX(-50%);
+    color:#fff;font-size:20px;z-index:20;letter-spacing:3px;font-weight:300;
+    text-shadow:0 2px 15px rgba(0,0,0,0.8);
+    background:rgba(0,0,0,0.4);padding:8px 28px;border-radius:10px;
+    backdrop-filter:blur(10px);pointer-events:none;
+  }
+
+  #nav-buttons{
+    position:fixed;top:62px;left:50%;transform:translateX(-50%);
+    z-index:20;display:flex;gap:6px;pointer-events:all;
+  }
+  #nav-buttons button{
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);
+    color:#ccc;padding:8px 20px;cursor:pointer;font-size:13px;
+    border-radius:22px;transition:all 0.35s;backdrop-filter:blur(6px);
+    font-family:'Segoe UI',Arial,sans-serif;
+  }
+  #nav-buttons button:hover{background:rgba(255,255,255,0.2);color:#fff}
+  #nav-buttons button.active{background:rgba(100,180,255,0.25);border-color:rgba(100,180,255,0.5);color:#fff}
+
+  #info-panel{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:rgba(5,10,20,0.9);border:1px solid rgba(255,255,255,0.12);
+    color:#d0d8e8;padding:18px 28px;border-radius:14px;
+    max-width:700px;text-align:center;z-index:20;
+    font-size:13.5px;line-height:1.75;
+    backdrop-filter:blur(16px);box-shadow:0 8px 40px rgba(0,0,0,0.6);
+    pointer-events:none;transition:opacity 0.5s;
+  }
+  #info-panel em{color:#88bbff}
+  #info-panel strong{color:#fff}
+
+  #sound-toggle{
+    position:fixed;top:16px;right:16px;z-index:25;
+    background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);
+    color:#aaa;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;
+    pointer-events:all;
+  }
+  #sound-toggle:hover{color:#fff}
+
+  .dog-vision .a-canvas{
+    filter:saturate(0.25) sepia(0.15) hue-rotate(-15deg) brightness(1.05);
+    transition:filter 1.2s ease;
+  }
+  .normal-vision .a-canvas{
+    filter:none;
+    transition:filter 1.2s ease;
+  }
+</style>
+</head>
+<body class="normal-vision">
+
+<div id="scene-label">UMWELTEN</div>
+<div id="nav-buttons">
+  <button onclick="switchScene('human')">👤 Mensch</button>
+  <button onclick="switchScene('dog')">🐕 Hund</button>
+  <button onclick="switchScene('butterfly')">🦋 Schmetterling</button>
+  <button onclick="switchScene('ai')">🤖 KI</button>
+</div>
+<button id="sound-toggle" onclick="toggleSound()">🔇 Sound</button>
+<div id="info-panel">
+  Ein Jogger am Strand mit seinem Hund. Ein Schmetterling fliegt vorbei.<br>
+  Jedes Wesen lebt in seiner eigenen <strong>Umwelt</strong> – seiner subjektiven Blase.
+</div>
+
+<!-- ============================================================ -->
+<!-- A-FRAME SCENE -->
+<!-- ============================================================ -->
+<a-scene
+  renderer="antialias:true; colorManagement:true; toneMapping:ACESFilmic; toneMappingExposure:1.2"
+  fog="type:linear; color:#87CEEB; near:40; far:90"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false"
+>
+
+  <!-- ===== ASSETS ===== -->
+  <a-assets timeout="30000">
+    <!-- Free low-poly models from various CC0/CC-BY sources -->
+    <!-- Using basic primitives as fallback; replace URLs with your own .glb files -->
+  </a-assets>
+
+  <!-- ===== CAMERA ===== -->
+  <a-entity id="camera-rig" position="0 3.5 14">
+    <a-camera id="main-camera" look-controls="enabled:false" wasd-controls="enabled:false" fov="50">
+    </a-camera>
+  </a-entity>
+
+  <!-- ===== SKY ===== -->
+  <a-gradient-sky id="sky-entity" material="shader:flat; color:#87CEEB; opacity:1"></a-gradient-sky>
+  <!-- Simple sky with color; we'll add a gradient via a large sphere -->
+  <a-sky id="sky-bg" color="#87CEEB"></a-sky>
+
+  <!-- ===== LIGHTING ===== -->
+  <a-light type="ambient" color="#8899bb" intensity="0.5"></a-light>
+  <a-light type="directional" color="#ffeedd" intensity="1.6" position="20 25 15"
+    light="castShadow:true; shadowMapWidth:2048; shadowMapHeight:2048"></a-light>
+  <a-light type="hemisphere" color="#87CEEB" groundColor="#445522" intensity="0.35"></a-light>
+
+  <!-- ===== SUN DISC ===== -->
+  <a-circle color="#ffeecc" radius="3" position="40 30 -60"
+    material="shader:flat" look-at="[camera]"></a-circle>
+
+  <!-- ===== BEACH: SAND ===== -->
+  <a-plane id="sand" color="#d4b896" width="80" height="30"
+    rotation="-90 0 0" position="0 0 5"
+    material="roughness:0.95" shadow="receive:true"></a-plane>
+
+  <!-- ===== WET SAND ===== -->
+  <a-plane color="#9a8060" width="80" height="4"
+    rotation="-90 0 0" position="0 0.01 -6"
+    material="roughness:0.6" shadow="receive:true"></a-plane>
+
+  <!-- ===== WATER ===== -->
+  <a-plane id="water" color="#2266aa" width="80" height="40"
+    rotation="-90 0 0" position="0 -0.15 -28"
+    material="roughness:0.15; opacity:0.75; transparent:true"
+    animation="property:material.opacity; from:0.7; to:0.8; dur:3000; dir:alternate; loop:true; easing:easeInOutSine">
+  </a-plane>
+
+  <!-- ===== DUNES ===== -->
+  <a-sphere color="#c4a878" radius="3" scale="1.5 0.35 1" position="-15 0 17" material="roughness:1"></a-sphere>
+  <a-sphere color="#c4a878" radius="4" scale="1.5 0.3 1" position="-5 0 18" material="roughness:1"></a-sphere>
+  <a-sphere color="#c4a878" radius="3.5" scale="1.5 0.35 1" position="5 0 16" material="roughness:1"></a-sphere>
+  <a-sphere color="#c4a878" radius="3" scale="1.5 0.4 1" position="15 0 19" material="roughness:1"></a-sphere>
+  <a-sphere color="#c4a878" radius="4.5" scale="1.5 0.3 1" position="25 0 17" material="roughness:1"></a-sphere>
+
+  <!-- ===== BEACH GRASS (simple planes) ===== -->
+  <a-entity id="grass-container"></a-entity>
+
+  <!-- ===== FLOWERS ===== -->
+  <a-entity id="flower-container"></a-entity>
+
+  <!-- ===== JOGGER (built from primitives) ===== -->
+  <a-entity id="jogger" position="-25 0 -2" rotation="0 90 0">
+    <!-- Head -->
+    <a-sphere color="#d4a574" radius="0.2" position="0 1.68 0" material="roughness:0.7"></a-sphere>
+    <!-- Hair -->
+    <a-sphere color="#3a2a1a" radius="0.22" theta-start="0" theta-length="90" position="0 1.72 0" material="roughness:0.9"></a-sphere>
+    <!-- Torso -->
+    <a-cylinder color="#2255aa" radius="0.15" height="0.5" position="0 1.15 0" material="roughness:0.75"></a-cylinder>
+    <!-- Earbuds -->
+    <a-sphere color="#ffffff" radius="0.022" position="0.17 1.65 0.05" material="roughness:0.3"></a-sphere>
+    <a-sphere color="#ffffff" radius="0.022" position="-0.17 1.65 0.05" material="roughness:0.3"></a-sphere>
+    <!-- Phone -->
+    <a-box color="#111111" width="0.04" height="0.08" depth="0.005" position="0.3 0.95 0.12" material="metalness:0.5"></a-box>
+    <!-- Hips -->
+    <a-cylinder color="#1a1a2a" radius="0.13" height="0.16" position="0 0.82 0"></a-cylinder>
+    <!-- Left leg pivot -->
+    <a-entity id="jogger-leg-l" position="-0.07 0.75 0">
+      <a-cylinder color="#1a1a2a" radius="0.055" height="0.36" position="0 -0.18 0"></a-cylinder>
+      <a-cylinder color="#d4a574" radius="0.042" height="0.34" position="0 -0.42 0"></a-cylinder>
+      <a-box color="#ee4422" width="0.07" height="0.045" depth="0.13" position="0 -0.6 0.02"></a-box>
+    </a-entity>
+    <!-- Right leg pivot -->
+    <a-entity id="jogger-leg-r" position="0.07 0.75 0">
+      <a-cylinder color="#1a1a2a" radius="0.055" height="0.36" position="0 -0.18 0"></a-cylinder>
+      <a-cylinder color="#d4a574" radius="0.042" height="0.34" position="0 -0.42 0"></a-cylinder>
+      <a-box color="#ee4422" width="0.07" height="0.045" depth="0.13" position="0 -0.6 0.02"></a-box>
+    </a-entity>
+    <!-- Left arm pivot -->
+    <a-entity id="jogger-arm-l" position="-0.2 1.32 0">
+      <a-cylinder color="#2255aa" radius="0.04" height="0.28" position="0 -0.14 0"></a-cylinder>
+      <a-cylinder color="#d4a574" radius="0.032" height="0.25" position="0 -0.32 0.05"></a-cylinder>
+    </a-entity>
+    <!-- Right arm pivot -->
+    <a-entity id="jogger-arm-r" position="0.2 1.32 0">
+      <a-cylinder color="#2255aa" radius="0.04" height="0.28" position="0 -0.14 0"></a-cylinder>
+      <a-cylinder color="#d4a574" radius="0.032" height="0.25" position="0 -0.32 0.05"></a-cylinder>
+    </a-entity>
+  </a-entity>
+
+  <!-- ===== DOG ===== -->
+  <a-entity id="dog" position="-22 0 -3" rotation="0 70 0">
+    <!-- Body -->
+    <a-cylinder color="#c4883a" radius="0.17" height="0.7" position="0 0.42 0" rotation="0 0 90" material="roughness:0.9"></a-cylinder>
+    <!-- Chest -->
+    <a-sphere color="#c4883a" radius="0.19" position="0.2 0.44 0" material="roughness:0.9"></a-sphere>
+    <!-- Head -->
+    <a-sphere color="#c4883a" radius="0.14" position="0.4 0.54 0" material="roughness:0.9"></a-sphere>
+    <!-- Snout -->
+    <a-cylinder color="#c4883a" radius="0.05" height="0.11" position="0.52 0.51 0" rotation="0 0 90" material="roughness:0.9"></a-cylinder>
+    <!-- Nose -->
+    <a-sphere color="#1a1a1a" radius="0.02" position="0.58 0.52 0"></a-sphere>
+    <!-- Ears -->
+    <a-sphere color="#c4883a" radius="0.06" scale="0.4 1 0.6" position="0.34 0.6 0.11"></a-sphere>
+    <a-sphere color="#c4883a" radius="0.06" scale="0.4 1 0.6" position="0.34 0.6 -0.11"></a-sphere>
+    <!-- Eyes -->
+    <a-sphere color="#2a1a0a" radius="0.02" position="0.48 0.57 0.065"></a-sphere>
+    <a-sphere color="#2a1a0a" radius="0.02" position="0.48 0.57 -0.065"></a-sphere>
+    <!-- Tongue -->
+    <a-plane color="#ff6688" width="0.025" height="0.04" position="0.55 0.46 0" rotation="0 90 0" material="side:double"></a-plane>
+    <!-- Legs -->
+    <a-entity id="dog-leg-fl" position="0.17 0.32 0.09">
+      <a-cylinder color="#c4883a" radius="0.035" height="0.2" position="0 -0.1 0"></a-cylinder>
+      <a-cylinder color="#c4883a" radius="0.028" height="0.15" position="0 -0.22 0"></a-cylinder>
+    </a-entity>
+    <a-entity id="dog-leg-fr" position="0.17 0.32 -0.09">
+      <a-cylinder color="#c4883a" radius="0.035" height="0.2" position="0 -0.1 0"></a-cylinder>
+      <a-cylinder color="#c4883a" radius="0.028" height="0.15" position="0 -0.22 0"></a-cylinder>
+    </a-entity>
+    <a-entity id="dog-leg-bl" position="-0.17 0.32 0.09">
+      <a-cylinder color="#c4883a" radius="0.035" height="0.2" position="0 -0.1 0"></a-cylinder>
+      <a-cylinder color="#c4883a" radius="0.028" height="0.15" position="0 -0.22 0"></a-cylinder>
+    </a-entity>
+    <a-entity id="dog-leg-br" position="-0.17 0.32 -0.09">
+      <a-cylinder color="#c4883a" radius="0.035" height="0.2" position="0 -0.1 0"></a-cylinder>
+      <a-cylinder color="#c4883a" radius="0.028" height="0.15" position="0 -0.22 0"></a-cylinder>
+    </a-entity>
+  </a-entity>
+
+  <!-- ===== BUTTERFLY ===== -->
+  <a-entity id="butterfly" position="25 2 -1" rotation="0 -90 0" scale="2 2 2">
+    <!-- Body -->
+    <a-cylinder color="#1a1a1a" radius="0.02" height="0.12" position="0 0 0"></a-cylinder>
+    <!-- Head -->
+    <a-sphere color="#1a1a1a" radius="0.025" position="0 0.08 0"></a-sphere>
+    <!-- Wings (will be animated) -->
+    <a-entity id="wing-l" position="0 0.02 0">
+      <a-triangle color="#ff6600" vertex-a="0 0 0" vertex-b="-0.12 0.08 0" vertex-c="-0.08 -0.04 0"
+        material="side:double; opacity:0.85; transparent:true"></a-triangle>
+    </a-entity>
+    <a-entity id="wing-r" position="0 0.02 0">
+      <a-triangle color="#ff6600" vertex-a="0 0 0" vertex-b="0.12 0.08 0" vertex-c="0.08 -0.04 0"
+        material="side:double; opacity:0.85; transparent:true"></a-triangle>
+    </a-entity>
+  </a-entity>
+
+  <!-- ===== UMWELT BUBBLES (hidden by default, toggled per scene) ===== -->
+  <a-sphere id="bubble-human" color="#4488ff" radius="7" position="0 2.5 -2"
+    material="opacity:0.035; transparent:true; side:double; depthWrite:false"
+    visible="false">
+  </a-sphere>
+  <a-sphere id="bubble-human-inner" color="#ffffff" radius="2.2" position="0 1.2 -2"
+    material="opacity:0.025; transparent:true; side:double; depthWrite:false"
+    visible="false">
+  </a-sphere>
+
+  <a-sphere id="bubble-dog" color="#cc8833" radius="3.2" position="0 0.8 -3"
+    material="opacity:0.045; transparent:true; side:double; depthWrite:false"
+    visible="false">
+  </a-sphere>
+
+  <a-sphere id="bubble-butterfly" color="#ff6600" radius="0.7" position="0 2 -1"
+    material="opacity:0.06; transparent:true; side:double; depthWrite:false"
+    visible="false">
+  </a-sphere>
+
+  <!-- ===== PARTICLE CONTAINERS (filled dynamically) ===== -->
+  <a-entity id="human-particles" visible="false"></a-entity>
+  <a-entity id="dog-particles" visible="false"></a-entity>
+  <a-entity id="butterfly-particles" visible="false"></a-entity>
+  <a-entity id="knowledge-labels" visible="false"></a-entity>
+
+  <!-- ===== AI SCENE (hidden by default) ===== -->
+  <a-entity id="ai-scene" visible="false">
+    <!-- Dark void -->
+    <a-sphere color="#020208" radius="50" material="shader:flat; side:back" position="0 0 0"></a-sphere>
+    <!-- Cold light -->
+    <a-light type="point" color="#2244aa" intensity="0.8" distance="20" position="0 5 3"></a-light>
+    <!-- Server monolith -->
+    <a-box color="#0a0a14" width="0.9" height="2" depth="0.5" position="0 1 0"
+      material="roughness:0.15; metalness:0.85"></a-box>
+    <!-- Server lines -->
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 0.3 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 0.5 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 0.7 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 0.9 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 1.1 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 1.3 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <a-box color="#0066cc" width="0.7" height="0.006" depth="0.01" position="0 1.5 0.26" material="shader:flat; opacity:0.6"></a-box>
+    <!-- AI eye -->
+    <a-circle color="#00aaff" radius="0.05" position="0 1.7 0.26" material="shader:flat"></a-circle>
+    <!-- Vector tokens -->
+    <a-entity id="ai-tokens"></a-entity>
+  </a-entity>
+
+</a-scene>
+
+<!-- ============================================================ -->
+<!-- LOGIC -->
+<!-- ============================================================ -->
+<script>
+// Wait for A-Frame to be ready
+document.querySelector('a-scene').addEventListener('loaded', function(){
+
+  const jogger = document.getElementById('jogger');
+  const dogEl = document.getElementById('dog');
+  const butterflyEl = document.getElementById('butterfly');
+  const cameraRig = document.getElementById('camera-rig');
+
+  const bubbleHuman = document.getElementById('bubble-human');
+  const bubbleHumanInner = document.getElementById('bubble-human-inner');
+  const bubbleDog = document.getElementById('bubble-dog');
+  const bubbleButterfly = document.getElementById('bubble-butterfly');
+
+  const humanParticles = document.getElementById('human-particles');
+  const dogParticles = document.getElementById('dog-particles');
+  const butterflyParticles = document.getElementById('butterfly-particles');
+  const knowledgeLabels = document.getElementById('knowledge-labels');
+  const aiScene = document.getElementById('ai-scene');
+
+  let currentScene = 'human';
+  let time = 0;
+  let joggerX = -25;
+  let dogX = -22;
+  let butterflyX = 25;
+
+  // ===== Generate beach grass =====
+  const grassContainer = document.getElementById('grass-container');
+  for(let i=0;i<25;i++){
+    const x = (Math.random()-0.5)*50;
+    const z = 10+Math.random()*8;
+    for(let j=0;j<4;j++){
+      const blade = document.createElement('a-plane');
+      blade.setAttribute('color','#6a8a3a');
+      blade.setAttribute('width','0.04');
+      blade.setAttribute('height', String(0.2+Math.random()*0.25));
+      blade.setAttribute('position',`${x+(Math.random()-0.5)*0.15} 0.12 ${z+(Math.random()-0.5)*0.15}`);
+      blade.setAttribute('rotation',`0 ${Math.random()*180} 0`);
+      blade.setAttribute('material','side:double');
+      grassContainer.appendChild(blade);
+    }
+  }
+
+  // ===== Generate flowers =====
+  const flowerContainer = document.getElementById('flower-container');
+  const flowerColors = ['#ff6688','#ffaa44','#ffff66','#aa66ff'];
+  for(let i=0;i<15;i++){
+    const x = (Math.random()-0.5)*40;
+    const z = 8+Math.random()*10;
+    const stem = document.createElement('a-cylinder');
+    stem.setAttribute('color','#3a6a2a');
+    stem.setAttribute('radius','0.015');
+    stem.setAttribute('height','0.25');
+    stem.setAttribute('position',`${x} 0.12 ${z}`);
+    flowerContainer.appendChild(stem);
+    const petal = document.createElement('a-sphere');
+    petal.setAttribute('color', flowerColors[Math.floor(Math.random()*4)]);
+    petal.setAttribute('radius','0.05');
+    petal.setAttribute('scale','1 0.5 1');
+    petal.setAttribute('position',`${x} 0.26 ${z}`);
+    flowerContainer.appendChild(petal);
+  }
+
+  // ===== Generate human sensory particles =====
+  const senseColors = ['#ff6688','#66aaff','#ffcc44','#66ff88','#ff66ff','#ffffff'];
+  for(let i=0;i<60;i++){
+    const p = document.createElement('a-sphere');
+    const sz = 0.02+Math.random()*0.03;
+    p.setAttribute('radius', String(sz));
+    p.setAttribute('color', senseColors[Math.floor(Math.random()*senseColors.length)]);
+    p.setAttribute('material',`shader:flat; opacity:${0.2+Math.random()*0.3}; transparent:true`);
+    const a = Math.random()*Math.PI*2;
+    const r = 0.5+Math.random()*6;
+    p.setAttribute('position',`${Math.cos(a)*r} ${0.3+Math.random()*4.5} ${Math.sin(a)*r}`);
+    p.dataset.angle = a;
+    p.dataset.radius = r;
+    p.dataset.speed = 0.002+Math.random()*0.005;
+    p.dataset.baseY = 0.3+Math.random()*4.5;
+    p.dataset.bobSpeed = 0.8+Math.random()*1.2;
+    humanParticles.appendChild(p);
+  }
+
+  // ===== Generate knowledge labels =====
+  const knowledgeItems = ['Andromeda ✦','New York','Quantenphysik','Erinnerungen','Musik ♪','Geschichte'];
+  knowledgeItems.forEach((item,i)=>{
+    const el = document.createElement('a-text');
+    el.setAttribute('value', item);
+    el.setAttribute('color','rgba(150,180,255,0.6)');
+    el.setAttribute('align','center');
+    el.setAttribute('width','4');
+    const a = (i/6)*Math.PI*2;
+    el.setAttribute('position',`${Math.cos(a)*5.5} ${3.5+Math.sin(i)*1.2} ${Math.sin(a)*5.5}`);
+    el.setAttribute('look-at','[camera]');
+    el.dataset.angle = a;
+    el.dataset.radius = 5.5;
+    el.dataset.offsetY = 3.5+Math.sin(i)*1.2;
+    knowledgeLabels.appendChild(el);
+  });
+
+  // ===== Generate dog smell particles =====
+  const smellColors = ['#ffaa00','#ff6600','#ffcc33','#ee8833','#ddaa22'];
+  for(let i=0;i<150;i++){
+    const p = document.createElement('a-sphere');
+    const sz = 0.01+Math.random()*0.03;
+    p.setAttribute('radius', String(sz));
+    p.setAttribute('color', smellColors[Math.floor(Math.random()*smellColors.length)]);
+    p.setAttribute('material',`shader:flat; opacity:${0.15+Math.random()*0.4}; transparent:true`);
+    const a = Math.random()*Math.PI*2;
+    const r = Math.random()*2.8;
+    p.setAttribute('position',`${Math.cos(a)*r} ${0.05+Math.random()*1.0} ${Math.sin(a)*r}`);
+    p.dataset.angle = a;
+    p.dataset.radius = r;
+    p.dataset.speed = 0.003+Math.random()*0.01;
+    p.dataset.baseY = 0.05+Math.random()*1.0;
+    p.dataset.bobSpeed = 0.4+Math.random()*1.0;
+    dogParticles.appendChild(p);
+  }
+
+  // ===== Generate butterfly UV particles =====
+  const uvColors = ['#aa00ff','#cc44ff','#8800cc','#ff00ff'];
+  for(let i=0;i<15;i++){
+    const p = document.createElement('a-sphere');
+    const sz = 0.005+Math.random()*0.01;
+    p.setAttribute('radius', String(sz));
+    p.setAttribute('color', uvColors[Math.floor(Math.random()*uvColors.length)]);
+    p.setAttribute('material',`shader:flat; opacity:${0.3+Math.random()*0.5}; transparent:true`);
+    const a = Math.random()*Math.PI*2;
+    const r = Math.random()*0.4;
+    p.setAttribute('position',`${Math.cos(a)*r} ${Math.sin(a)*r*0.5} ${(Math.random()-0.5)*0.3}`);
+    p.dataset.angle = a;
+    p.dataset.radius = r;
+    p.dataset.speed = 0.003+Math.random()*0.006;
+    butterflyParticles.appendChild(p);
+  }
+
+  // ===== Generate AI vector tokens =====
+  const aiTokensEl = document.getElementById('ai-tokens');
+  const tokens = [
+    {label:'Strand',pos:'2.5 2.0 0.5',color:'#ddaa44'},
+    {label:'Sand',pos:'2.8 2.3 0.8',color:'#ddaa44'},
+    {label:'Meer',pos:'2.2 1.7 -0.2',color:'#4488cc'},
+    {label:'Urlaub',pos:'3.0 2.5 0.2',color:'#ddaa44'},
+    {label:'Baum',pos:'-2.0 3.0 1.0',color:'#44aa44'},
+    {label:'grün',pos:'-1.7 3.3 1.3',color:'#44aa44'},
+    {label:'Natur',pos:'-2.3 2.8 0.7',color:'#44aa44'},
+    {label:'Schmerz',pos:'-3.0 0.8 -1.0',color:'#ff4444'},
+    {label:'unangenehm',pos:'-2.6 1.1 -0.7',color:'#ff6666'},
+    {label:'Verletzung',pos:'-3.3 0.5 -1.3',color:'#ff6666'},
+    {label:'Hund',pos:'0.5 1.5 -2.0',color:'#cc8833'},
+    {label:'bellen',pos:'0.3 1.2 -2.3',color:'#cc8833'},
+    {label:'Freude',pos:'1.5 4.0 -0.5',color:'#44aaff'},
+    {label:'Sonne',pos:'3.5 4.5 1.0',color:'#ffff44'},
+    {label:'warm',pos:'3.2 4.2 1.3',color:'#ffff44'}
+  ];
+
+  tokens.forEach(t => {
+    // Token sphere
+    const sp = document.createElement('a-sphere');
+    sp.setAttribute('radius','0.07');
+    sp.setAttribute('color', t.color);
+    sp.setAttribute('position', t.pos);
+    sp.setAttribute('material','shader:flat');
+    aiTokensEl.appendChild(sp);
+
+    // Glow
+    const gl = document.createElement('a-sphere');
+    gl.setAttribute('radius','0.16');
+    gl.setAttribute('color', t.color);
+    gl.setAttribute('position', t.pos);
+    gl.setAttribute('material',`shader:flat; opacity:0.08; transparent:true`);
+    aiTokensEl.appendChild(gl);
+
+    // Label
+    const lbl = document.createElement('a-text');
+    lbl.setAttribute('value', t.label);
+    lbl.setAttribute('color', t.color);
+    lbl.setAttribute('align','center');
+    lbl.setAttribute('width','3');
+    const pp = t.pos.split(' ').map(Number);
+    lbl.setAttribute('position',`${pp[0]} ${pp[1]+0.3} ${pp[2]}`);
+    lbl.setAttribute('look-at','[camera]');
+    aiTokensEl.appendChild(lbl);
+  });
+
+  // Connection lines between nearby AI tokens
+  for(let i=0;i<tokens.length;i++){
+    for(let j=i+1;j<tokens.length;j++){
+      const a=tokens[i].pos.split(' ').map(Number);
+      const b=tokens[j].pos.split(' ').map(Number);
+      const dist=Math.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2);
+      if(dist<1.8){
+        const line=document.createElement('a-entity');
+        // Use a thin cylinder as a line
+        const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2, mz=(a[2]+b[2])/2;
+        const dx=b[0]-a[0], dy=b[1]-a[1], dz=b[2]-a[2];
+        const len=Math.sqrt(dx*dx+dy*dy+dz*dz);
+        line.setAttribute('geometry',`primitive:cylinder; radius:0.005; height:${len}`);
+        line.setAttribute('material','color:#223344; opacity:0.25; transparent:true; shader:flat');
+        line.setAttribute('position',`${mx} ${my} ${mz}`);
+        // Rotate cylinder to point from a to b
+        const ux=dx/len, uy=dy/len, uz=dz/len;
+        const ax2=Math.acos(uy);
+        const cross_x=-uz, cross_z=ux;
+        const cross_len=Math.sqrt(cross_x*cross_x+cross_z*cross_z);
+        if(cross_len>0.001){
+          line.setAttribute('rotation',`${THREE.MathUtils.radToDeg(Math.atan2(-dz,dx))} 0 ${THREE.MathUtils.radToDeg(ax2-Math.PI/2)}`);
+        }
+        // Simpler approach: use look-at trick
+        line.object3D.position.set(mx,my,mz);
+        aiTokensEl.appendChild(line);
+      }
+    }
+  }
+
+  // AI annotations
+  const annotations = [
+    {text:'"Baum" = nahe "grün", "Natur" — kein echter Baum', pos:'-2 4.2 1', color:'#556666'},
+    {text:'"Strand" = nahe "Sand", "Meer" — kein Sand unter den Füßen', pos:'2.5 3.4 0.5', color:'#556666'},
+    {text:'v_schmerz = [0.12, -0.54, 0.87, ...] — bedeutungslos', pos:'-3 -0.2 -1', color:'#664444'},
+    {text:'← Kopfhörer → Übersetzungs-KI → Vektorraum', pos:'0 5.5 0', color:'#445566'}
+  ];
+  annotations.forEach(a => {
+    const el = document.createElement('a-text');
+    el.setAttribute('value', a.text);
+    el.setAttribute('color', a.color);
+    el.setAttribute('align','center');
+    el.setAttribute('width','6');
+    el.setAttribute('position', a.pos);
+    el.setAttribute('look-at','[camera]');
+    aiTokensEl.appendChild(el);
+  });
+
+  // Floating data cubes in AI scene
+  for(let i=0;i<50;i++){
+    const cb = document.createElement('a-box');
+    cb.setAttribute('width','0.025');cb.setAttribute('height','0.025');cb.setAttribute('depth','0.025');
+    cb.setAttribute('color','#1a1a2a');
+    cb.setAttribute('material','shader:flat; opacity:0.2; transparent:true');
+    const x=(Math.random()-0.5)*12, y=Math.random()*6, z=(Math.random()-0.5)*8;
+    cb.setAttribute('position',`${x} ${y} ${z}`);
+    cb.dataset.baseY = y;
+    cb.dataset.type = 'dataFloat';
+    aiTokensEl.appendChild(cb);
+  }
+
+  // ===== AUDIO =====
+  let audioCtx=null, soundEnabled=false, masterGain=null, birdInterval=null, waveSource=null, waveGainNode=null;
+  function initAudio(){
+    if(audioCtx)return;
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();masterGain.gain.value=0.3;
+    masterGain.connect(audioCtx.destination);
+  }
+  function playChirp(freq,st,vol){
+    if(!audioCtx||!soundEnabled)return;
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.setValueAtTime(freq,st);
+    o.frequency.linearRampToValueAtTime(freq*1.3,st+0.04);
+    o.frequency.linearRampToValueAtTime(freq*0.9,st+0.08);
+    g.gain.setValueAtTime(0,st);g.gain.linearRampToValueAtTime(vol,st+0.01);
+    g.gain.linearRampToValueAtTime(0,st+0.1);
+    o.connect(g);g.connect(masterGain);o.start(st);o.stop(st+0.12);
+  }
+  function startBirds(v){
+    if(birdInterval)return;
+    birdInterval=setInterval(()=>{
+      if(!audioCtx||!soundEnabled)return;
+      const n=audioCtx.currentTime,f=2000+Math.random()*2000;
+      const c=2+Math.floor(Math.random()*3);
+      for(let i=0;i<c;i++)playChirp(f+Math.random()*500,n+i*0.12,v);
+    },1500+Math.random()*2000);
+  }
+  function stopBirds(){if(birdInterval){clearInterval(birdInterval);birdInterval=null;}}
+  function startWaves(v){
+    if(!audioCtx||waveSource)return;
+    const bs=audioCtx.sampleRate*2,buf=audioCtx.createBuffer(1,bs,audioCtx.sampleRate),d=buf.getChannelData(0);
+    let l=0;for(let i=0;i<bs;i++){l=(l+0.02*(Math.random()*2-1))/1.02;d[i]=l*3.5;}
+    waveSource=audioCtx.createBufferSource();waveSource.buffer=buf;waveSource.loop=true;
+    waveGainNode=audioCtx.createGain();waveGainNode.gain.value=v;
+    const f=audioCtx.createBiquadFilter();f.type='lowpass';f.frequency.value=200;
+    waveSource.connect(f);f.connect(waveGainNode);waveGainNode.connect(masterGain);waveSource.start();
+  }
+  function stopWaves(){if(waveSource){waveSource.stop();waveSource=null;}}
+
+  window.toggleSound=function(){
+    const b=document.getElementById('sound-toggle');
+    if(!soundEnabled){initAudio();soundEnabled=true;b.textContent='🔊 Sound';startWaves(0.06);updateAudioForScene(currentScene);}
+    else{soundEnabled=false;b.textContent='🔇 Sound';stopBirds();stopWaves();}
+  };
+
+  function updateAudioForScene(n){
+    if(!audioCtx||!soundEnabled)return;stopBirds();const t=audioCtx.currentTime;
+    if(n==='human'){startBirds(0.03);if(waveGainNode)waveGainNode.gain.linearRampToValueAtTime(0.06,t+0.5);}
+    else if(n==='dog'){startBirds(0.12);if(waveGainNode)waveGainNode.gain.linearRampToValueAtTime(0.1,t+0.5);}
+    else if(n==='butterfly'){startBirds(0.01);if(waveGainNode)waveGainNode.gain.linearRampToValueAtTime(0.02,t+0.5);}
+    else if(n==='ai'){if(waveGainNode)waveGainNode.gain.linearRampToValueAtTime(0,t+0.8);}
+  }
+
+  // ===== SCENE SWITCHING =====
+  window.switchScene = function(name){
+    currentScene = name;
+    const label=document.getElementById('scene-label');
+    const info=document.getElementById('info-panel');
+
+    // Reset
+    document.body.className='normal-vision';
+    jogger.setAttribute('visible','true');
+    dogEl.setAttribute('visible','true');
+    butterflyEl.setAttribute('visible','true');
+    bubbleHuman.setAttribute('visible','false');
+    bubbleHumanInner.setAttribute('visible','false');
+    bubbleDog.setAttribute('visible','false');
+    bubbleButterfly.setAttribute('visible','false');
+    humanParticles.setAttribute('visible','false');
+    dogParticles.setAttribute('visible','false');
+    butterflyParticles.setAttribute('visible','false');
+    knowledgeLabels.setAttribute('visible','false');
+    aiScene.setAttribute('visible','false');
+    document.querySelector('a-sky').setAttribute('visible','true');
+
+    // Active button
+    document.querySelectorAll('#nav-buttons button').forEach(b=>b.classList.remove('active'));
+    const idx=['human','dog','butterfly','ai'].indexOf(name);
+    const btns=document.querySelectorAll('#nav-buttons button');
+    if(idx>=0&&btns[idx])btns[idx].classList.add('active');
+
+    switch(name){
+      case 'human':
+        label.textContent='👤 UMWELT: MENSCH';
+        info.innerHTML=`Die Bubble des <strong>Menschen</strong>: Er sieht den Strand, das Meer, den Himmel.<br>
+          Er weiß von anderen Städten, fernen Planeten, der Geschichte der Erde.<br>
+          Er hört Musik über Kopfhörer, riecht das Salzwasser, fühlt den Wind.<br>
+          <em>Aber auch er lebt nur in seiner Bubble – seiner subjektiven Umwelt.</em>`;
+        bubbleHuman.setAttribute('visible','true');
+        bubbleHumanInner.setAttribute('visible','true');
+        humanParticles.setAttribute('visible','true');
+        knowledgeLabels.setAttribute('visible','true');
+        cameraRig.setAttribute('position','0 3.5 14');
+        break;
+
+      case 'dog':
+        label.textContent='🐕 UMWELT: HUND';
+        info.innerHTML=`Die Bubble des <strong>Hundes</strong>: Kleiner als die des Menschen.<br>
+          Kein Wissen über ferne Planeten. Mehr <strong>im Jetzt</strong>.<br>
+          Aber die Geruchswelt <strong>explodiert</strong>: 200 Mio. Riechzellen.<br>
+          Farben verblassen (Dichromat). Geräusche werden <strong>lauter und detaillierter</strong>.`;
+        document.body.className='dog-vision';
+        bubbleDog.setAttribute('visible','true');
+        dogParticles.setAttribute('visible','true');
+        cameraRig.setAttribute('position','0 2.5 10');
+        break;
+
+      case 'butterfly':
+        label.textContent='🦋 UMWELT: SCHMETTERLING';
+        info.innerHTML=`Die Bubble des <strong>Schmetterlings</strong>: Winzig. Radikal im <strong>Hier und Jetzt</strong>.<br>
+          Kein Strand als Konzept. Kein Jogger. Kein Meer.<br>
+          Nur: <strong>UV-Muster</strong>, <strong>Windrichtung</strong>, <strong>Pheromone</strong>, <strong>Licht/Dunkel</strong>.<br>
+          <em>Er sieht Farben die wir nicht sehen (UV) – aber kennt kein "Morgen".</em>`;
+        bubbleButterfly.setAttribute('visible','true');
+        butterflyParticles.setAttribute('visible','true');
+        cameraRig.setAttribute('position','0 3 12');
+        break;
+
+      case 'ai':
+        label.textContent='🤖 UMWELT: KI';
+        info.innerHTML=`<strong>Überleitung:</strong> Der Jogger hört über Kopfhörer einen Podcast –<br>
+          eine KI übersetzt ihn simultan. Aber <strong>was ist die Welt dieser KI?</strong><br><br>
+          Sie kennt "Strand" – aber nur als Punkt im Vektorraum, nahe "Sand", "Meer", "Urlaub".<br>
+          <strong>Kein Sand unter den Füßen.</strong><br>
+          Ein "Baum" ist kein Ding mit harter Rinde, das man verbrennen kann –<br>
+          sondern ein <strong>Begriff, der oft mit "grün" und "Natur" in Texten vorkommt</strong>.<br><br>
+          <em>Die KI hat keine Umwelt. Sie hat einen Vektorraum. Und der ist dunkel.</em>`;
+        jogger.setAttribute('visible','false');
+        dogEl.setAttribute('visible','false');
+        butterflyEl.setAttribute('visible','false');
+        document.querySelector('a-sky').setAttribute('visible','false');
+        aiScene.setAttribute('visible','true');
+        cameraRig.setAttribute('position','0 3 10');
+        break;
+    }
+
+    updateAudioForScene(name);
+  };
+
+  // ===== ANIMATION TICK =====
+  const legL = document.getElementById('jogger-leg-l');
+  const legR = document.getElementById('jogger-leg-r');
+  const armL = document.getElementById('jogger-arm-l');
+  const armR = document.getElementById('jogger-arm-r');
+  const dogLegFL = document.getElementById('dog-leg-fl');
+  const dogLegFR = document.getElementById('dog-leg-fr');
+  const dogLegBL = document.getElementById('dog-leg-bl');
+  const dogLegBR = document.getElementById('dog-leg-br');
+  const wingL = document.getElementById('wing-l');
+  const wingR = document.getElementById('wing-r');
+
+  const WALK_SPEED = 1.8;
+  const BF_SPEED = 0.6;
+
+  document.querySelector('a-scene').setAttribute('tick', '');
+
+  // Use requestAnimationFrame for the tick
+  function tick(){
+    requestAnimationFrame(tick);
+    const dt = 0.016;
+    time += dt;
+
+    // Jogger movement: left to right, loop
+    joggerX += WALK_SPEED * dt;
+    if(joggerX > 25) joggerX = -25;
+    jogger.setAttribute('position', `${joggerX} ${Math.abs(Math.sin(time*4.5))*0.06} -2`);
+
+    // Jogger leg animation
+    const legAngle = Math.sin(time*9)*35;
+    legL.setAttribute('rotation',`${legAngle} 0 0`);
+    legR.setAttribute('rotation',`${-legAngle} 0 0`);
+    armL.setAttribute('rotation',`${-legAngle*0.7} 0 0`);
+    armR.setAttribute('rotation',`${legAngle*0.7} 0 0`);
+
+    // Dog follows jogger
+    const dogTargetX = joggerX + 3;
+    dogX += (dogTargetX - dogX) * 0.05;
+    if(dogX > 28) dogX = -22;
+    const dogZ = -3 + Math.sin(time*0.8)*1.0;
+    dogEl.setAttribute('position',`${dogX} ${Math.abs(Math.sin(time*5))*0.03} ${dogZ}`);
+
+    // Dog leg animation
+    const dLeg = Math.sin(time*8)*20;
+    dogLegFL.setAttribute('rotation',`${dLeg} 0 0`);
+    dogLegFR.setAttribute('rotation',`${-dLeg} 0 0`);
+    dogLegBL.setAttribute('rotation',`${-dLeg*0.8} 0 0`);
+    dogLegBR.setAttribute('rotation',`${dLeg*0.8} 0 0`);
+
+    // Butterfly: right to left, slow
+    butterflyX -= BF_SPEED * dt;
+    if(butterflyX < -30) butterflyX = 30;
+    const bfY = 1.8 + Math.sin(time*0.5)*0.4 + Math.sin(time*0.2)*0.2;
+    const bfZ = -1 + Math.sin(time*0.3)*1.5;
+    butterflyEl.setAttribute('position',`${butterflyX} ${bfY} ${bfZ}`);
+
+    // Wing flap
+    const flapAngle = Math.sin(time*8)*50;
+    wingL.setAttribute('rotation',`0 ${-flapAngle} 0`);
+    wingR.setAttribute('rotation',`0 ${flapAngle} 0`);
+
+    // Update bubble positions to follow characters
+    if(bubbleHuman.getAttribute('visible')==='true'){
+      bubbleHuman.setAttribute('position',`${joggerX} 2.5 -2`);
+      bubbleHumanInner.setAttribute('position',`${joggerX} 1.2 -2`);
+    }
+    if(bubbleDog.getAttribute('visible')==='true'){
+      bubbleDog.setAttribute('position',`${dogX} 0.8 ${dogZ}`);
+    }
+    if(bubbleButterfly.getAttribute('visible')==='true'){
+      bubbleButterfly.setAttribute('position',`${butterflyX} ${bfY} ${bfZ}`);
+    }
+
+    // Update particle container positions
+    humanParticles.setAttribute('position',`${joggerX} 0 -2`);
+    dogParticles.setAttribute('position',`${dogX} 0 ${dogZ}`);
+    butterflyParticles.setAttribute('position',`${butterflyX} ${bfY} ${bfZ}`);
+    knowledgeLabels.setAttribute('position',`${joggerX} 0 -2`);
+
+    // Animate AI data cubes
+    if(aiScene.getAttribute('visible')==='true'){
+      aiTokensEl.querySelectorAll('a-box').forEach(cb=>{
+        if(cb.dataset.type==='dataFloat'){
+          const by=parseFloat(cb.dataset.baseY);
+          const p=cb.getAttribute('position');
+          const px=parseFloat(p.x)||0;
+          cb.setAttribute('position',`${px} ${by+Math.sin(time*1.2+px*2)*0.25} ${p.z||0}`);
+          const r=cb.getAttribute('rotation')||{x:0,y:0,z:0};
+          cb.setAttribute('rotation',`${(parseFloat(r.x)||0)+0.3} ${(parseFloat(r.y)||0)+0.5} 0`);
+        }
+      });
+    }
+
+    // Gentle camera sway
+    const camPos = cameraRig.getAttribute('position');
+    const swayX = Math.sin(time*0.15)*0.05;
+    const swayY = Math.cos(time*0.1)*0.02;
+    cameraRig.object3D.position.x = parseFloat(camPos.x||0) + swayX;
+    cameraRig.object3D.position.y = parseFloat(camPos.y||0) + swayY;
+  }
+
+  tick();
+
+  // Start with human scene
+  window.switchScene('human');
+
+}); // end a-scene loaded
+</script>
+</body>
+</html>

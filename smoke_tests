@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd "$SCRIPT_DIR"
+
+bash find_double_defined_js.sh
+
+python3 -m py_compile py/**/*.py
+
+python3 py/qos.py py
+
+bash php_syntax_check.sh
+
+bash js_syntax_test.sh
+
+# Layout guard: hovering a mouseoverable term (glossary entry, citation,
+# ...) in a chapter introduction must never move the stuff around the
+# drop cap. Runs headless Chromium against the live site; degrades to a
+# SKIP when Chromium or the site is unavailable. Placed early on
+# purpose: it must keep running even if a later test is red.
+bash tests/hover_layout_guard.sh
+
+php tests/search_test.php
+
+node tests/search_js_test.js
+
+node tests/topics_test.js

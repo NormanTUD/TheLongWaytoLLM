@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garbentheorie – Interaktiv & Intuitiv</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/Temml-Latin.css">
+<script src="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/temml.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --accent: #58a6ff;
+  --accent2: #f78166;
+  --accent3: #7ee787;
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --border: #30363d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+h1 { color: var(--accent); font-size: 2.2em; margin-bottom: 10px; text-align: center; }
+h2 { color: var(--accent2); font-size: 1.5em; margin: 30px 0 15px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+h3 { color: var(--accent3); font-size: 1.2em; margin: 20px 0 10px; }
+.subtitle { text-align: center; color: var(--text-dim); margin-bottom: 30px; font-size: 1.1em; }
+
+/* Navigation */
+.nav-tabs {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px;
+  justify-content: center; position: sticky; top: 0; z-index: 100;
+  background: var(--bg); padding: 15px 0; border-bottom: 1px solid var(--border);
+}
+.nav-tab {
+  padding: 10px 20px; border-radius: 8px; cursor: pointer;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--text); font-size: 0.9em; transition: all 0.3s;
+}
+.nav-tab:hover { border-color: var(--accent); color: var(--accent); }
+.nav-tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: bold; }
+
+/* Sections */
+.section { display: none; animation: fadeIn 0.4s; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Cards */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 25px; margin: 20px 0;
+  transition: border-color 0.3s;
+}
+.card:hover { border-color: var(--accent); }
+.card.definition { border-left: 4px solid var(--accent); }
+.card.example { border-left: 4px solid var(--accent3); }
+.card.intuition { border-left: 4px solid var(--accent2); background: #1c2128; }
+.card.ai { border-left: 4px solid #d2a8ff; }
+
+.label {
+  display: inline-block; padding: 2px 10px; border-radius: 4px;
+  font-size: 0.75em; font-weight: bold; margin-bottom: 10px; text-transform: uppercase;
+}
+.label-def { background: rgba(88,166,255,0.2); color: var(--accent); }
+.label-ex { background: rgba(126,231,135,0.2); color: var(--accent3); }
+.label-int { background: rgba(247,129,102,0.2); color: var(--accent2); }
+.label-ai { background: rgba(210,168,255,0.2); color: #d2a8ff; }
+
+/* Math */
+.math-block {
+  background: #0d1117; border: 1px solid var(--border);
+  border-radius: 8px; padding: 15px 20px; margin: 12px 0;
+  overflow-x: auto; text-align: center;
+}
+.math-inline { display: inline; }
+
+/* Interactive */
+.interactive-area {
+  background: #0d1117; border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin: 20px 0;
+}
+canvas { border-radius: 8px; display: block; margin: 10px auto; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 15px 0; }
+.controls label { color: var(--text-dim); font-size: 0.9em; }
+.controls input[type="range"] { width: 150px; }
+.controls select, .controls button {
+  padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text); cursor: pointer;
+}
+.controls button:hover { border-color: var(--accent); color: var(--accent); }
+.controls button.active-btn { background: var(--accent); color: var(--bg); }
+
+/* Grid */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Diagram */
+.diagram-container { text-align: center; margin: 20px 0; }
+.arrow { color: var(--accent); font-size: 1.5em; }
+
+/* Tooltip */
+.tooltip {
+  position: relative; display: inline-block; border-bottom: 1px dashed var(--accent);
+  cursor: help;
+}
+.tooltip .tooltiptext {
+  visibility: hidden; width: 280px; background: #1c2128;
+  color: var(--text); text-align: left; border-radius: 8px;
+  padding: 12px; position: absolute; z-index: 1;
+  bottom: 125%; left: 50%; margin-left: -140px;
+  border: 1px solid var(--border); font-size: 0.85em;
+  opacity: 0; transition: opacity 0.3s;
+}
+.tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+/* Flow diagram */
+.flow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+.flow-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 18px; text-align: center; min-width: 120px;
+}
+.flow-arrow { color: var(--accent); font-size: 1.5em; }
+
+/* Stalk visualization */
+#stalkCanvas { background: #0d1017; }
+
+/* Progress */
+.progress-bar {
+  height: 4px; background: var(--border); border-radius: 2px; margin: 5px 0 20px;
+}
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
+</style>
+</head>
+<body>
+
+<h1>🌾 Garbentheorie</h1>
+<p class="subtitle">Interaktiv · Formal · Intuitiv — Von Prägarben bis Exodromie</p>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 12.5%"></div></div>
+
+<div class="nav-tabs" id="navTabs">
+  <div class="nav-tab active" data-section="sec-overview">Überblick</div>
+  <div class="nav-tab" data-section="sec-presheaves">Prägarben</div>
+  <div class="nav-tab" data-section="sec-sheaves">Garben</div>
+  <div class="nav-tab" data-section="sec-stalks">Halme</div>
+  <div class="nav-tab" data-section="sec-sheafification">Garbifizierung</div>
+  <div class="nav-tab" data-section="sec-morphisms">Morphismen</div>
+  <div class="nav-tab" data-section="sec-cohomology">Kohomologie</div>
+  <div class="nav-tab" data-section="sec-constructible">Konstruierbar & Exodromie</div>
+</div>
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="section active" id="sec-overview">
+<h2>🗺️ Die große Landkarte</h2>
+
+<div class="card intuition">
+<span class="label label-int">Kernidee</span>
+<p><strong>Garbe = lokale Daten, die sich konsistent verkleben lassen.</strong></p>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Offene Mengen & Überlappungen</h3>
+<canvas id="openSetCanvas" width="700" height="260"></canvas>
+<div class="controls">
+  <label>U₁ links: <input type="range" id="openLeft" min="10" max="50" value="25"></label>
+  <label>U₁ rechts: <input type="range" id="openRight" min="50" max="90" value="55"></label>
+  <label>U₂ links: <input type="range" id="openLeft2" min="10" max="90" value="45"></label>
+  <label>U₂ rechts: <input type="range" id="openRight2" min="20" max="90" value="75"></label>
+  <button id="btnOpen" class="active-btn" onclick="toggleOpenType('open')">Offen (a,b)</button>
+  <button id="btnClosed" onclick="toggleOpenType('closed')">Abgeschlossen [a,b]</button>
+</div>
+<div id="openSetInfo" class="card" style="margin-top:10px; font-size:0.9em"></div>
+</div>
+
+<div class="flow">
+  <div class="flow-box"><strong>Prägarbe</strong><br><small>Daten auf offenen Mengen</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box"><strong>Garbe</strong><br><small>+ Verkleben möglich</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box"><strong>Halme</strong><br><small>Lokale Info an Punkten</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box"><strong>Kohomologie</strong><br><small>Globale Obstruktionen</small></div>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<h3>📐 Formaler Rahmen</h3>
+<div class="math-block" id="math-functor"></div>
+</div>
+
+<div class="card">
+<h3>🔗 Beziehungen</h3>
+<div id="conceptGraph" style="width:100%; height:400px;"></div>
+</div>
+</div>
+</div>
+
+<!-- ==================== PRESHEAVES ==================== -->
+<div class="section" id="sec-presheaves">
+<h2>📦 Prägarben (Presheaves)</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-presheaf-def"></div>
+<div class="math-block" id="math-presheaf-functor"></div>
+</div>
+
+<div class="card example">
+<span class="label label-ex">Beispiel</span>
+<h3>Stetige Funktionen ✓ Garbe</h3>
+<div class="math-block" id="math-ex-cont"></div>
+</div>
+
+<div class="card example">
+<span class="label label-ex">Beispiel</span>
+<h3>Beschränkte Funktionen ✗ keine Garbe</h3>
+<div class="math-block" id="math-ex-bounded"></div>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Beschränkte Funktionen</h3>
+<canvas id="boundedCanvas" width="700" height="300"></canvas>
+<div class="controls">
+  <label>Intervall-Grenze: <input type="range" id="splitSlider" min="20" max="80" value="50"></label>
+  <label>Steigung links: <input type="range" id="slopeLeft" min="1" max="10" value="3"></label>
+  <label>Steigung rechts: <input type="range" id="slopeRight" min="1" max="10" value="3"></label>
+  <button onclick="drawBounded()">Neu zeichnen</button>
+</div>
+<p id="boundedInfo" style="color:var(--accent3); margin-top:10px"></p>
+</div>
+
+
+</div>
+
+<!-- ==================== SHEAVES ==================== -->
+<div class="section" id="sec-sheaves">
+<h2>🌾 Garben (Sheaves)</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-S1"></div>
+<div class="math-block" id="math-S2"></div>
+</div>
+
+<div class="card intuition">
+<span class="label label-int">Intuition</span>
+<div class="math-block" id="math-equalizer"></div>
+</div>
+
+<div class="interactive-area">
+ <h3>🎮 Garben-Axiome</h3>
+<div class="controls">
+  <select id="sheafScenario">
+    <option value="continuous">Stetige Funktionen (Garbe ✓)</option>
+    <option value="bounded">Beschränkte Funktionen (keine Garbe ✗)</option>
+    <option value="constant">Konstante Garbe (Garbe ✓)</option>
+    <option value="constantPre">Konstante Prägarbe (keine Garbe ✗)</option>
+  </select>
+</div>
+<canvas id="sheafCanvas" width="700" height="350"></canvas>
+<div id="sheafExplanation" class="card" style="margin-top:15px"></div>
+</div>
+
+<div class="card example">
+<h3>Konstante Prägarbe ✗ vs. Konstante Garbe ✓</h3>
+<div class="grid-2">
+<div><div class="math-block" id="math-const-pre"></div></div>
+<div><div class="math-block" id="math-const-sheaf"></div></div>
+</div>
+</div>
+
+<div class="card example">
+<h3>Wolkenkratzer-Garbe</h3>
+<div class="math-block" id="math-skyscraper"></div>
+</div>
+</div>
+
+<!-- ==================== STALKS ==================== -->
+<div class="section" id="sec-stalks">
+<h2>🌱 Halme (Stalks)</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-stalk-def"></div>
+</div>
+
+<div class="card intuition">
+<div style="text-align:center; margin:15px 0; font-size:1.2em">
+  <span style="color:var(--accent2)">Globaler Schnitt</span> → 
+  <span style="color:var(--accent)">Lokaler Schnitt</span> → 
+  <span style="color:var(--accent3)">Keim (Halm)</span>
+</div>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Schnitt → Keim → Halm</h3>
+<div style="display:flex; justify-content:center; gap:30px; margin-bottom:10px; font-size:0.85em; color:var(--text-dim)">
+  <span>Globaler Schnitt <span style="color:var(--accent)">s ∈ ℱ(X)</span></span>
+  <span style="color:var(--text-dim)">→</span>
+  <span>Lokaler Schnitt <span style="color:var(--accent2)">s|_U ∈ ℱ(U)</span></span>
+  <span style="color:var(--text-dim)">→</span>
+  <span>Keim <span style="color:var(--accent3)">[s]_x</span></span>
+  <span style="color:var(--text-dim)">→</span>
+  <span>Halm <span style="color:var(--accent)">ℱ_x</span></span>
+</div>
+<canvas id="stalkCanvas" width="700" height="450"></canvas>
+<div class="controls">
+  <label>Position x: <input type="range" id="stalkX" min="5" max="95" value="50"></label>
+  <label>Garbe: 
+    <select id="stalkType">
+      <option value="continuous">Stetige Funktionen</option>
+      <option value="constant">Konstante Garbe ℤ</option>
+      <option value="skyscraper">Wolkenkratzer bei 0.5</option>
+    </select>
+  </label>
+</div>
+<div id="stalkInfo" class="card" style="margin-top:10px"></div>
+</div>
+
+<div class="card definition">
+<span class="label label-def">Schlüsselsatz</span>
+<div class="math-block" id="math-stalk-iso"></div>
+</div>
+</div>
+
+<!-- ==================== SHEAFIFICATION ==================== -->
+<div class="section" id="sec-sheafification">
+<h2>✨ Garbifizierung (Sheafification)</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-sheafification"></div>
+</div>
+
+<div class="card intuition">
+<div class="math-block" id="math-shf-construction"></div>
+</div>
+
+<div class="card example">
+<h3>Konstante Prägarbe → Konstante Garbe</h3>
+<p><span class="tooltip">ℱ<sup>pre</sup>(U)=G<span class="tooltiptext">Konstante Prägarbe: Jeder offenen Menge wird derselbe Wert G zugeordnet.</span></span> → ℱ⁺(U) = <span class="tooltip">lokal konstante Fkt.<span class="tooltiptext">Funktionen U→G, die auf zusammenhängenden Teilen konstant sind.</span></span></p>
+</div>
+
+<div class="card example">
+<h3>Beschränkte → alle stetigen Funktionen</h3>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Garbifizierung in Aktion</h3>
+<canvas id="sheafifyCanvas" width="700" height="300"></canvas>
+<div class="controls">
+  <button id="btnShowPre" class="active-btn" onclick="toggleSheafify('pre')">Prägarbe</button>
+  <button id="btnShowSheaf" onclick="toggleSheafify('sheaf')">Garbifizierung</button>
+  <button id="btnShowBoth" onclick="toggleSheafify('both')">Vergleich</button>
+</div>
+<div id="sheafifyInfo" class="card" style="margin-top:10px"></div>
+</div>
+
+<div class="card">
+<span class="label label-def">Halme bleiben erhalten</span>
+<div class="math-block" id="math-shf-stalks"></div>
+</div>
+</div>
+
+<!-- ==================== MORPHISMS ==================== -->
+<div class="section" id="sec-morphisms">
+<h2>🔀 Morphismen & Funktorialität</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-morph-def"></div>
+</div>
+<div class="card intuition">
+<div class="math-block" id="math-morph-comm"></div>
+</div>
+
+<div class="card example">
+<div class="math-block" id="math-kernel"></div>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Kern, Bild, Kokern</h3>
+<canvas id="kernelCanvas" width="700" height="350"></canvas>
+<div class="controls">
+  <label>Multiplikator k: <input type="range" id="kernelMultiplier" min="1" max="7" value="2"></label>
+</div>
+<div id="kernelInfo" class="card" style="margin-top:10px"></div>
+</div>
+
+<div class="card intuition">
+<div class="math-block" id="math-surj-example"></div>
+</div>
+
+<div class="card">
+<span class="label label-def">Exakte Sequenzen</span>
+<div class="math-block" id="math-ses"></div>
+</div>
+
+ 
+<div class="interactive-area">
+<h3>🎮 Pushforward & Pullback</h3>
+<div class="flow">
+  <div class="flow-box"><strong>f<sup>-1</sup></strong><br><small>Pullback</small><br><small>exakt, linksadjungiert</small></div>
+  <div class="flow-arrow">⊣</div>
+  <div class="flow-box"><strong>f<sub>*</sub></strong><br><small>Pushforward</small><br><small>linksexakt</small></div>
+</div>
+<div class="math-block" id="math-adjunction"></div>
+<div class="grid-2">
+<div class="card" style="margin:5px 0">
+<div class="math-block" id="math-pushforward"></div>
+</div>
+<div class="card" style="margin:5px 0">
+<div class="math-block" id="math-pullback"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ==================== COHOMOLOGY ==================== -->
+<div class="section" id="sec-cohomology">
+<h2>💎 Garbenkohomologie</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-cohom-def"></div>
+<div class="math-block" id="math-cohom-compute"></div>
+</div>
+
+<div class="card intuition">
+<div class="math-block" id="math-exp-seq"></div>
+</div>
+
+<div class="card example">
+<span class="label label-ex">Beispiel</span>
+<h3>Kohomologie der Sphäre S<sup>n</sup></h3>
+<div class="math-block" id="math-sphere-cohom"></div>
+</div>
+
+<div class="card definition">
+<span class="label label-def">Čech-Kohomologie</span>
+<div class="math-block" id="math-cech"></div>
+<div class="math-block" id="math-cech-iso"></div>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Kohomologie berechnen</h3>
+<div class="controls">
+  <select id="cohomSpace">
+    <option value="circle">S¹ (Kreis)</option>
+    <option value="sphere2">S² (2-Sphäre)</option>
+    <option value="torus">T² (Torus)</option>
+    <option value="rp2">ℝP² (Projektive Ebene)</option>
+    <option value="Rn">ℝⁿ</option>
+  </select>
+  <select id="cohomCoeff">
+    <option value="Z">ℤ</option>
+    <option value="R">ℝ</option>
+    <option value="Q">ℚ</option>
+  </select>
+  <button onclick="computeCohomology()">Berechnen</button>
+</div>
+<div id="cohomResult" class="card" style="margin-top:15px"></div>
+<div id="cohomPlot" style="width:100%; height:250px; margin-top:15px"></div>
+</div>
+
+<div class="card">
+<span class="label label-def">Mayer-Vietoris</span>
+<div class="math-block" id="math-mv"></div>
+</div>
+</div>
+
+<!-- ==================== CONSTRUCTIBLE & EXODROMY ==================== -->
+<div class="section" id="sec-constructible">
+<h2>🏗️ Konstruierbare Garben & Exodromie</h2>
+
+<div class="card definition">
+<span class="label label-def">Definition</span>
+<div class="math-block" id="math-strat"></div>
+</div>
+
+<div class="card definition">
+<span class="label label-def">Konstruierbare Garbe</span>
+<div class="math-block" id="math-constructible"></div>
+</div>
+
+<div class="card example">
+<h3>Konstruierbare Garben auf ℝ</h3>
+<p>Stratifizierung ℝ → {0 → 1}. X₀={0}, X₁=ℝ\{0}</p>
+</div>
+
+<div class="card definition">
+<span class="label label-def">Exit-Pfad-Kategorie</span>
+<div class="math-block" id="math-exit"></div>
+<div style="text-align:center; margin:15px 0">
+<p style="color:var(--accent3)">✓ Nur aufwärts</p>
+<p style="color:var(--accent2)">✗ Nie zurück</p>
+</div>
+</div>
+
+<div class="interactive-area">
+<h3>🎮 Exit-Pfade auf S¹</h3>
+<canvas id="exitCanvas" width="700" height="350"></canvas>
+<div class="controls">
+  <button id="btnExitValid" onclick="drawExitPath('valid')">Gültiger Exit-Pfad ✓</button>
+  <button id="btnExitInvalid" onclick="drawExitPath('invalid')">Ungültiger Pfad ✗</button>
+  <button id="btnExitCategory" onclick="drawExitPath('category')">Exit-Kategorie zeigen</button>
+</div>
+<div id="exitInfo" class="card" style="margin-top:10px"></div>
+</div>
+
+<div class="card definition">
+<span class="label label-def">Exodromie-Satz</span>
+<div class="math-block" id="math-exodromy"></div>
+<div style="text-align:center; font-size:1.2em; margin:10px 0; color:var(--accent)">
+Cons<sub>P</sub>(X) ≃ Fun(Exit<sub>P</sub>(X), Set)
+</div>
+</div>
+
+<div class="card intuition">
+<div class="grid-2">
+<div><div class="math-block" id="math-cons-ex"></div></div>
+<div><span style="color:var(--accent); font-size:2em; display:block;text-align:center">• ← • → •</span></div>
+</div>
+</div>
+
+<div class="card">
+<span class="label label-def">Étale Version</span>
+<div class="math-block" id="math-etale-exodromy"></div>
+<div class="math-block" id="math-sga1"></div>
+</div>
+</div>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ===== NAVIGATION =====
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.section).classList.add('active');
+    // Update progress
+    const tabs = [...document.querySelectorAll('.nav-tab')];
+    const idx = tabs.indexOf(tab);
+    document.getElementById('progressFill').style.width = ((idx + 1) / tabs.length * 100) + '%';
+  });
+});
+
+// ===== MATH RENDERING =====
+function renderMath() {
+  const mathDefs = {
+    'math-functor': `\\mathcal{F} : \\text{Open}(X)^{\\text{op}} \\to \\mathcal{C}`,
+    'math-presheaf-def': `\\text{Eine Prägarbe ist ein kontravarianter Funktor von der Kategorie der offenen Mengen in eine Zielkategorie.}`,
+    'math-presheaf-functor': `\\mathcal{F} : \\text{Open}(X)^{\\text{op}} \\to \\mathcal{C}, \\quad U \\mapsto \\mathcal{F}(U)`,
+    'math-ex-cont': `\\mathcal{F}(U) := \\{f : U \\to \\mathbb{R} \\mid f \\text{ stetig}\\}`,
+    'math-ex-bounded': `\\mathcal{F}(U) := \\{f : U \\to \\mathbb{R} \\mid f \\text{ stetig und beschränkt}\\}`,
+    'math-S1': `s_1|_{U_i} = s_2|_{U_i} \\;\\forall i \\in I \\implies s_1 = s_2`,
+    'math-S2': `s_i|_{U_i \\cap U_j} = s_j|_{U_i \\cap U_j} \\;\\forall i,j \\implies \\exists!\\, s \\in \\mathcal{F}(U): s|_{U_i} = s_i`,
+    'math-equalizer': `\\mathcal{F}(U) \\xrightarrow{\\;\\;} \\prod_i \\mathcal{F}(U_i) \\rightrightarrows \\prod_{i,j} \\mathcal{F}(U_i \\cap U_j)`,
+    'math-const-pre': `\\mathcal{F}^{\\text{pre}}_G(U) = G \\quad \\forall U`,
+    'math-const-sheaf': `\\underline{G}(U) = \\{f: U \\to G \\mid f \\text{ lokal konstant}\\}`,
+    'math-skyscraper': `x_*G(U) = \\begin{cases} G & \\text{falls } x \\in U \\\\ 0 & \\text{sonst} \\end{cases}`,
+    'math-stalk-def': `\\mathcal{F}_x := \\varinjlim_{U \\ni x} \\mathcal{F}(U)`,
+    'math-stalk-iso': `\\varphi: \\mathcal{F} \\to \\mathcal{G} \\text{ ist Iso} \\iff \\varphi_x: \\mathcal{F}_x \\to \\mathcal{G}_x \\text{ ist Iso } \\forall x \\in X`,
+    'math-sheafification': `\\theta: \\mathcal{F} \\to \\mathcal{F}^+, \\quad \\text{universell: } \\forall \\varphi: \\mathcal{F} \\to \\mathcal{G} \\;(\\mathcal{G} \\text{ Garbe}) \\;\\exists! \\psi: \\mathcal{F}^+ \\to \\mathcal{G}`,
+    'math-shf-construction': `\\mathcal{F}^+(U) = \\left\\{s: U \\to \\bigsqcup_{x \\in U} \\mathcal{F}_x \\;\\middle|\\; s(x) \\in \\mathcal{F}_x,\\; s \\text{ lokal wie Schnitte von } \\mathcal{F}\\right\\}`,
+    'math-shf-stalks': `\\mathcal{F}_x \\cong \\mathcal{F}^+_x \\quad \\forall x \\in X`,
+    'math-morph-def': `\\varphi: \\mathcal{F} \\to \\mathcal{G} \\text{ ist eine Familie } \\varphi_U: \\mathcal{F}(U) \\to \\mathcal{G}(U) \\text{ mit } \\varphi_U \\circ \\rho^{\\mathcal{F}}_{VU} = \\rho^{\\mathcal{G}}_{VU} \\circ \\varphi_V`,
+    'math-morph-comm': `\\begin{array}{ccc} \\mathcal{F}(V) & \\xrightarrow{\\varphi_V} & \\mathcal{G}(V) \\\\ \\downarrow \\rho_{VU} & & \\downarrow \\rho'_{VU} \\\\ \\mathcal{F}(U) & \\xrightarrow{\\varphi_U} & \\mathcal{G}(U) \\end{array}`,
+    'math-kernel': `(\\ker\\varphi)(U) = \\ker(\\varphi_U), \\quad (\\text{im}\\,\\varphi)(U) = \\text{im}(\\varphi_U), \\quad (\\text{coker}\\,\\varphi)(U) = \\text{coker}(\\varphi_U)`,
+    'math-ses': `0 \\to \\mathcal{F} \\xrightarrow{\\varphi} \\mathcal{G} \\xrightarrow{\\psi} \\mathcal{H} \\to 0`,
+    'math-surj-example': `\\text{exp}: \\mathcal{O} \\to \\mathcal{O}^\\times \\text{ auf } \\mathbb{C}^*`,
+    'math-adjunction': `\\text{Hom}_{\\text{Sh}(X)}(f^{-1}\\mathcal{G},\\, \\mathcal{F}) \\cong \\text{Hom}_{\\text{Sh}(Y)}(\\mathcal{G},\\, f_*\\mathcal{F})`,
+    'math-pushforward': `(f_*\\mathcal{F})(V) = \\mathcal{F}(f^{-1}(V))`,
+    'math-pullback': `(f^{-1}\\mathcal{F})(U) = \\varinjlim_{f(U) \\subseteq V} \\mathcal{F}(V) \\text{ (garbifiziert)}`,
+    'math-cohom-def': `H^i(X, \\mathcal{F}) := R^i\\Gamma(X, \\mathcal{F})`,
+    'math-cohom-compute': `H^i(X, \\mathcal{F}) = H^i\\big(\\Gamma(X, I^0) \\to \\Gamma(X, I^1) \\to \\Gamma(X, I^2) \\to \\cdots\\big)`,    'math-exp-seq': `0 \\to \\mathbb{Z} \\xrightarrow{2\\pi i} \\mathcal{O} \\xrightarrow{\\exp} \\mathcal{O}^\\times \\to 0`,
+    'math-les': `\\cdots \\to H^0(X, \\mathcal{O}^\\times) \\to H^1(X, \\mathbb{Z}) \\to H^1(X, \\mathcal{O}) \\to \\cdots`,
+    'math-sphere-cohom': `H^k(S^n, R) = \\begin{cases} R & k = 0, n \\\\ 0 & \\text{sonst} \\end{cases}`,
+    'math-cech': `\\check{C}^p(\\mathcal{U}, \\mathcal{F}) = \\prod_{|J|=p+1} \\mathcal{F}(U_{j_0} \\cap \\cdots \\cap U_{j_p})`,
+    'math-cech-iso': `\\check{H}^*(\\mathcal{U}, \\mathcal{F}) \\cong H^*(X, \\mathcal{F})`,
+    'math-mv': `\\cdots \\to H^k(X,F) \\to H^k(U,F) \\oplus H^k(V,F) \\to H^k(U \\cap V, F) \\to H^{k+1}(X,F) \\to \\cdots`,
+    'math-strat': `f: X \\to P \\quad \\text{(stetig, P mit Alexandroff-Topologie)}`,
+    'math-constructible': `\\mathcal{F} \\text{ ist } P\\text{-konstruierbar} \\iff \\mathcal{F}|_{X_p} \\text{ ist lokal konstant } \\forall p \\in P`,
+    'math-exit': `\\text{Exit}_P(X): \\quad \\text{Obj} = X, \\quad \\text{Mor}(x,y) = \\{\\text{Exit-Pfade } x \\to y\\} / \\text{Homotopie}`,
+    'math-exodromy': `\\text{Cons}_P(X) \\simeq \\text{Fun}(\\text{Exit}_P(X),\\, \\text{Set})`,
+    'math-etale-exodromy': `\\text{Cons}(X) \\simeq \\text{Fun}^{\\text{cts}}(\\text{Gal}(X),\\, \\text{Fin})`,
+    'math-sga1': `\\text{Fun}(\\pi_1^{\\text{ét}}(X, \\bar{x}),\\, \\text{Fin}) \\simeq \\text{Cov}_X`,
+    'math-cons-ex': `\\text{Cons}_P(\\mathbb{R}) = \\text{Fun}(\\text{Exit}_P(\\mathbb{R}), \\text{Set})`,
+  };
+
+  // Inline math
+  const inlineDefs = {
+    'm-X': `X`,
+    'm-C': `\\mathcal{C}`,
+    'm-U': `U \\subseteq X`,
+    'm-FU': `\\mathcal{F}(U)`,
+    'm-UV': `V \\supseteq U`,
+    'm-rho': `\\rho_{VU}: \\mathcal{F}(V) \\to \\mathcal{F}(U)`,
+    'm-ex1-X': `X = \\mathbb{R}`,
+    'm-ai-patch': `U \\subseteq \\text{Image}`,
+    'm-sheaf-F': `\\mathcal{F}`,
+    'm-sheaf-cover': `U = \\bigcup_{i \\in I} U_i`,
+    'm-UV-disj': `U, V \\text{ disjunkt}`,
+    'm-product': `\\mathcal{F}(U) \\times \\mathcal{F}(V)`,
+    'm-single-G': `G`,
+    'm-sky-x': `x \\in X`,
+    'm-stalk-Fx': `\\mathcal{F}_x`,
+    'm-stalk-x': `x`,
+    'm-germ': `(U, s),\\; s \\in \\mathcal{F}(U)`,
+    'm-shf-F': `\\mathcal{F}`,
+    'm-shf-Fplus': `\\mathcal{F}^+`,
+    'm-shf-theta': `\\theta: \\mathcal{F} \\to \\mathcal{F}^+`,
+    'm-shf-Fplus2': `\\mathcal{F}^+`,
+    'm-shf-Fplus3': `\\mathcal{F}^+`,
+    'm-shf-s': `s: U \\to \\bigsqcup_{x \\in U} \\mathcal{F}_x`,
+    'm-shf-ex1': `U \\mapsto G`,
+    'm-shf-ex2': `U \\mapsto \\{f: U \\to G \\mid f \\text{ lokal konstant}\\}`,
+    'm-morph-phi': `\\varphi: \\mathcal{F} \\to \\mathcal{G}`,
+    'm-morph-phiU': `\\varphi_U: \\mathcal{F}(U) \\to \\mathcal{G}(U)`,
+    'm-morph-ex1': `\\mathcal{F} = C^0(\\cdot, \\mathbb{R})`,
+    'm-morph-ex2': `\\varphi_U(f) = 2f`,
+    'm-ker': `(\\ker\\varphi)(U) = \\ker(\\varphi_U)`,
+    'm-im': `(\\text{im}\\,\\varphi)^+ \\hookrightarrow \\mathcal{G}`,
+    'm-coker': `(\\text{coker}\\,\\varphi)^+`,
+    'm-surj-phi': `\\varphi: \\mathcal{F} \\to \\mathcal{G}`,
+    'm-surj-phiU': `\\varphi_U: \\mathcal{F}(U) \\to \\mathcal{G}(U)`,
+    'm-exp': `\\exp: \\mathcal{O} \\to \\mathcal{O}^\\times`,
+    'm-Cx': `\\mathbb{C}^*`,
+    'm-exp-global': `\\exp: \\mathcal{O}(\\mathbb{C}^*) \\to \\mathcal{O}^\\times(\\mathbb{C}^*)`,
+    'm-Hi': `H^i(X, \\mathcal{F})`,
+    'm-Gamma': `\\Gamma(X, -)`,
+    'm-inj-res': `0 \\to \\mathcal{F} \\to I^0 \\to I^1 \\to \\cdots`,
+    'm-cover-U': `\\mathcal{U} = \\{U_i\\}`,
+    'm-intersections': `U_{i_0} \\cap \\cdots \\cap U_{i_k}`,
+    'm-pullback-stalk': `(f^{-1}\\mathcal{F})_x = \\mathcal{F}_{f(x)}`,
+    'm-strat-f': `f: X \\to P`,
+    'm-stratum': `X_p = f^{-1}(p)`,
+    'm-cons-restr': `\\mathcal{F}|_{X_p}`,
+  };
+
+  // Render all math
+  Object.entries(mathDefs).forEach(([id, tex]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      try { temml.render(tex, el, { displayMode: true }); }
+      catch(e) { el.innerHTML = `<code>${tex}</code>`; }
+    }
+  });
+
+  Object.entries(inlineDefs).forEach(([id, tex]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      try { temml.render(tex, el, { displayMode: false }); }
+      catch(e) { el.innerHTML = `<code>${tex}</code>`; }
+    }
+  });
+}
+
+// Run math rendering
+renderMath();
+
+// ===== CONCEPT GRAPH =====
+function drawConceptGraph() {
+  const nodes = [
+    {id: 'Prägarbe', x: 0.1, y: 0.5, color: '#58a6ff'},
+    {id: 'Garbe', x: 0.3, y: 0.5, color: '#7ee787'},
+    {id: 'Halm', x: 0.5, y: 0.3, color: '#f78166'},
+    {id: 'Garbifizierung', x: 0.2, y: 0.2, color: '#d2a8ff'},
+    {id: 'Morphismus', x: 0.5, y: 0.7, color: '#58a6ff'},
+    {id: 'Kohomologie', x: 0.7, y: 0.5, color: '#7ee787'},
+    {id: 'Konstruierbar', x: 0.85, y: 0.3, color: '#f78166'},
+    {id: 'Exodromie', x: 0.9, y: 0.6, color: '#d2a8ff'},
+    {id: 'Exit-Pfade', x: 0.75, y: 0.75, color: '#58a6ff'},
+  ];
+  const edges = [
+    ['Prägarbe', 'Garbe'], ['Prägarbe', 'Garbifizierung'],
+    ['Garbifizierung', 'Garbe'], ['Garbe', 'Halm'],
+    ['Garbe', 'Morphismus'], ['Garbe', 'Kohomologie'],
+    ['Kohomologie', 'Konstruierbar'], ['Konstruierbar', 'Exodromie'],
+    ['Exodromie', 'Exit-Pfade'], ['Morphismus', 'Kohomologie'],
+    ['Halm', 'Exodromie'],
+  ];
+
+  const edgeTraces = edges.map(([from, to]) => {
+    const n1 = nodes.find(n => n.id === from);
+    const n2 = nodes.find(n => n.id === to);
+    return {
+      x: [n1.x, n2.x], y: [n1.y, n2.y],
+      mode: 'lines', type: 'scatter',
+      line: { color: '#30363d', width: 2 },
+      hoverinfo: 'none', showlegend: false
+    };
+  });
+
+  const nodeTrace = {
+    x: nodes.map(n => n.x), y: nodes.map(n => n.y),
+    mode: 'markers+text', type: 'scatter',
+    marker: { size: 20, color: nodes.map(n => n.color) },
+    text: nodes.map(n => n.id),
+    textposition: 'top center',
+    textfont: { color: '#c9d1d9', size: 11 },
+    hoverinfo: 'text', showlegend: false
+  };
+
+  Plotly.newPlot('conceptGraph', [...edgeTraces, nodeTrace], {
+    paper_bgcolor: '#161b22', plot_bgcolor: '#161b22',
+    xaxis: { visible: false, range: [-0.05, 1.05] },
+    yaxis: { visible: false, range: [-0.05, 1.05] },
+    margin: { t: 10, b: 10, l: 10, r: 10 },
+    hovermode: 'closest'
+  }, { responsive: true, displayModeBar: false });
+}
+drawConceptGraph();
+
+// ===== OPEN SET CANVAS =====
+let openType = 'open';
+function toggleOpenType(type) {
+  openType = type;
+  document.getElementById('btnOpen').classList.toggle('active-btn', type === 'open');
+  document.getElementById('btnClosed').classList.toggle('active-btn', type === 'closed');
+  drawOpenSet();
+}
+function drawOpenSet() {
+  const canvas = document.getElementById('openSetCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const left1 = parseInt(document.getElementById('openLeft').value);
+  const right1 = parseInt(document.getElementById('openRight').value);
+  const left2 = parseInt(document.getElementById('openLeft2').value);
+  const right2 = parseInt(document.getElementById('openRight2').value);
+
+  // Base lines
+  const y1 = H * 0.30, y2 = H * 0.55, yOverlap = H * 0.82;
+
+  // Draw U₁ on top track
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(20, y1); ctx.lineTo(W - 20, y1); ctx.stroke();
+  ctx.fillStyle = 'rgba(88,166,255,0.15)';
+  ctx.fillRect(left1, y1 - 20, right1 - left1, 40);
+  ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2;
+  ctx.strokeRect(left1, y1 - 20, right1 - left1, 40);
+  ctx.fillStyle = '#58a6ff'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('U₁', (left1 + right1) / 2 - 10, y1 + 6);
+  // Endpoint markers
+  if (openType === 'open') {
+    ctx.strokeStyle = '#f78166'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(left1, y1, 8, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(right1, y1, 8, 0, 2 * Math.PI); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#7ee787';
+    ctx.beginPath(); ctx.arc(left1, y1, 8, 0, 2 * Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(right1, y1, 8, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif';
+  ctx.fillText('a', left1 - 5, y1 - 25); ctx.fillText('b', right1 - 5, y1 - 25);
+
+  // Draw U₂ on middle track
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(20, y2); ctx.lineTo(W - 20, y2); ctx.stroke();
+  ctx.fillStyle = 'rgba(126,231,135,0.15)';
+  ctx.fillRect(left2, y2 - 20, right2 - left2, 40);
+  ctx.strokeStyle = '#7ee787'; ctx.lineWidth = 2;
+  ctx.strokeRect(left2, y2 - 20, right2 - left2, 40);
+  ctx.fillStyle = '#7ee787'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('U₂', (left2 + right2) / 2 - 10, y2 + 6);
+  if (openType === 'open') {
+    ctx.strokeStyle = '#f78166'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(left2, y2, 8, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(right2, y2, 8, 0, 2 * Math.PI); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#7ee787';
+    ctx.beginPath(); ctx.arc(left2, y2, 8, 0, 2 * Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(right2, y2, 8, 0, 2 * Math.PI); ctx.fill();
+  }
+
+  // Overlap track at bottom
+  const ol = Math.max(left1, left2), or = Math.min(right1, right2);
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(20, yOverlap); ctx.lineTo(W - 20, yOverlap); ctx.stroke();
+  if (ol < or) {
+    // Has overlap
+    ctx.fillStyle = 'rgba(210,168,255,0.25)';
+    ctx.fillRect(ol, yOverlap - 20, or - ol, 40);
+    ctx.strokeStyle = '#d2a8ff'; ctx.lineWidth = 3;
+    ctx.strokeRect(ol, yOverlap - 20, or - ol, 40);
+    ctx.fillStyle = '#d2a8ff'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('U₁ ∩ U₂  (Überlappung)', (ol + or) / 2 - 60, yOverlap + 6);
+    // matching checkmark
+    ctx.fillStyle = '#7ee787'; ctx.font = '16px sans-serif';
+    ctx.fillText('✓', or + 10, yOverlap + 6);
+  } else {
+    // No overlap
+    ctx.fillStyle = '#8b949e'; ctx.font = '12px sans-serif';
+    ctx.fillText('⌀  keine Überlappung', W / 2 - 60, yOverlap + 6);
+  }
+
+  const info = document.getElementById('openSetInfo');
+  if (ol < or) {
+    info.innerHTML = '<div style="display:flex; gap:15px; align-items:center">'
+      + '<div><strong style="color:var(--accent3)">Überlappung vorhanden</strong><br>'
+      + 'U₁ ∩ U₂ = (' + Math.round(ol / 7 * 10) / 10 + ', ' + Math.round(or / 7 * 10) / 10 + ')</div>'
+      + '<div style="border-left:1px solid var(--border); padding-left:15px; font-size:0.9em; color:var(--text-dim)">'
+      + 'Auf der Überlappung müssen Schnitte übereinstimmen (Verklebungsbedingung S2).</div></div>';
+  } else {
+    info.innerHTML = '<div><strong style="color:var(--accent2)">Keine Überlappung</strong><br>'
+      + '<span style="color:var(--text-dim); font-size:0.9em">Disjunkte offene Mengen: S2 verlangt F(U₁∪U₂) = F(U₁) × F(U₂).</span></div>';
+  }
+}
+document.getElementById('openLeft').addEventListener('input', drawOpenSet);
+document.getElementById('openRight').addEventListener('input', drawOpenSet);
+document.getElementById('openLeft2').addEventListener('input', drawOpenSet);
+document.getElementById('openRight2').addEventListener('input', drawOpenSet);
+drawOpenSet();
+
+// ===== KERNEL/IMAGE/COKERNEL CANVAS =====
+function drawKernelCokernel() {
+  const canvas = document.getElementById('kernelCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const k = parseInt(document.getElementById('kernelMultiplier').value);
+  const n = 8;
+  const elA = Array.from({length: n}, (_, i) => i);
+  const elB = Array.from({length: n}, (_, i) => i);
+  const map = elA.map(x => (k * x) % n);
+  const startX = 150, endX = 550, ySpacing = 37, startY = 25;
+  // column headers
+  ctx.fillStyle = '#58a6ff'; ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('A = ℤ/8ℤ', startX - 35, startY - 10);
+  ctx.fillStyle = '#7ee787';
+  ctx.fillText('B = ℤ/8ℤ', endX - 35, startY - 10);
+  // draw elements and arrows
+  elA.forEach((x, i) => {
+    const yA = startY + i * ySpacing;
+    const yB = startY + map[x] * ySpacing;
+    ctx.strokeStyle = 'rgba(48,54,61,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(startX + 10, yA); ctx.lineTo(endX - 10, yB); ctx.stroke();
+    const inKernel = map[x] === 0;
+    ctx.fillStyle = inKernel ? '#f78166' : '#58a6ff';
+    ctx.beginPath(); ctx.arc(startX, yA, 9, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = inKernel ? '#f78166' : '#8b949e'; ctx.font = '11px sans-serif';
+    ctx.fillText(x, startX + 15, yA + 4);
+    if (inKernel) { ctx.fillStyle = '#f78166'; ctx.font = '10px sans-serif'; ctx.fillText('Kern', startX + 30, yA + 4); }
+  });
+  elB.forEach((y, i) => {
+    const yPos = startY + i * ySpacing;
+    const inImage = map.includes(y);
+    let color = '#30363d';
+    if (y === 0) color = '#8b949e';
+    else if (inImage) color = '#7ee787';
+    else color = '#d2a8ff';
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(endX, yPos, 9, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = color === '#30363d' ? '#8b949e' : color; ctx.font = '11px sans-serif';
+    ctx.fillText(y, endX + 15, yPos + 4);
+    if (y === 0) { ctx.fillStyle = '#8b949e'; ctx.font = '10px sans-serif'; ctx.fillText('0', endX + 30, yPos + 4); }
+    else if (inImage) { ctx.fillStyle = '#7ee787'; ctx.font = '10px sans-serif'; ctx.fillText('Bild', endX + 30, yPos + 4); }
+    else { ctx.fillStyle = '#d2a8ff'; ctx.font = '10px sans-serif'; ctx.fillText('Kokern', endX + 30, yPos + 4); }
+  });
+  // mapping info
+  const kernelEls = elA.filter(x => map[x] === 0);
+  const imageEls = [...new Set(map.filter(x => x !== 0))];
+  const cokerEls = elB.filter(y => !map.includes(y) && y !== 0);
+  const info = document.getElementById('kernelInfo');
+  info.innerHTML = `<strong>φ(x) = ${k}·x mod 8</strong><br>
+    Kern = { ${kernelEls.join(', ')} } (rot, wird auf 0 abgebildet)<br>
+    Bild = { ${imageEls.join(', ')} } (grün, wird getroffen)<br>
+    Kokern = B / Bild = { ${cokerEls.join(', ')} } + 0 (lila, fehlt im Bild)`;
+}
+document.getElementById('kernelMultiplier').addEventListener('input', drawKernelCokernel);
+drawKernelCokernel();
+
+// ===== BOUNDED FUNCTIONS CANVAS =====
+function drawBounded() {
+  const canvas = document.getElementById('boundedCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const split = parseInt(document.getElementById('splitSlider').value) / 100;
+  const sL = parseInt(document.getElementById('slopeLeft').value);
+  const sR = parseInt(document.getElementById('slopeRight').value);
+
+  const splitX = split * W;
+
+  // Background regions
+  ctx.fillStyle = 'rgba(88,166,255,0.05)';
+  ctx.fillRect(0, 0, splitX, H);
+  ctx.fillStyle = 'rgba(126,231,135,0.05)';
+  ctx.fillRect(splitX, 0, W - splitX, H);
+
+  // Divider
+  ctx.strokeStyle = '#30363d';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(splitX, 0);
+  ctx.lineTo(splitX, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw left function (bounded, increasing toward split)
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let x = 20; x < splitX; x++) {
+    const t = (x - 20) / (splitX - 20);
+    const y = H/2 - sL * 20 * Math.sin(t * Math.PI / 2);
+    if (x === 20) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Draw right function (bounded, increasing from split)
+  ctx.strokeStyle = '#7ee787';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let x = splitX; x < W - 20; x++) {
+    const t = (x - splitX) / (W - 20 - splitX);
+    const y = H/2 - sR * 20 * Math.sin(t * Math.PI / 2);
+    if (x === splitX) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Combined (potentially unbounded)
+  ctx.strokeStyle = '#f78166';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  for (let x = 20; x < W - 20; x++) {
+    let y;
+    if (x < splitX) {
+      const t = (x - 20) / (splitX - 20);
+      y = H/2 - sL * 20 * Math.sin(t * Math.PI / 2);
+    } else {
+      const t = (x - splitX) / (W - 20 - splitX);
+      y = H/2 - sR * 20 * Math.sin(t * Math.PI / 2);
+    }
+    if (x === 20) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = '12px sans-serif';
+  ctx.fillText('f₁ (beschränkt auf U₁)', 30, 30);
+  ctx.fillStyle = '#7ee787';
+  ctx.fillText('f₂ (beschränkt auf U₂)', splitX + 10, 30);
+  ctx.fillStyle = '#f78166';
+  ctx.fillText('Verklebt: f₁ ∪ f₂', W/2 - 40, H - 20);
+
+  const maxLeft = sL * 20;
+  const maxRight = sR * 20;
+  const info = document.getElementById('boundedInfo');
+  info.innerHTML = `Schranke links: ${maxLeft}, Schranke rechts: ${maxRight}. ` +
+    (maxLeft + maxRight > 100 ? '⚠️ Zusammen potenziell unbeschränkt! → Keine Garbe!' : '✓ Noch beschränkt.');
+}
+drawBounded();
+document.getElementById('splitSlider').addEventListener('input', drawBounded);
+document.getElementById('slopeLeft').addEventListener('input', drawBounded);
+document.getElementById('slopeRight').addEventListener('input', drawBounded);
+
+// ===== SHEAF SCENARIO =====
+function drawSheafScenario() {
+  const canvas = document.getElementById('sheafCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const scenario = document.getElementById('sheafScenario').value;
+  const exp = document.getElementById('sheafExplanation');
+
+  const u1Start = 80, u1End = 350, u2Start = 250, u2End = 550;
+  const overlapStart = u2Start, overlapEnd = u1End;
+  const barY = H - 80, barH = 60;
+
+  // Open set regions
+  ctx.fillStyle = 'rgba(88,166,255,0.08)';
+  ctx.fillRect(u1Start, barY, u1End - u1Start, barH);
+  ctx.fillStyle = 'rgba(126,231,135,0.08)';
+  ctx.fillRect(u2Start, barY, u2End - u2Start, barH);
+
+  // Overlap region — bold border + hatch pattern
+  const ox = overlapStart, oy = barY, ow = overlapEnd - overlapStart, oh = barH;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ox, oy, ow, oh);
+  ctx.clip();
+  // Diagonal hatch
+  ctx.strokeStyle = 'rgba(210,168,255,0.20)';
+  ctx.lineWidth = 1;
+  for (let i = ox - oh; i < ox + ow + oh; i += 10) {
+    ctx.beginPath(); ctx.moveTo(i, oy); ctx.lineTo(i + oh, oy + oh); ctx.stroke();
+  }
+  ctx.restore();
+  // Overlay purple tint
+  ctx.fillStyle = 'rgba(210,168,255,0.12)';
+  ctx.fillRect(ox, oy, ow, oh);
+  // Bold border
+  ctx.strokeStyle = '#d2a8ff';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(ox, oy, ow, oh);
+  // Highlight glow
+  ctx.shadowColor = 'rgba(210,168,255,0.3)';
+  ctx.shadowBlur = 8;
+  ctx.strokeRect(ox, oy, ow, oh);
+  ctx.shadowBlur = 0;
+
+  // Labels
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('U₁', (u1Start + u1End) / 2 - 10, H - 30);
+  ctx.fillStyle = '#7ee787';
+  ctx.fillText('U₂', (u2Start + u2End) / 2 - 10, H - 30);
+  ctx.fillStyle = '#d2a8ff';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('U₁ ∩ U₂', (overlapStart + overlapEnd) / 2 - 30, barY - 12);
+
+  // Draw sample lines in overlap to show matching
+  const sampleXs = [];
+  for (let i = 3; i < 8; i++) sampleXs.push(ox + (i / 10) * ow);
+
+  if (scenario === 'continuous') {
+    // Both curves are the SAME sine — perfect match on overlap
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = u1Start; x <= u1End; x++) {
+      const t = (x - u1Start) / (u1End - u1Start);
+      const y = H - 130 - 80 * Math.sin(t * Math.PI);
+      if (x === u1Start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#7ee787';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = u2Start; x <= u2End; x++) {
+      const t = (x - u1Start) / (u1End - u1Start);
+      const y = H - 130 - 80 * Math.sin(t * Math.PI);
+      if (x === u2Start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Overlap matching verification lines
+    sampleXs.forEach(x => {
+      const t = (x - u1Start) / (u1End - u1Start);
+      const y = H - 130 - 80 * Math.sin(t * Math.PI);
+      ctx.strokeStyle = 'rgba(126,231,135,0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, barY + barH + 5); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7ee787';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('✓', x - 5, barY + barH + 22);
+    });
+
+    ctx.fillStyle = '#7ee787';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('✓ Garbe!', W - 150, 30);
+    exp.innerHTML = '';
+  } else if (scenario === 'bounded') {
+    // Different curves: one goes up, one goes down → mismatch in overlap
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = u1Start; x <= u1End; x++) {
+      const t = (x - u1Start) / (u1End - u1Start);
+      const y = H - 130 - 40 * Math.sin(t * Math.PI * 0.5);
+      if (x === u1Start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#7ee787';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = u2Start; x <= u2End; x++) {
+      const t = (x - u2Start) / (u2End - u2Start);
+      const y = H - 130 - 40 * Math.sin((t + 0.5) * Math.PI * 0.5) - 30;
+      if (x === u2Start) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Overlap mismatch indicators
+    sampleXs.forEach(x => {
+      const t1 = (x - u1Start) / (u1End - u1Start);
+      const t2 = (x - u2Start) / (u2End - u2Start);
+      const y1 = H - 130 - 40 * Math.sin(t1 * Math.PI * 0.5);
+      const y2 = H - 130 - 40 * Math.sin((t2 + 0.5) * Math.PI * 0.5) - 30;
+      // Show the gap
+      ctx.strokeStyle = 'rgba(247,129,102,0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke();
+      ctx.setLineDash([]);
+      // Mismatch X
+      ctx.fillStyle = '#f78166';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('✗', x - 5, barY + barH + 22);
+      // f1 and f2 value labels
+      ctx.fillStyle = '#58a6ff';
+      ctx.font = '9px sans-serif';
+      ctx.fillText('f₁', x + 5, y1 - 2);
+      ctx.fillStyle = '#7ee787';
+      ctx.fillText('f₂', x + 5, y2 + 10);
+    });
+
+    ctx.fillStyle = '#f78166';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('✗ Keine Garbe!', W - 180, 30);
+    exp.innerHTML = '';
+  } else if (scenario === 'constant') {
+    // Same constant value on both — trivially match
+    ctx.fillStyle = '#58a6ff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('ℤ', (u1Start + u1End) / 2 - 8, H - 145);
+    ctx.fillStyle = '#7ee787';
+    ctx.fillText('ℤ', (u2Start + u2End) / 2 - 8, H - 145);
+
+    sampleXs.forEach(x => {
+      ctx.fillStyle = '#7ee787';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('✓', x - 5, barY + barH + 22);
+    });
+
+    ctx.fillStyle = '#7ee787';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('✓ Garbe!', W - 150, 30);
+    exp.innerHTML = '';
+  } else if (scenario === 'constantPre') {
+    // U₁→G, U₂→G; but U₁∪U₂→G not G×G → product mismatch
+    ctx.fillStyle = '#58a6ff';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText('G', (u1Start + u1End) / 2 - 6, H - 145);
+    ctx.fillStyle = '#7ee787';
+    ctx.fillText('G', (u2Start + u2End) / 2 - 6, H - 145);
+
+    // Draw U₁∪U₂ label below and show the problem
+    const unionMid = (u1Start + u2End) / 2;
+    ctx.fillStyle = '#f78166';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('U₁ ∪ U₂', unionMid - 28, H - 20);
+    ctx.strokeStyle = '#f78166';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(u1Start, barY + 2, u2End - u1Start, barH - 4);
+    ctx.setLineDash([]);
+
+    // Mismatch indicators
+    sampleXs.forEach(x => {
+      ctx.fillStyle = '#f78166';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('✗', x - 5, barY + barH + 22);
+    });
+
+    // Product mismatch annotation
+    ctx.fillStyle = '#f78166';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('✗ Keine Garbe!', W - 180, 30);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('F(U₁∪U₂) = G  (sollte G×G)', u1Start, H - 5);
+    exp.innerHTML = '';
+  }
+}
+document.getElementById('sheafScenario').addEventListener('change', drawSheafScenario);
+drawSheafScenario();
+
+// ===== STALK VISUALIZATION =====
+function drawStalk() {
+  const canvas = document.getElementById('stalkCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const xPos = parseInt(document.getElementById('stalkX').value) / 100;
+  const type = document.getElementById('stalkType').value;
+  const px = 50 + xPos * (W - 100);
+
+  // Draw base line labeled X
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(50, H - 60);
+  ctx.lineTo(W - 50, H - 60);
+  ctx.stroke();
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '12px sans-serif';
+  ctx.fillText('Raum X', W - 65, H - 45);
+
+  // Draw point x and global section indicator
+  ctx.fillStyle = '#f78166';
+  ctx.beginPath();
+  ctx.arc(px, H - 60, 8, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#f78166';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('x', px - 3, H - 35);
+
+  // Draw a "global section" line spanning the whole space (for context)
+  if (type === 'continuous') {
+    ctx.strokeStyle = 'rgba(88,166,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    for (let xx = 50; xx <= W - 50; xx++) {
+      const t = (xx - 50) / (W - 100);
+      const y = H - 60 - 10 - 15 * Math.sin(t * Math.PI * 2);
+      if (xx === 50) ctx.moveTo(xx, y); else ctx.lineTo(xx, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(88,166,255,0.3)';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('Globaler Schnitt s ∈ ℱ(X)', 50, H - 35);
+  }
+
+  // Layered hierarchy: neighborhoods getting smaller → germ → stalk
+  const levelLabels = ['Schnitt auf U₁', 'Schnitt auf U₂', 'Schnitt auf U₃', 'Keim [s]_x'];
+  const colors = ['rgba(88,166,255,0.12)', 'rgba(88,166,255,0.18)', 'rgba(88,166,255,0.25)', 'rgba(210,168,255,0.30)'];
+  const borderColors = ['#58a6ff', '#58a6ff', '#58a6ff', '#d2a8ff'];
+  const radii = [200, 140, 90, 50];
+
+  for (let i = 0; i < radii.length; i++) {
+    const r = radii[i];
+    const y = H - 80 - i * 55;
+    // Filled rectangle for the neighborhood
+    ctx.fillStyle = colors[i];
+    ctx.fillRect(px - r, y, 2 * r, 42);
+    ctx.strokeStyle = borderColors[i];
+    ctx.lineWidth = i === radii.length - 1 ? 3 : 1;
+    ctx.strokeRect(px - r, y, 2 * r, 42);
+
+    // Section inside
+    if (type === 'continuous') {
+      ctx.strokeStyle = '#7ee787';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let xx = px - r; xx <= px + r; xx++) {
+        const t = (xx - px) / r;
+        const yy = y + 21 - 12 * Math.cos(t * Math.PI * (i + 1));
+        if (xx === px - r) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+    } else if (type === 'constant') {
+      ctx.fillStyle = '#7ee787';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('ℤ', px - 5, y + 28);
+    } else if (type === 'skyscraper') {
+      const skyX = 0.5;
+      const skyPx = 50 + skyX * (W - 100);
+      ctx.fillStyle = Math.abs(px - skyPx) < r ? '#7ee787' : '#8b949e';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(Math.abs(px - skyPx) < r ? 'ℤ' : '0', px - 5, y + 28);
+    }
+
+    // Level label on the right
+    ctx.fillStyle = i === radii.length - 1 ? '#d2a8ff' : '#58a6ff';
+    ctx.font = i === radii.length - 1 ? 'bold 13px sans-serif' : '12px sans-serif';
+    ctx.fillText(levelLabels[i], px + r + 8, y + 28);
+
+    // Restriction arrow between levels
+    if (i < radii.length - 1) {
+      ctx.strokeStyle = 'rgba(139,148,158,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(px, y + 42);
+      ctx.lineTo(px, y + 42 + 5);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(139,148,158,0.3)';
+      ctx.font = '8px sans-serif';
+      ctx.fillText('↓ Einschränkung', px + 8, y + 42 + 7);
+    }
+  }
+
+  // Arrow to stalk (from the germ level up)
+  const germTopY = H - 80 - 3 * 55;
+  ctx.strokeStyle = '#f78166';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(px, germTopY);
+  ctx.lineTo(px, 30);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Stalk label at top
+  ctx.fillStyle = '#f78166';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('Halm ℱ_x', px - 35, 25);
+
+  // Stalk "basket" icon — open circle collecting germs
+  ctx.strokeStyle = '#f78166';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px + 70, 18, 12, 0.3, Math.PI - 0.3);
+  ctx.stroke();
+  ctx.fillStyle = '#f78166';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('{Keime}', px + 70, 35);
+
+  // Info box: show what stalk looks like right now
+  const info = document.getElementById('stalkInfo');
+  if (type === 'continuous') {
+    info.innerHTML = '<div style="display:flex; gap:20px; align-items:center">'
+      + '<div><strong style="color:var(--accent3)">ℱ_x = Keime stetiger Fkt.</strong><br>'
+      + 'Jeder Schnitt auf einer Umgebung von x definiert einen Keim.<br>'
+      + '<span style="color:var(--text-dim); font-size:0.9em">Zwei Funktionen haben denselben Keim ⟺ sie stimmen auf einer Umgebung von x überein.</span></div>'
+      + '<div style="border-left:1px solid var(--border); padding-left:15px">'
+      + '<span style="color:var(--accent)">ℱ_x =</span> '
+      + '<span style="color:var(--accent3)">{ [f]_x </span>'
+      + '<span style="color:var(--text-dim)">|</span> '
+      + '<span style="color:var(--accent3)">f stetig in Umgebung von x }</span>'
+      + '</div></div>';
+  } else if (type === 'constant') {
+    info.innerHTML = '<div style="display:flex; gap:20px; align-items:center">'
+      + '<div><strong style="color:var(--accent3)">ℱ_x = ℤ</strong><br>'
+      + 'Auf jeder zusammenhängenden Umgebung ist der Schnitt konstant.<br>'
+      + '<span style="color:var(--text-dim); font-size:0.9em">Der Halm ist immer ℤ, egal wo x steht.</span></div>'
+      + '<div style="border-left:1px solid var(--border); padding-left:15px">'
+      + '<span style="color:var(--accent)">ℱ_x =</span> '
+      + '<span style="color:var(--accent3)">{ ℤ }</span>'
+      + '</div></div>';
+  } else if (type === 'skyscraper') {
+    const isAtSky = Math.abs(xPos - 0.5) < 0.05;
+    info.innerHTML = '<div style="display:flex; gap:20px; align-items:center">'
+      + '<div><strong style="color:var(--accent3)">ℱ_x = ' + (isAtSky ? 'ℤ' : '0') + '</strong><br>'
+      + (isAtSky ? 'Am Punkt 0.5 sitzt die ganze Information.' : 'Weg vom Punkt 0.5 ist der Halm trivial.') + '<br>'
+      + '<span style="color:var(--text-dim); font-size:0.9em">Wolkenkratzer-Garbe: nur ein Punkt trägt Daten.</span></div>'
+      + '<div style="border-left:1px solid var(--border); padding-left:15px">'
+      + '<span style="color:var(--accent)">ℱ_x =</span> '
+      + '<span style="color:var(--accent3)">{ ' + (isAtSky ? 'ℤ' : '0') + ' }</span>'
+      + '</div></div>';
+  }
+}
+document.getElementById('stalkX').addEventListener('input', drawStalk);
+document.getElementById('stalkType').addEventListener('change', drawStalk);
+drawStalk();
+
+// ===== SHEAFIFICATION =====
+let sheafifyMode = 'pre';
+function toggleSheafify(mode) {
+  sheafifyMode = mode;
+  document.getElementById('btnShowPre').classList.toggle('active-btn', mode === 'pre');
+  document.getElementById('btnShowSheaf').classList.toggle('active-btn', mode === 'sheaf');
+  document.getElementById('btnShowBoth').classList.toggle('active-btn', mode === 'both');
+  drawSheafify();
+}
+
+function drawSheafify() {
+  const canvas = document.getElementById('sheafifyCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Example: constant presheaf → constant sheaf on disconnected space
+  // Space: two intervals [0, 0.4] and [0.6, 1]
+  const gap = 0.4 * W + 50;
+  const left = [50, 0.4 * W + 50];
+  const right = [0.6 * W + 50, W - 50];
+
+  // Draw space
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(left[0
+], left[1]);
+  ctx.lineTo(left[1], H - 60);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(right[0], H - 60);
+  ctx.lineTo(right[1], H - 60);
+  ctx.stroke();
+
+  // Gap label
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '12px sans-serif';
+  ctx.fillText('Lücke (nicht zusammenhängend)', left[1] + 10, H - 45);
+
+  if (sheafifyMode === 'pre' || sheafifyMode === 'both') {
+    // Constant presheaf: F(U) = G for all U
+    ctx.fillStyle = sheafifyMode === 'both' ? 'rgba(247,129,102,0.7)' : '#f78166';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Konstante Prägarbe: F(U) = ℤ für alle U', 50, 30);
+
+    // Show F(X) = ℤ (wrong!)
+    ctx.fillStyle = '#f78166';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('F(X) = ℤ', W/2 - 20, 70);
+    ctx.fillText('F(links) = ℤ', left[0] + 20, 100);
+    ctx.fillText('F(rechts) = ℤ', right[0] + 20, 100);
+
+    // Problem indicator
+    ctx.fillStyle = '#f78166';
+    ctx.fillText('⚠️ Für X = links ∪ rechts (disjunkt):', 50, 140);
+    ctx.fillText('Garbe verlangt: F(X) = ℤ × ℤ', 70, 165);
+    ctx.fillText('Prägarbe gibt: F(X) = ℤ  ← FALSCH!', 70, 190);
+  }
+
+  if (sheafifyMode === 'sheaf' || sheafifyMode === 'both') {
+    const yOff = sheafifyMode === 'both' ? 80 : 0;
+    ctx.fillStyle = sheafifyMode === 'both' ? 'rgba(126,231,135,0.9)' : '#7ee787';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Garbifizierung: F⁺(U) = lokal konstante Fkt.', 50, 220 + yOff - 80);
+
+    ctx.fillStyle = '#7ee787';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('F⁺(X) = ℤ × ℤ  ✓', W/2 - 30, 250 + yOff - 80);
+    ctx.fillText('F⁺(links) = ℤ', left[0] + 20, 270 + yOff - 80);
+    ctx.fillText('F⁺(rechts) = ℤ', right[0] + 20, 270 + yOff - 80);
+  }
+
+  const info = document.getElementById('sheafifyInfo');
+  if (sheafifyMode === 'pre') {
+    info.innerHTML = '<p><strong>Problem:</strong> Die konstante Prägarbe gibt jedem offenen U denselben Wert ℤ. Aber für disjunkte U₁, U₂ verlangt (S2): F(U₁ ∪ U₂) = F(U₁) × F(U₂) = ℤ × ℤ ≠ ℤ.</p>';
+  } else if (sheafifyMode === 'sheaf') {
+    info.innerHTML = '<p><strong>Lösung:</strong> Die Garbifizierung ersetzt "konstant" durch "lokal konstant". Auf zusammenhängenden Mengen ist das immer noch ℤ, aber auf disjunkten Vereinigungen wird es ℤ × ℤ. Die Halme bleiben gleich!</p>';
+  } else {
+    info.innerHTML = '<p><strong>Vergleich:</strong> Die Garbifizierung ändert die Halme nicht (F_x ≅ F⁺_x für alle x), aber sie "repariert" das globale Verhalten, sodass Verkleben funktioniert.</p>';
+  }
+}
+drawSheafify();
+
+// ===== EXIT PATHS =====
+function drawExitPath(mode) {
+  const canvas = document.getElementById('exitCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const r = 120;
+
+  // Draw circle (S¹)
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Stratification points
+  const p0 = { x: cx + r, y: cy }; // Stratum 0 (point)
+  const p1 = { x: cx - r, y: cy }; // Stratum 2 (point)
+
+  // Draw strata
+  // Stratum 0 (lowest) - a point on the right
+  ctx.fillStyle = '#f78166';
+  ctx.beginPath();
+  ctx.arc(p0.x, p0.y, 8, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#f78166';
+  ctx.font = '13px sans-serif';
+  ctx.fillText('Stratum 0', p0.x + 12, p0.y + 5);
+
+  // Stratum 2 (highest) - a point on the left
+  ctx.fillStyle = '#7ee787';
+  ctx.beginPath();
+  ctx.arc(p1.x, p1.y, 8, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.fillStyle = '#7ee787';
+  ctx.font = '13px sans-serif';
+  ctx.fillText('Stratum 2', p1.x - 70, p1.y + 5);
+
+  // Arcs = Stratum 1
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = '13px sans-serif';
+  ctx.fillText('Stratum 1 (oberer Bogen)', cx - 50, cy - r - 15);
+  ctx.fillText('Stratum 1 (unterer Bogen)', cx - 50, cy + r + 25);
+
+  // Color the arcs
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI * 0.95, -Math.PI * 0.05);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI * 0.05, Math.PI * 0.95);
+  ctx.stroke();
+
+  const info = document.getElementById('exitInfo');
+
+  if (mode === 'valid') {
+    // Valid exit path: from stratum 0 to stratum 1 to stratum 2
+    ctx.strokeStyle = '#7ee787';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    // Path going from p0 along upper arc to p1
+    ctx.arc(cx, cy, r + 15, 0, Math.PI, true);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow
+    ctx.fillStyle = '#7ee787';
+    ctx.beginPath();
+    ctx.moveTo(p1.x - 5, p1.y - 18);
+    ctx.lineTo(p1.x + 5, p1.y - 12);
+    ctx.lineTo(p1.x - 2, p1.y - 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#7ee787';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('✓ Exit-Pfad: 0 → 1 → 2', cx - 60, 30);
+    ctx.font = '12px sans-serif';
+    ctx.fillText('(monoton steigend in Strata)', cx - 60, 50);
+
+    info.innerHTML = '<p><strong>Gültiger Exit-Pfad:</strong> Der Pfad startet in Stratum 0, durchquert Stratum 1, und endet in Stratum 2. Die Stratifizierungsfunktion f∘γ ist monoton steigend. ✓</p>';
+  } else if (mode === 'invalid') {
+    // Invalid: goes from stratum 1 back to stratum 0
+    ctx.strokeStyle = '#f78166';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    // Path starting in upper arc, going back to p0
+    const startAngle = -Math.PI * 0.5;
+    ctx.arc(cx, cy, r + 15, startAngle, 0.1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // X mark
+    ctx.fillStyle = '#f78166';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('✗ Kein Exit-Pfad: 1 → 0', cx - 60, 30);
+    ctx.font = '12px sans-serif';
+    ctx.fillText('(geht zurück in niedrigeres Stratum!)', cx - 80, 50);
+
+    // Big X
+    ctx.strokeStyle = '#f78166';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + 50, cy - 50);
+    ctx.lineTo(cx + 80, cy - 20);
+    ctx.moveTo(cx + 80, cy - 50);
+    ctx.lineTo(cx + 50, cy - 20);
+    ctx.stroke();
+
+    info.innerHTML = '<p><strong>Ungültiger Pfad:</strong> Dieser Pfad geht von Stratum 1 zurück nach Stratum 0. Das verletzt die Monotonie-Bedingung! Exit-Pfade dürfen nur "aufwärts" gehen. ✗</p>';
+  } else if (mode === 'category') {
+    // Show the exit category
+    ctx.fillStyle = '#d2a8ff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('Exit-Pfad-Kategorie:', 50, 30);
+
+    // Draw the category diagram
+    const dx = 150, dy = 80;
+    const nodes = [
+      { x: cx, y: cy - 60, label: 'p₁ (Stratum 2)', color: '#7ee787' },
+      { x: cx - 100, y: cy + 60, label: 'oberer Bogen', color: '#58a6ff' },
+      { x: cx + 100, y: cy + 60, label: 'unterer Bogen', color: '#58a6ff' },
+      { x: cx, y: cy + 120, label: 'p₀ (Stratum 0)', color: '#f78166' },
+    ];
+
+    // Draw arrows
+    ctx.strokeStyle = '#8b949e';
+    ctx.lineWidth = 2;
+    // upper arc → p1
+    drawArrow(ctx, nodes[1].x + 20, nodes[1].y - 10, nodes[0].x - 20, nodes[0].y + 10);
+    // lower arc → p1
+    drawArrow(ctx, nodes[2].x - 20, nodes[2].y - 10, nodes[0].x + 20, nodes[0].y + 10);
+    // p0 → upper arc
+    drawArrow(ctx, nodes[3].x - 10, nodes[3].y - 10, nodes[1].x + 10, nodes[1].y + 15);
+    // p0 → lower arc
+    drawArrow(ctx, nodes[3].x + 10, nodes[3].y - 10, nodes[2].x - 10, nodes[2].y + 15);
+
+    // Draw nodes
+    nodes.forEach(n => {
+      ctx.fillStyle = n.color;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 6, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.font = '12px sans-serif';
+      ctx.fillText(n.label, n.x + 10, n.y + 4);
+    });
+
+    info.innerHTML = '<p><strong>Exit-Kategorie von S¹ → {0→1→2}:</strong> Objekte sind Punkte, Morphismen sind Exit-Pfade. Von Stratum 0 gibt es Pfade in beide Bögen (Stratum 1), und von dort weiter nach Stratum 2. Ein Funktor auf dieser Kategorie = eine konstruierbare Garbe!</p><p>Exodromie-Satz: <strong>Cons<sub>P</sub>(S¹) ≃ Fun(Exit<sub>P</sub>(S¹), Set)</strong></p>';
+  }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2) {
+  const headLen = 10;
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+}
+drawExitPath('valid');
+
+// ===== COHOMOLOGY CALCULATOR =====
+function computeCohomology() {
+  const space = document.getElementById('cohomSpace').value;
+  const coeff = document.getElementById('cohomCoeff').value;
+  const R = coeff === 'Z' ? 'ℤ' : coeff === 'R' ? 'ℝ' : 'ℚ';
+
+  let result = '';
+  let plotData = [];
+
+  const cohomData = {
+    circle: { name: 'S¹', groups: [R, R, '0', '0', '0'] },
+    sphere2: { name: 'S²', groups: [R, '0', R, '0', '0'] },
+    torus: { name: 'T²', groups: [R, R+'⊕'+R, R, '0', '0'] },
+    rp2: {
+      name: 'ℝP²',
+      groups: coeff === 'Z' ? ['ℤ', 'ℤ/2', '0', '0', '0'] :
+              coeff === 'R' ? ['ℝ', '0', '0', '0', '0'] :
+              ['ℚ', '0', '0', '0', '0']
+    },
+    Rn: { name: 'ℝⁿ', groups: [R, '0', '0', '0', '0'] },
+  };
+
+  const data = cohomData[space];
+  result = `<h3>H*(${data.name}, ${R})</h3><table style="width:100%; text-align:center; border-collapse:collapse;">`;
+  result += '<tr style="border-bottom:1px solid var(--border)">';
+  for (let i = 0; i < 5; i++) {
+    result += `<th style="padding:8px">H<sup>${i}</sup></th>`;
+  }
+  result += '</tr><tr>';
+  for (let i = 0; i < 5; i++) {
+    const val = data.groups[i];
+    const color = val === '0' ? 'var(--text-dim)' : 'var(--accent3)';
+    result += `<td style="padding:8px; color:${color}; font-weight:bold">${val}</td>`;
+  }
+  result += '</tr></table>';
+
+  // Add interpretation
+  if (space === 'circle') {
+    result += '<p style="margin-top:10px">H¹ ≅ ℤ: Der Kreis hat ein "Loch" – es gibt keinen globalen Logarithmus!</p>';
+  } else if (space === 'sphere2') {
+    result += '<p style="margin-top:10px">H² ≅ ℤ: Die 2-Sphäre umschließt einen Hohlraum.</p>';
+  } else if (space === 'torus') {
+    result += '<p style="margin-top:10px">H¹ ≅ ℤ²: Zwei unabhängige Schleifen. H² ≅ ℤ: Ein Hohlraum.</p>';
+  } else if (space === 'rp2' && coeff === 'Z') {
+    result += '<p style="margin-top:10px">H¹ ≅ ℤ/2: Torsion! Die nicht-orientierbare Schleife hat Ordnung 2.</p>';
+  } else if (space === 'Rn') {
+    result += '<p style="margin-top:10px">ℝⁿ ist kontrahierbar → alle höheren Kohomologien verschwinden.</p>';
+  }
+
+  document.getElementById('cohomResult').innerHTML = result;
+
+  // Plot
+  const dims = data.groups.map(g => {
+    if (g === '0') return 0;
+    if (g === R) return 1;
+    if (g.includes('⊕')) return 2;
+    if (g.includes('/')) return 0.5; // torsion
+    return 1;
+  });
+
+  Plotly.newPlot('cohomPlot', [{
+    x: [0, 1, 2, 3, 4],
+    y: dims,
+    type: 'bar',
+    marker: { color: dims.map(d => d > 0 ? '#7ee787' : '#30363d') },
+    text: data.groups,
+    textposition: 'outside',
+    textfont: { color: '#c9d1d9' }
+  }], {
+    paper_bgcolor: '#161b22',
+    plot_bgcolor: '#161b22',
+    xaxis: { title: 'Grad k', color: '#8b949e', tickvals: [0,1,2,3,4] },
+    yaxis: { title: 'Rang', color: '#8b949e', range: [0, 3] },
+    margin: { t: 30, b: 50, l: 50, r: 20 },
+    font: { color: '#c9d1d9' }
+  }, { responsive: true, displayModeBar: false });
+}
+computeCohomology();
+</script>
+</body>
+</html>

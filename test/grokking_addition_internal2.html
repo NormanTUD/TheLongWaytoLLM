@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Transformers Learn Modular Addition — Interactive Playground</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/Temml-Latin-Modern.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/temml@0.10.24/dist/temml.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #0d1025 50%, #0a0a1a 100%);
+            color: #e0e0e0;
+            line-height: 1.8;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px 30px; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin: 50px 0 10px;
+            background: linear-gradient(90deg, #7ecfff, #c77dff, #ffb347);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle { text-align: center; color: #888; margin-bottom: 50px; font-size: 1.05em; }
+        h2 {
+            font-size: 1.8em;
+            margin: 70px 0 25px;
+            color: #fff;
+            position: relative;
+            padding-left: 20px;
+        }
+        h2::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5px;
+            height: 70%;
+            border-radius: 3px;
+        }
+        h2.embed::before { background: #ff6b6b; }
+        h2.attention::before { background: #ffb347; }
+        h2.mlp::before { background: #4caf50; }
+        h2.interference::before { background: #7ecfff; }
+        h2.softmax::before { background: #c77dff; }
+        h2.dft::before { background: #f06595; }
+
+        .card {
+            background: rgba(18, 18, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(126, 207, 255, 0.1);
+            border-radius: 16px;
+            padding: 35px;
+            margin: 30px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .card.glow-red { border-color: rgba(255, 107, 107, 0.3); }
+        .card.glow-orange { border-color: rgba(255, 179, 71, 0.3); }
+        .card.glow-green { border-color: rgba(76, 175, 80, 0.3); }
+        .card.glow-blue { border-color: rgba(126, 207, 255, 0.3); }
+        .card.glow-purple { border-color: rgba(199, 125, 255, 0.3); }
+        .card.glow-pink { border-color: rgba(240, 101, 149, 0.3); }
+
+        p { margin: 15px 0; font-size: 1.05em; color: #ccc; }
+
+        .eq-box {
+            background: rgba(10, 10, 30, 0.8);
+            border: 1px solid rgba(126, 207, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin: 20px 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .eq-box .temml { font-size: 1.3em; }
+        .eq-box.live {
+            border-color: rgba(76, 175, 80, 0.4);
+            background: rgba(10, 30, 10, 0.5);
+        }
+        .eq-box.live::before {
+            content: '🔴 LIVE — changes with sliders';
+            display: block;
+            font-size: 0.75em;
+            color: #4caf50;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(10, 10, 30, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 0.85em;
+            color: #aaa;
+            font-weight: 500;
+        }
+        .control-group .val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #7ecfff;
+            min-width: 40px;
+            text-align: center;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 160px;
+            height: 6px;
+            border-radius: 3px;
+            background: #2a2a5a;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #7ecfff;
+            box-shadow: 0 0 10px rgba(126, 207, 255, 0.5);
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border-radius: 12px;
+            background: rgba(5, 5, 20, 0.9);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .insight {
+            background: rgba(76, 175, 80, 0.08);
+            border-left: 4px solid #4caf50;
+            border-radius: 0 12px 12px 0;
+            padding: 18px 22px;
+            margin: 20px 0;
+        }
+        .insight::before { content: '💡 '; }
+
+        .analogy {
+            background: rgba(255, 179, 71, 0.08);
+            border-left: 4px solid #ffb347;
+            border-radius: 0 12px 12px 0;
+            padding: 18px 22px;
+            margin: 20px 0;
+        }
+        .analogy::before { content: '🎯 Think of it like: '; color: #ffb347; font-weight: bold; }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 20px 0;
+        }
+        @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+        .step-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+        .badge-red { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .badge-orange { background: rgba(255,179,71,0.2); color: #ffb347; }
+        .badge-green { background: rgba(76,175,80,0.2); color: #4caf50; }
+        .badge-blue { background: rgba(126,207,255,0.2); color: #7ecfff; }
+        .badge-purple { background: rgba(199,125,255,0.2); color: #c77dff; }
+        .badge-pink { background: rgba(240,101,149,0.2); color: #f06595; }
+
+        .flow-pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .flow-node {
+            padding: 14px 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 0.9em;
+            font-weight: 600;
+            min-width: 130px;
+            border: 2px solid;
+        }
+        .flow-node small { display: block; font-weight: 400; opacity: 0.7; margin-top: 4px; }
+        .flow-arrow { font-size: 1.5em; color: #555; }
+
+        .caption {
+            text-align: center;
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .grid-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .grid-demo .mini-card {
+            background: rgba(20, 20, 50, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+        }
+        .grid-demo .mini-card h4 {
+            color: #7ecfff;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>How a Transformer Learns (a + b) mod 113</h1>
+<p class="subtitle">An interactive playground. Pull sliders. Watch equations change. Understand by <em>seeing</em>.<br>
+Based on Nanda et al. (ICLR 2023)</p>
+
+<!-- ===== OVERVIEW PIPELINE ===== -->
+<div class="flow-pipeline">
+    <div class="flow-node" style="border-color:#ff6b6b; background:rgba(255,107,107,0.05);">Embed<small>numbers → angles</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:#ffb347; background:rgba(255,179,71,0.05);">Attention<small>bilinear mixing</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:#4caf50; background:rgba(76,175,80,0.05);">MLP<small>trig identities</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:#7ecfff; background:rgba(126,207,255,0.05);">Unembed<small>interference</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:#c77dff; background:rgba(199,125,255,0.05);">Softmax<small>pick peak</small></div>
+</div>
+
+<!-- ===== SECTION: DFT PRIMER ===== -->
+<h2 class="dft">What is the Discrete Fourier Transform (DFT)?</h2>
+<div class="card glow-pink">
+    <span class="step-badge badge-pink">PREREQUISITE</span>
+    
+    <p><strong>Problem:</strong> You have a list of 113 numbers (like pixel brightnesses, or neuron weights). You want to know: "Is there a hidden repeating pattern in this list?"</p>
+
+    <div class="analogy">You hear a chord on a piano. The DFT tells you which individual notes (frequencies) make up that chord, and how loud each note is.</div>
+
+    <p>The DFT decomposes any list of numbers into a sum of sine and cosine waves at different frequencies. Watch:</p>
+
+    <canvas id="dftCanvas" width="700" height="350"></canvas>
+    <div class="caption">Blue = your signal (sum of waves). Colored = the individual frequency components the DFT finds.</div>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>Frequency 1 amplitude</label>
+            <div class="val" id="dftA1Val">1.0</div>
+            <input type="range" id="dftA1" min="0" max="20" value="10">
+        </div>
+        <div class="control-group">
+            <label>Frequency 1 (k₁)</label>
+            <div class="val" id="dftK1Val">3</div>
+            <input type="range" id="dftK1" min="1" max="20" value="3">
+        </div>
+        <div class="control-group">
+            <label>Frequency 2 amplitude</label>
+            <div class="val" id="dftA2Val">0.7</div>
+            <input type="range" id="dftA2" min="0" max="20" value="7">
+        </div>
+        <div class="control-group">
+            <label>Frequency 2 (k₂)</label>
+            <div class="val" id="dftK2Val">7</div>
+            <input type="range" id="dftK2" min="1" max="20" value="7">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="dftEqLive"></div>
+
+    <div class="insight">
+        The DFT is just asking: "For each possible frequency k = 1, 2, 3, ..., how much does my signal look like cos(2πk·n/N) and sin(2πk·n/N)?" If the answer is "a lot!", that frequency is present in your signal.
+    </div>
+
+    <p><strong>Why does the transformer care?</strong> Modular addition repeats every 113 steps. The DFT is the natural tool for anything periodic. The transformer's weights, after training, become <em>sparse in the Fourier basis</em> — meaning only ~5 frequencies have significant energy. Everything else is ~zero.</p>
+</div>
+
+<!-- ===== SECTION: EMBEDDING ===== -->
+<h2 class="embed">Step 1: Embedding — Numbers Become Angles on a Circle</h2>
+<div class="card glow-red">
+    <span class="step-badge badge-red">EMBEDDING</span>
+
+    <p>The network maps each input number <strong>a</strong> to a point on a circle. The angle depends on the frequency <strong>k</strong>:</p>
+
+    <div class="eq-box" id="embedEqStatic"></div>
+
+    <p>Pull the sliders and watch the equation update with <em>your</em> concrete numbers:</p>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>Input number a</label>
+            <div class="val" id="emb_a_val">7</div>
+            <input type="range" id="emb_a" min="0" max="112" value="7">
+        </div>
+        <div class="control-group">
+            <label>Frequency k</label>
+            <div class="val" id="emb_k_val">14</div>
+            <input type="range" id="emb_k" min="1" max="56" value="14">
+        </div>
+        <div class="control-group">
+            <label>Input number b</label>
+            <div class="val" id="emb_b_val">23</div>
+            <input type="range" id="emb_b" min="0" max="112" value="23">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="embedEqLive"></div>
+
+    <canvas id="circleCanvas" width="700" height="400"></canvas>
+    <div class="caption">Every number 0–112 maps to a point on this circle. Red = a, Blue = b, Green = (a+b) mod 113.</div>
+
+    <div class="insight">
+        The network learns EXACTLY these sines and cosines. Not approximately — the paper shows >93% of variance in the embedding matrix is explained by sin/cos at just 5 specific frequencies: k ∈ {14, 35, 41, 42, 52}.
+    </div>
+</div>
+
+<!-- ===== SECTION: TRIG IDENTITIES ===== -->
+<h2 class="mlp">Trig Identities — Why They Matter Here</h2>
+<div class="card glow-green">
+    <span class="step-badge badge-green">THE KEY MATH</span>
+
+    <p><strong>The Goal:</strong> We have cos(ω·a) and sin(ω·a) and cos(ω·b) and sin(ω·b). We want cos(ω·(a+b)) and sin(ω·(a+b)).</p>
+
+    <p><strong>The trig identity that saves us:</strong></p>
+    <div class="eq-box" id="trigIdentityStatic"></div>
+
+    <p>This is not abstract — watch it work with YOUR numbers:</p>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>a</label>
+            <div class="val" id="trig_a_val">7</div>
+            <input type="range" id="trig_a" min="0" max="112" value="7">
+        </div>
+        <div class="control-group">
+            <label>b</label>
+            <div class="val" id="trig_b_val">23</div>
+            <input type="range" id="trig_b" min="0" max="112" value="23">
+        </div>
+        <div class="control-group">
+            <label>k</label>
+            <div class="val" id="trig_k_val">14</div>
+            <input type="range" id="trig_k" min="1" max="56" value="14">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="trigEqLive"></div>
+
+    <canvas id="trigCanvas" width="700" height="300"></canvas>
+    <div class="caption">Left: cos(ω·a) and cos(ω·b) as separate points. Right: the PRODUCT terms that combine into cos(ω·(a+b)).</div>
+
+    <div class="analogy">
+        You know where person A is on a clock face, and where person B is. The trig identity tells you where person (A+B) is, using only multiplication and subtraction of the coordinates you already have.
+    </div>
+
+    <p><strong>But wait — the network needs to MULTIPLY cos(ω·a) × cos(ω·b).</strong> Neural networks are mostly linear (matrix multiplications + additions). Where does the multiplication come from? That's what attention does...</p>
+</div>
+
+<!-- ===== SECTION: BILINEAR / ATTENTION ===== -->
+<h2 class="attention">Step 2: Attention as Bilinear Mixing — How Multiplication Happens</h2>
+<div class="card glow-orange">
+    <span class="step-badge badge-orange">ATTENTION</span>
+
+    <p><strong>What is "bilinear"?</strong> A function f(x, y) is bilinear if it's linear in x when y is fixed, AND linear in y when x is fixed. The simplest example:</p>
+
+    <div class="eq-box" id="bilinearEq1"></div>
+
+    <p>That's just multiplication! And attention IS bilinear because:</p>
+
+    <div class="eq-box" id="bilinearEq2"></div>
+
+    <div class="analogy">
+        Imagine a volume knob (attention weight) that depends on person A, controlling how loud person B's voice (value) is. The output = knob_position × voice_loudness. That's a product! The knob depends on A, the voice depends on B, so the output depends on A×B.
+    </div>
+
+    <canvas id="bilinearCanvas" width="700" height="350"></canvas>
+    <div class="caption">The attention weight (orange curve) depends on a. It multiplies the value (which depends on b). Result = product of functions of a and b.</div>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>a (controls attention weight)</label>
+            <div class="val" id="bilin_a_val">20</div>
+            <input type="range" id="bilin_a" min="0" max="112" value="20">
+        </div>
+        <div class="control-group">
+            <label>b (controls value)</label>
+            <div class="val" id="bilin_b_val">50</div>
+            <input type="range" id="bilin_b" min="0" max="112" value="50">
+        </div>
+        <div class="control-group">
+            <label>Frequency k</label>
+            <div class="val" id="bilin_k_val">35</div>
+            <input type="range" id="bilin_k" min="1" max="56" value="35">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="bilinearEqLive"></div>
+
+    <h3 style="color:#ffb347; margin-top:30px;">What is the "OV Circuit"?</h3>
+    <p>Each attention head has 4 matrices: Q (query), K (key), V (value), O (output). The <strong>OV circuit = O × V</strong> determines <em>what information gets moved</em>.</p>
+
+    <div class="eq-box" id="ovCircuitEq"></div>
+
+    <div class="grid-demo">
+        <div class="mini-card">
+            <h4>Q and K → "Where to look"</h4>
+            <p style="font-size:0.9em; color:#aaa;">The Query asks "what am I looking for?" The Key says "here's what I have." Their dot product = attention score.</p>
+        </div>
+        <div class="mini-card">
+            <h4>O and V → "What to copy"</h4>
+            <p style="font-size:0.9em; color:#aaa;">The Value is the actual content. O reshapes it into the right format. Together, OV = the information pipeline.</p>
+        </div>
+    </div>
+
+    <canvas id="ovCanvas" width="700" height="250"></canvas>
+    <div class="caption">The OV circuit for Head 0: it reads sin/cos at frequency k=35 from the input, and outputs sin/cos at the same frequency. The attention weight then multiplies this, creating the cross-terms we need.</div>
+
+    <div class="insight">
+        <strong>Key finding from the paper:</strong> The softmax in the attention is operating in a nearly LINEAR regime (97.5% variance explained by a linear fit). So attention_weight ≈ 0.5 + α·(cos(ω·a) - cos(ω·b)). This makes the whole thing a clean bilinear product.
+    </div>
+</div>
+
+<!-- ===== SECTION: CONSTRUCTIVE INTERFERENCE ===== -->
+<h2 class="interference">Step 3: Constructive Interference — How the Answer Emerges</h2>
+<div class="card glow-blue">
+    <span class="step-badge badge-blue">THE MAGIC</span>
+
+    <p>After the MLP computes cos(ω_k·(a+b)) for each of 5 frequencies, the unembedding matrix computes a score for every possible answer c:</p>
+
+    <div class="eq-box" id="interferenceEqStatic"></div>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>a</label>
+            <div class="val" id="int_a_val">25</div>
+            <input type="range" id="int_a" min="0" max="112" value="25">
+        </div>
+        <div class="control-group">
+            <label>b</label>
+            <div class="val" id="int_b_val">47</div>
+            <input type="range" id="int_b" min="0" max="112" value="47">
+        </div>
+        <div class="control-group">
+            <label># frequencies used</label>
+            <div class="val" id="int_nf_val">5</div>
+            <input type="range" id="int_nf" min="1" max="5" value="5">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="interferenceEqLive"></div>
+
+    <canvas id="interferenceCanvas" width="700" height="400"></canvas>
+    <div class="caption">Colored = individual cos waves per frequency. White = their SUM. The peak at the correct answer c* is where ALL waves equal 1 simultaneously.</div>
+
+    <p><strong>Why does this work?</strong></p>
+    <div class="eq-box" id="interferenceWhyEq"></div>
+
+    <canvas id="interferenceBarCanvas" width="700" height="200"></canvas>
+    <div class="caption">At c* = correct answer, all 5 cosines = 1 (they add up). At any wrong c, they point in random directions and mostly cancel.</div>
+
+    <div class="insight">
+        With just 1 frequency, cos(ω₁₄·(72-c)) ≈ 0.998 at c=64 — almost indistinguishable from the true peak at c=72! But with 5 frequencies, only c=72 gets ALL five cosines = 1. The wrong answers get random mixtures that cancel out.
+    </div>
+</div>
+
+<!-- ===== SECTION: SOFTMAX ===== -->
+<h2 class="softmax">Step 4: Softmax — Turning the Peak into a Probability</h2>
+<div class="card glow-purple">
+    <span class="step-badge badge-purple">SOFTMAX</span>
+
+    <p>Softmax takes a list of numbers (logits) and turns them into probabilities that sum to 1. The biggest number gets the most probability.</p>
+
+    <div class="eq-box" id="softmaxEqStatic"></div>
+
+    <p><strong>Play with it:</strong> See how temperature and peak height affect the sharpness:</p>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>Peak height (signal strength)</label>
+            <div class="val" id="sm_peak_val">5</div>
+            <input type="range" id="sm_peak" min="1" max="30" value="5">
+        </div>
+        <div class="control-group">
+            <label>Temperature (÷ logits by this)</label>
+            <div class="val" id="sm_temp_val">1.0</div>
+            <input type="range" id="sm_temp" min="1" max="50" value="10">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="softmaxEqLive"></div>
+
+    <canvas id="softmaxCanvas" width="700" height="300"></canvas>
+    <div class="caption">Purple = probability distribution after softmax. The sharper the peak in the logits, the more confident the model is.</div>
+
+    <div class="two-col">
+        <div class="eq-box" id="softmaxExampleHigh"></div>
+        <div class="eq-box" id="softmaxExampleLow"></div>
+    </div>
+
+    <div class="analogy">
+        Softmax is like a "winner-take-more" function. If one logit is much bigger than the rest, softmax gives it nearly 100% of the probability. The constructive interference already created a sharp peak — softmax just formalizes it into a probability.
+    </div>
+</div>
+
+<!-- ===== SECTION: FULL PIPELINE ===== -->
+<h2 class="interference">Full Pipeline — Watch It All Together</h2>
+<div class="card glow-blue">
+    <span class="step-badge badge-blue">EVERYTHING COMBINED</span>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>a</label>
+            <div class="val" id="full_a_val">37</div>
+            <input type="range" id="full_a" min="0" max="112" value="37">
+        </div>
+        <div class="control-group">
+            <label>b</label>
+            <div class="val" id="full_b_val">89</div>
+            <input type="range" id="full_b" min="0" max="112" value="89">
+        </div>
+    </div>
+
+    <div class="eq-box live" id="fullPipelineEq"></div>
+
+    <canvas id="fullCanvas" width="700" height="500"></canvas>
+    <div class="caption">The complete computation from input to output, traced for your chosen a and b.</div>
+</div>
+
+</div><!-- end container -->
+
+<script>
+// ========== UTILITIES ==========
+const P = 113;
+const KEY_FREQS = [14, 35, 41, 42, 52];
+const FREQ_COLORS = ['#ff6b6b', '#ffb347', '#4caf50', '#7ecfff', '#c77dff'];
+const ALPHAS = [44.1, 42.2, 44.8, 66.6, 63.0];
+
+function wk(k) { return 2 * Math.PI * k / P; }
+function mod(n, m) { return ((n % m) + m) % m; }
+
+function renderTeX(id, tex) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+        el.innerHTML = temml.renderToString(tex, {displayMode: true});
+    } catch(e) {
+        el.innerHTML = '<span style="color:#ff6b6b;">TeX error: ' + e.message + '</span>';
+    }
+}
+
+function getVal(id) { return parseFloat(document.getElementById(id).value); }
+
+// ========== DFT SECTION ==========
+function updateDFT() {
+    const a1 = getVal('dftA1') / 10;
+    const k1 = getVal('dftK1');
+    const a2 = getVal('dftA2') / 10;
+    const k2 = getVal('dftK2');
+
+    document.getElementById('dftA1Val').textContent = a1.toFixed(1);
+    document.getElementById('dftK1Val').textContent = k1;
+    document.getElementById('dftA2Val').textContent = a2.toFixed(1);
+    document.getElementById('dftK2Val').textContent = k2;
+
+    // Live equation
+    renderTeX('dftEqLive', String.raw`
+        \underbrace{f(n)}_{\text{signal at position } n} = 
+        \underbrace{${a1.toFixed(1)}}_{\text{amplitude}_1} \cdot \cos\!\left(\frac{2\pi \cdot \overbrace{${k1}}^{\text{freq}_1} \cdot n}{113}\right) + 
+        \underbrace{${a2.toFixed(1)}}_{\text{amplitude}_2} \cdot \cos\!\left(\frac{2\pi \cdot \overbrace{${k2}}^{\text{freq}_2} \cdot n}{113}\right)
+    `);
+
+    // Draw DFT canvas
+    const canvas = document.getElementById('dftCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const margin = {left: 50, right: 20, top: 30, bottom: 40};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    // Compute signal
+    const N = 113;
+    const signal = [];
+    const wave1 = [];
+    const wave2 = [];
+    for (let n = 0; n < N; n++) {
+        const w1val = a1 * Math.cos(2 * Math.PI * k1 * n / N);
+        const w2val = a2 * Math.cos(2 * Math.PI * k2 * n / N);
+        wave1.push(w1val);
+        wave2.push(w2val);
+        signal.push(w1val + w2val);
+    }
+
+    const maxVal = Math.max(Math.abs(a1) + Math.abs(a2), 0.1) * 1.2;
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotH);
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.stroke();
+
+    // Zero line
+    const zeroY = margin.top + plotH / 2;
+    ctx.strokeStyle = '#333';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, zeroY);
+    ctx.lineTo(margin.left + plotW, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    function toY(val) { return margin.top + plotH / 2 - (val / maxVal) * (plotH / 2); }
+    function toX(n) { return margin.left + (n / (N - 1)) * plotW; }
+
+    // Draw wave 1
+    ctx.strokeStyle = '#ff6b6b88';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let n = 0; n < N; n++) {
+        const px = toX(n), py = toY(wave1[n]);
+        n === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Draw wave 2
+    ctx.strokeStyle = '#4caf5088';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let n = 0; n < N; n++) {
+        const px = toX(n), py = toY(wave2[n]);
+        n === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Draw combined signal
+    ctx.strokeStyle = '#7ecfff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let n = 0; n < N; n++) {
+        const px = toX(n), py = toY(signal[n]);
+        n === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Legend
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillText('freq k=' + k1 + ' (amp=' + a1.toFixed(1) + ')', W - 200, 20);
+    ctx.fillStyle = '#4caf50';
+    ctx.fillText('freq k=' + k2 + ' (amp=' + a2.toFixed(1) + ')', W - 200, 38);
+    ctx.fillStyle = '#7ecfff';
+    ctx.fillText('SUM (what you observe)', W - 200, 56);
+
+    // Draw DFT bar chart on the right side (bottom portion)
+    const barAreaTop = margin.top + plotH * 0.7;
+    const barAreaH = plotH * 0.25;
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.fillText('DFT magnitudes:', margin.left + 5, barAreaTop - 5);
+
+    const maxFreqShow = 25;
+    const barW = plotW / maxFreqShow - 2;
+    for (let k = 1; k <= maxFreqShow; k++) {
+        // Compute DFT magnitude at frequency k
+        let re = 0, im = 0;
+        for (let n = 0; n < N; n++) {
+            re += signal[n] * Math.cos(2 * Math.PI * k * n / N);
+            im += signal[n] * Math.sin(2 * Math.PI * k * n / N);
+        }
+        const mag = Math.sqrt(re * re + im * im) / (N / 2);
+        const barH = (mag / (maxVal)) * barAreaH;
+
+        let color = '#555';
+        if (k === k1) color = '#ff6b6b';
+        if (k === k2) color = '#4caf50';
+
+        const bx = margin.left + ((k - 1) / maxFreqShow) * plotW;
+        ctx.fillStyle = color;
+        ctx.fillRect(bx, barAreaTop + barAreaH - barH, barW, barH);
+
+        if (k % 3 === 0 || k === k1 || k === k2) {
+            ctx.fillStyle = '#888';
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(k, bx + barW / 2, barAreaTop + barAreaH + 12);
+            ctx.textAlign = 'left';
+        }
+    }
+
+    // X axis label
+    ctx.fillStyle = '#888';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('n (position in list, 0 to 112)', margin.left + plotW / 2, margin.top + plotH + 25);
+    ctx.textAlign = 'left';
+}
+
+['dftA1', 'dftK1', 'dftA2', 'dftK2'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateDFT);
+});
+updateDFT();
+
+// ========== EMBEDDING SECTION ==========
+function updateEmbed() {
+    const a = getVal('emb_a');
+    const k = getVal('emb_k');
+    const b = getVal('emb_b');
+    const w = wk(k);
+    const sum = mod(a + b, P);
+
+    document.getElementById('emb_a_val').textContent = a;
+    document.getElementById('emb_k_val').textContent = k;
+    document.getElementById('emb_b_val').textContent = b;
+
+    const cosA = Math.cos(w * a).toFixed(4);
+    const sinA = Math.sin(w * a).toFixed(4);
+    const cosB = Math.cos(w * b).toFixed(4);
+    const sinB = Math.sin(w * b).toFixed(4);
+
+    renderTeX('embedEqLive', String.raw`
+        \underbrace{\omega_{${k}}}_{\text{angular freq}} = \frac{2\pi \cdot ${k}}{113} = ${w.toFixed(4)} \qquad
+        \cos(\omega_{${k}} \cdot \underbrace{${Math.round(a)}}_{a}) = ${cosA} \qquad
+        \sin(\omega_{${k}} \cdot ${Math.round(a)}) = ${sinA}
+    `);
+
+    // Draw circle
+    const canvas = document.getElementById('circleCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const cx = W * 0.35, cy = H * 0.5, r = 150;
+
+    // Draw circle
+    ctx.strokeStyle = '#2a2a5a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - r - 20, cy);
+    ctx.lineTo(cx + r + 20, cy);
+    ctx.moveTo(cx, cy - r - 20);
+    ctx.lineTo(cx, cy + r + 20);
+    ctx.stroke();
+
+    ctx.fillStyle = '#666';
+    ctx.font = '11px monospace';
+    ctx.fillText('cos →', cx + r + 5, cy - 5);
+    ctx.fillText('sin ↑', cx + 5, cy - r - 8);
+
+    // Draw all points lightly
+    for (let i = 0; i < P; i++) {
+        const angle = w * i;
+        const px = cx + r * Math.cos(angle);
+        const py = cy - r * Math.sin(angle);
+        ctx.fillStyle = 'rgba(100,100,150,0.3)';
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    // Highlight a (red)
+    const angleA = w * a;
+    const ax = cx + r * Math.cos(angleA);
+    const ay = cy - r * Math.sin(angleA);
+    ctx.strokeStyle = '#ff6b6b55';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ax, ay);
+    ctx.stroke();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(ax, ay, 9, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('a=' + Math.round(a), ax + 12, ay - 8);
+
+    // Highlight b (blue)
+    const angleB = w * b;
+    const bx = cx + r * Math.cos(angleB);
+    const by = cy - r * Math.sin(angleB);
+    ctx.strokeStyle = '#7ecfff55';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+    ctx.fillStyle = '#7ecfff';
+    ctx.beginPath();
+    ctx.arc(bx, by, 9, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#7ecfff';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('b=' + Math.round(b), bx + 12, by + 15);
+
+    // Highlight (a+b) mod 113 (green)
+    const angleS = w * sum;
+    const sx = cx + r * Math.cos(angleS);
+    const sy = cy - r * Math.sin(angleS);
+    ctx.strokeStyle = '#4caf5055';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 9, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#4caf50';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('(a+b)%113=' + sum, sx + 12, sy + 5);
+
+    // Right side info
+    const rx = W * 0.63;
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('ω_' + Math.round(k) + ' = 2π·' + Math.round(k) + '/113 = ' + w.toFixed(4), rx, 40);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillText('angle(a) = ω·' + Math.round(a) + ' = ' + (w * a).toFixed(2) + ' rad', rx, 80);
+    ctx.fillText('cos(ω·a) = ' + cosA, rx, 100);
+    ctx.fillText('sin(ω·a) = ' + sinA, rx, 120);
+    ctx.fillStyle = '#7ecfff';
+    ctx.fillText('angle(b) = ω·' + Math.round(b) + ' = ' + (w * b).toFixed(2) + ' rad', rx, 160);
+    ctx.fillText('cos(ω·b) = ' + cosB, rx, 180);
+    ctx.fillText('sin(ω·b) = ' + sinB, rx, 200);
+    ctx.fillStyle = '#4caf50';
+    ctx.fillText('(a+b) mod 113 = ' + sum, rx, 240);
+    ctx.fillText('angle(a+b) = ω·' + sum + ' = ' + (w * sum).toFixed(2) + ' rad', rx, 260);
+
+    ctx.fillStyle = '#ffb347';
+    ctx.font = '11px monospace';
+    ctx.fillText('KEY: angle(a) + angle(b) ≡ angle(a+b) mod 2π', rx, 310);
+    ctx.fillText('because ω·(a+b mod P) ≡ ω·a + ω·b mod 2π', rx, 330);
+    ctx.fillText('Addition becomes ROTATION!', rx, 360);
+}
+
+['emb_a', 'emb_k', 'emb_b'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateEmbed);
+});
+
+// ========== TRIG IDENTITY SECTION ==========
+function updateTrig() {
+    const a = getVal('trig_a');
+    const b = getVal('trig_b');
+    const k = getVal('trig_k');
+    const w = wk(k);
+    const sum = mod(a + b, P);
+
+    document.getElementById('trig_a_val').textContent = Math.round(a);
+    document.getElementById('trig_b_val').textContent = Math.round(b);
+    document.getElementById('trig_k_val').textContent = Math.round(k);
+
+    const cosA = Math.cos(w * a);
+    const sinA = Math.sin(w * a);
+    const cosB = Math.cos(w * b);
+    const sinB = Math.sin(w * b);
+    const cosAB = Math.cos(w * sum);
+    const product1 = cosA * cosB;
+    const product2 = sinA * sinB;
+    const result = product1 - product2;
+
+    renderTeX('trigEqLive', String.raw`
+        \underbrace{\cos(\omega_{${Math.round(k)}} \cdot (${Math.round(a)} + ${Math.round(b)}))}_{\cos(\omega \cdot ${sum}) = ${cosAB.toFixed(4)}} = 
+        \underbrace{\cos(\omega \cdot ${Math.round(a)})}_{ ${cosA.toFixed(4)}} \cdot \underbrace{\cos(\omega \cdot ${Math.round(b)})}_{${cosB.toFixed(4)}} - 
+        \underbrace{\sin(\omega \cdot ${Math.round(a)})}_{${sinA.toFixed(4)}} \cdot \underbrace{\sin(\omega \cdot ${Math.round(b)})}_{${sinB.toFixed(4)}}
+        = ${product1.toFixed(4)} - ${product2.toFixed(4)} = ${result.toFixed(4)}
+    `);
+
+    // Draw trig visualization
+    const canvas = document.getElementById('trigCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Left: two unit circles showing cos/sin components
+    const r = 80;
+    const cy = H / 2;
+
+    // Circle 1: a
+    const cx1 = 120;
+    ctx.strokeStyle = '#2a2a5a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx1, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    const ax1 = cx1 + r * cosA;
+    const ay1 = cy - r * sinA;
+    ctx.strokeStyle = '#ff6b6b88';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx1, cy);
+    ctx.lineTo(ax1, ay1);
+    ctx.stroke();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(ax1, ay1, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px monospace';
+    ctx.fillText('a=' + Math.round(a), cx1 - 15, cy + r + 20);
+
+    // Projections for a
+    ctx.strokeStyle = '#ff6b6b44';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(ax1, ay1);
+    ctx.lineTo(ax1, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ax1, ay1);
+    ctx.lineTo(cx1, ay1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Circle 2: b
+    const cx2 = 300;
+    ctx.strokeStyle = '#2a2a5a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx2, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    const bx2 = cx2 + r * cosB;
+    const by2 = cy - r * sinB;
+    ctx.strokeStyle = '#7ecfff88';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx2, cy);
+    ctx.lineTo(bx2, by2);
+    ctx.stroke();
+    ctx.fillStyle = '#7ecfff';
+    ctx.beginPath();
+    ctx.arc(bx2, by2, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px monospace';
+    ctx.fillText('b=' + Math.round(b), cx2 - 15, cy + r + 20);
+
+    // Right: result circle showing (a+b)
+    const cx3 = 530;
+    ctx.strokeStyle = '#2a2a5a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx3, cy, r, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    const sx3 = cx3 + r * cosAB;
+    const sy3 = cy - r * Math.sin(w * sum);
+    ctx.strokeStyle = '#4caf5088';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx3, cy);
+    ctx.lineTo(sx3, sy3);
+    ctx.stroke();
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(sx3, sy3, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.font = '11px monospace';
+    ctx.fillText('(a+b)%113=' + sum, cx3 - 30, cy + r + 20);
+
+    // Arrows between
+    ctx.fillStyle = '#ffb347';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('×', 200, cy - 20);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#ffb347';
+    ctx.fillText('multiply', 190, cy + 5);
+    ctx.fillStyle = '#ffb347';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('→', 420, cy);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#ffb347';
+    ctx.fillText('trig identity', 400, cy + 20);
+
+    // Show the product values
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText('cos·cos = ' + product1.toFixed(3), cx3 - 50, 25);
+    ctx.fillText('sin·sin = ' + product2.toFixed(3), cx3 - 50, 42);
+    ctx.fillStyle = '#4caf50';
+    ctx.fillText('difference = ' + result.toFixed(4) + ' ✓', cx3 - 50, 62);
+}
+
+['trig_a', 'trig_b', 'trig_k'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateTrig);
+});
+
+// ========== BILINEAR / ATTENTION SECTION ==========
+function updateBilinear() {
+    const a = getVal('bilin_a');
+    const b = getVal('bilin_b');
+    const k = getVal('bilin_k');
+    const w = wk(k);
+
+    document.getElementById('bilin_a_val').textContent = Math.round(a);
+    document.getElementById('bilin_b_val').textContent = Math.round(b);
+    document.getElementById('bilin_k_val').textContent = Math.round(k);
+
+    const cosA = Math.cos(w * a);
+    const cosB = Math.cos(w * b);
+    const attnWeight = 0.5 + 0.27 * (cosA - cosB);
+
+    renderTeX('bilinearEqLive', String.raw`
+        \underbrace{\text{attn\_weight}}_{ ${attnWeight.toFixed(4)}} = 0.5 + 0.27 \cdot \left(
+        \underbrace{\cos(\omega_{${Math.round(k)}} \cdot ${Math.round(a)})}_{${cosA.toFixed(4)}} - 
+        \underbrace{\cos(\omega_{${Math.round(k)}} \cdot ${Math.round(b)})}_{${cosB.toFixed(4)}}\right)
+    `);
+
+    // Draw bilinear canvas
+    const canvas = document.getElementById('bilinearCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const margin = {left: 55, right: 20, top: 35, bottom: 45};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotH);
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.stroke();
+
+    // Compute attention weights for all b values, with current a fixed
+    const attnWeights = [];
+    const values = [];
+    const products = [];
+    for (let bi = 0; bi < P; bi++) {
+        const cB = Math.cos(w * bi);
+        const aw = 0.5 + 0.27 * (cosA - cB);
+        const val = Math.cos(w * bi); // value depends on b
+        attnWeights.push(aw);
+        values.push(val);
+        products.push(aw * val);
+    }
+
+    const maxY = 1.2;
+    function toY(val) { return margin.top + plotH / 2 - (val / maxY) * (plotH / 2); }
+    function toX(n) { return margin.left + (n / (P - 1)) * plotW; }
+
+    // Zero line
+    ctx.strokeStyle = '#333';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, toY(0));
+    ctx.lineTo(margin.left + plotW, toY(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw attention weights
+    ctx.strokeStyle = '#ffb347';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < P; i++) {
+        const px = toX(i), py = toY(attnWeights[i]);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Draw values
+    ctx.strokeStyle = '#7ecfff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < P; i++) {
+        const px = toX(i), py = toY(values[i]);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Draw product
+    ctx.strokeStyle = '#4caf50';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i < P; i++) {
+        const px = toX(i), py = toY(products[i]);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Mark current b
+    const bIdx = Math.round(b);
+    const bX = toX(bIdx);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(bX, margin.top);
+    ctx.lineTo(bX, margin.top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Legend
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#ffb347';
+    ctx.fillText('attn_weight(b) — depends on a=' + Math.round(a), margin.left + 10, margin.top + 15);
+    ctx.fillStyle = '#7ecfff';
+    ctx.fillText('value(b) = cos(ω·b)', margin.left + 10, margin.top + 30);
+    ctx.fillStyle = '#4caf50';
+    ctx.fillText('PRODUCT = attn × value (this is bilinear!)', margin.left + 10, margin.top + 45);
+
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('b (token position)', margin.left + plotW / 2, margin.top + plotH + 25);
+    ctx.textAlign = 'left';
+
+    // OV circuit canvas
+    const ovCanvas = document.getElementById('ovCanvas');
+    const octx = ovCanvas.getContext('2d');
+    const oW = ovCanvas.width, oH = ovCanvas.height;
+    octx.clearRect(0, 0, oW, oH);
+
+    // Draw a simple diagram of the OV circuit
+    const boxW = 100, boxH = 50;
+    const startY = oH / 2;
+
+    // Input embedding
+    octx.fillStyle = '#1a1a3a';
+    octx.strokeStyle = '#ff6b6b';
+    octx.lineWidth = 2;
+    octx.beginPath();
+    octx.roundRect(30, startY - boxH / 2, boxW, boxH, 8);
+    octx.fill();
+    octx.stroke();
+    octx.fillStyle = '#ff6b6b';
+    octx.font = '11px monospace';
+    octx.textAlign = 'center';
+    octx.fillText('Embed(b)', 80, startY - 5);
+    octx.fillText('[cos ω·b, sin ω·b]', 80, startY + 12);
+
+    // V matrix
+    octx.fillStyle = '#1a1a3a';
+    octx.strokeStyle = '#ffb347';
+    octx.beginPath();
+    octx.roundRect(180, startY - boxH / 2, boxW, boxH, 8);
+    octx.fill();
+    octx.stroke();
+    octx.fillStyle = '#ffb347';
+    octx.fillText('V (Value)', 230, startY - 5);
+    octx.fillText('selects freq k', 230, startY + 12);
+
+    // O matrix
+    octx.fillStyle = '#1a1a3a';
+    octx.strokeStyle = '#c77dff';
+    octx.beginPath();
+    octx.roundRect(330, startY - boxH / 2, boxW, boxH, 8);
+    octx.fill();
+    octx.stroke();
+    octx.fillStyle = '#c77dff';
+    octx.fillText('O (Output)', 380, startY - 5);
+    octx.fillText('reshapes to d', 380, startY + 12);
+
+    // Result
+    octx.fillStyle = '#1a1a3a';
+    octx.strokeStyle = '#4caf50';
+    octx.beginPath();
+    octx.roundRect(480, startY - boxH / 2, boxW, boxH, 8);
+    octx.fill();
+    octx.stroke();
+    octx.fillStyle = '#4caf50';
+    octx.fillText('OV output', 530, startY - 5);
+    octx.fillText('cos/sin at freq k', 530, startY + 12);
+
+    // Arrows
+    octx.strokeStyle = '#666';
+    octx.lineWidth = 1.5;
+    const arrowPairs = [[130, 180], [280, 330], [430, 480]];
+    for (const [x1, x2] of arrowPairs) {
+        octx.beginPath();
+        octx.moveTo(x1, startY);
+        octx.lineTo(x2, startY);
+        octx.stroke();
+        // arrowhead
+        octx.beginPath();
+        octx.moveTo(x2 - 6, startY - 4);
+        octx.lineTo(x2, startY);
+        octx.lineTo(x2 - 6, startY + 4);
+        octx.stroke();
+    }
+
+    // Label
+    octx.fillStyle = '#aaa';
+    octx.font = '11px monospace';
+    octx.textAlign = 'left';
+    octx.fillText('OV Circuit = O × V : determines WHAT info gets copied from source to destination', 30, 25);
+    octx.fillText('QK Circuit = Q × K : determines WHERE to attend (which tokens to look at)', 30, oH - 15);
+    octx.textAlign = 'center';
+}
+
+['bilin_a', 'bilin_b', 'bilin_k'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateBilinear);
+});
+
+// ========== CONSTRUCTIVE INTERFERENCE SECTION ==========
+function updateInterference() {
+    const a = getVal('int_a');
+    const b = getVal('int_b');
+    const numFreqs = getVal('int_nf');
+    const correct = mod(Math.round(a) + Math.round(b), P);
+
+    document.getElementById('int_a_val').textContent = Math.round(a);
+    document.getElementById('int_b_val').textContent = Math.round(b);
+    document.getElementById('int_nf_val').textContent = Math.round(numFreqs);
+
+    // Live equation
+    const freqTerms = KEY_FREQS.slice(0, numFreqs).map((k, i) =>
+        String.raw`\underbrace{${ALPHAS[i].toFixed(1)}}_{\alpha_{${k}}} \cos\!\left(\frac{2\pi \cdot ${k}}{113}(${correct} - c)\right)`
+    ).join(' + ');
+
+    renderTeX('interferenceEqLive', String.raw`
+        \text{logit}(c) = ${freqTerms}
+    `);
+
+    // Draw interference canvas
+    const canvas = document.getElementById('interferenceCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const margin = {left: 55, right: 20, top: 40, bottom: 45};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    // Compute logits
+    const logits = [];
+    const individualLogits = KEY_FREQS.slice(0, numFreqs).map(() => []);
+
+    for (let c = 0; c < P; c++) {
+        let total = 0;
+        for (let fi = 0; fi < numFreqs; fi++) {
+            const k = KEY_FREQS[fi];
+            const w = wk(k);
+            const val = ALPHAS[fi] * Math.cos(w * (Math.round(a) + Math.round(b) - c));
+            individualLogits[fi].push(val);
+            total += val;
+        }
+        logits.push(total);
+    }
+
+    const maxVal = Math.max(...logits) * 1.1;
+    const minVal = Math.min(...logits) * 1.1;
+    const range = maxVal - minVal || 1;
+
+    function toY(val) { return margin.top + plotH * ((maxVal - val) / range); }
+    function toX(c) { return margin.left + (c / (P - 1)) * plotW; }
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotH);
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.stroke();
+
+    // Zero line
+    const zeroY = toY(0);
+    ctx.strokeStyle = '#333';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, zeroY);
+    ctx.lineTo(margin.left + plotW, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw individual frequency contributions
+    for (let fi = 0; fi < numFreqs; fi++) {
+        ctx.strokeStyle = FREQ_COLORS[fi] + '88';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let c = 0; c < P; c++) {
+            const px = toX(c), py = toY(individualLogits[fi][c]);
+            c === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
+    // Draw sum (white, bold)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let c = 0; c < P; c++) {
+        const px = toX(c), py = toY(logits[c]);
+        c === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Mark correct answer
+    const peakX = toX(correct);
+    const peakY = toY(logits[correct]);
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(peakX, peakY, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#4caf50';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('c*=' + correct + ' (correct!)', peakX + 12, peakY - 8);
+
+    // Legend
+    ctx.font = '10px monospace';
+    for (let fi = 0; fi < numFreqs; fi++) {
+        ctx.fillStyle = FREQ_COLORS[fi];
+        ctx.fillText('k=' + KEY_FREQS[fi] + ' (alpha=' + ALPHAS[fi].toFixed(1) + ')', W - 160, margin.top + 15 + fi * 15);
+    }
+    ctx.fillStyle = '#fff';
+    ctx.fillText('SUM (logit)', W - 160, margin.top + 15 + numFreqs * 15);
+
+    // X axis labels
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    for (let c = 0; c <= 112; c += 20) {
+        ctx.fillText(c, toX(c), margin.top + plotH + 18);
+    }
+    ctx.fillText('candidate answer c', margin.left + plotW / 2, margin.top + plotH + 35);
+    ctx.textAlign = 'left';
+
+    // Draw bar chart below
+    drawInterferenceBar();
+}
+
+function drawInterferenceBar() {
+    const a = Math.round(getVal('int_a'));
+    const b = Math.round(getVal('int_b'));
+    const numFreqs = Math.round(getVal('int_nf'));
+    const correct = mod(a + b, P);
+
+    const canvas = document.getElementById('interferenceBarCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const margin = {left: 55, right: 20, top: 25, bottom: 30};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    // Show cos values at correct answer vs a wrong answer
+    const wrong = mod(correct + 8, P);
+
+    // Draw comparison
+    const barGroupW = plotW / 2 - 20;
+    const barW = barGroupW / numFreqs - 4;
+
+    // Correct answer
+    ctx.fillStyle = '#4caf50';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('At c*=' + correct + ' (CORRECT)', margin.left + barGroupW / 2, margin.top + 12);
+
+    for (let fi = 0; fi < numFreqs; fi++) {
+        const k = KEY_FREQS[fi];
+        const w = wk(k);
+        const val = Math.cos(w * (a + b - correct)); // should be ~1
+        const bx = margin.left + fi * (barW + 4);
+        const barH = Math.abs(val) * (plotH - 30);
+        const by = margin.top + 20 + (plotH - 30) - barH;
+
+        ctx.fillStyle = FREQ_COLORS[fi] + 'cc';
+        ctx.fillRect(bx, by, barW, barH);
+        ctx.fillStyle = FREQ_COLORS[fi];
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(val.toFixed(2), bx + barW / 2, by - 4);
+        ctx.fillText('k=' + k, bx + barW / 2, margin.top + plotH + 10);
+    }
+
+    // Wrong answer
+    const offsetX = plotW / 2 + 20;
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('At c=' + wrong + ' (WRONG)', margin.left + offsetX + barGroupW / 2, margin.top + 12);
+
+    for (let fi = 0; fi < numFreqs; fi++) {
+        const k = KEY_FREQS[fi];
+        const w = wk(k);
+        const val = Math.cos(w * (a + b - wrong));
+        const bx = margin.left + offsetX + fi * (barW + 4);
+        const barH = Math.abs(val) * (plotH - 30);
+        const by = margin.top + 20 + (plotH - 30) - barH;
+
+        ctx.fillStyle = val >= 0 ? FREQ_COLORS[fi] + '88' : '#ff6b6b88';
+        ctx.fillRect(bx, by, barW, barH);
+        ctx.fillStyle = '#ccc';
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(val.toFixed(2), bx + barW / 2, by - 4);
+        ctx.fillText('k=' + KEY_FREQS[fi], bx + barW / 2, margin.top + plotH + 10);
+    }
+
+    ctx.textAlign = 'left';
+}
+
+['int_a', 'int_b', 'int_nf'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateInterference);
+});
+
+// ========== SOFTMAX SECTION ==========
+function updateSoftmax() {
+    const peakHeight = getVal('sm_peak');
+    const temp = getVal('sm_temp') / 10;
+
+    document.getElementById('sm_peak_val').textContent = Math.round(peakHeight);
+    document.getElementById('sm_temp_val').textContent = temp.toFixed(1);
+
+    // Compute logits with a peak
+    const correct = 72;
+    const logits = [];
+    for (let c = 0; c < P; c++) {
+        let val = 0;
+        for (let fi = 0; fi < KEY_FREQS.length; fi++) {
+            const k = KEY_FREQS[fi];
+            const w = wk(k);
+            val += peakHeight * Math.cos(w * (correct - c));
+        }
+        logits.push(val);
+    }
+
+    // Apply softmax with temperature
+    const scaledLogits = logits.map(l => l / temp);
+    const maxLogit = Math.max(...scaledLogits);
+    const expLogits = scaledLogits.map(l => Math.exp(l - maxLogit));
+    const sumExp = expLogits.reduce((s, v) => s + v, 0);
+    const probs = expLogits.map(e => e / sumExp);
+
+    const probCorrect = probs[correct];
+
+    renderTeX('softmaxEqLive', String.raw`
+        P(c = ${correct}) = \frac{e^{\text{logit}_{${correct}} / ${temp.toFixed(1)}}}{
+        \sum_{j=0}^{112} e^{\text{logit}_j / ${temp.toFixed(1)}}} = 
+        \frac{e^{${(logits[correct] / temp).toFixed(1)}}}{\text{sum of all}} = 
+        \underbrace{${probCorrect.toFixed(6)}}_{\text{probability of correct answer}}
+    `);
+
+    // Draw softmax canvas
+    const canvas = document.getElementById('softmaxCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const margin = {left: 55, right: 20, top: 35, bottom: 45};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    const maxProb = Math.max(...probs) * 1.1;
+
+    // Draw axes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotH);
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.stroke();
+
+    // Uniform line
+    const uniformY = margin.top + plotH * (1 - (1 / P) / maxProb);
+    ctx.strokeStyle = '#555';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, uniformY);
+    ctx.lineTo(margin.left + plotW, uniformY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#555';
+    ctx.font = '10px monospace';
+    ctx.fillText('uniform = 1/113 = 0.0088', margin.left + 5, uniformY - 5);
+
+    // Draw probability distribution
+    ctx.strokeStyle = '#c77dff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let c = 0; c < P; c++) {
+        const px = margin.left + (c / (P - 1)) * plotW;
+        const py = margin.top + plotH * (1 - probs[c] / maxProb);
+        c === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Fill under curve
+    ctx.fillStyle = 'rgba(199, 125, 255, 0.1)';
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top + plotH);
+    for (let c = 0; c < P; c++) {
+        const px = margin.left + (c / (P - 1)) * plotW;
+        const py = margin.top + plotH * (1 - probs[c] / maxProb);
+        ctx.lineTo(px, py);
+    }
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.closePath();
+    ctx.fill();
+
+    // Highlight peak
+    const peakPx = margin.left + (correct / (P - 1)) * plotW;
+    const peakPy = margin.top + plotH * (1 - probs[correct] / maxProb);
+    ctx.fillStyle = '#4caf50';
+    ctx.beginPath();
+    ctx.arc(peakPx, peakPy, 7, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#4caf50';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('P(' + correct + ') = ' + probCorrect.toFixed(4), peakPx + 12, peakPy - 8);
+
+    // X axis labels
+    ctx.fillStyle = '#888';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    for (let c = 0; c <= 112; c += 20) {
+        ctx.fillText(c, margin.left + (c / (P - 1)) * plotW, margin.top + plotH + 18);
+    }
+    ctx.fillText('answer c', margin.left + plotW / 2, margin.top + plotH + 35);
+    ctx.textAlign = 'left';
+
+    // Title
+    ctx.fillStyle = '#ccc';
+    ctx.font = '12px monospace';
+    ctx.fillText('Softmax output (temp=' + temp.toFixed(1) + ', peak=' + Math.round(peakHeight) + ')', margin.left, margin.top - 10);
+}
+
+['sm_peak', 'sm_temp'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateSoftmax);
+});
+
+// ========== FULL PIPELINE SECTION ==========
+function updateFullPipeline() {
+    const a = Math.round(getVal('full_a'));
+    const b = Math.round(getVal('full_b'));
+    const correct = mod(a + b, P);
+
+    document.getElementById('full_a_val').textContent = a;
+    document.getElementById('full_b_val').textContent = b;
+
+    // Live equation
+    const k0 = KEY_FREQS[0];
+    const w0 = wk(k0);
+    const cosA = Math.cos(w0 * a).toFixed(3);
+    const sinA = Math.sin(w0 * a).toFixed(3);
+    const cosB = Math.cos(w0 * b).toFixed(3);
+    const sinB = Math.sin(w0 * b).toFixed(3);
+    const cosAB = Math.cos(w0 * correct).toFixed(3);
+
+    renderTeX('fullPipelineEq', String.raw`
+        \underbrace{${a}}_{a} + \underbrace{${b}}_{b} \mod 113 = \underbrace{${correct}}_{c^*}
+        \qquad
+        \cos\!\left(\omega_{14} \cdot ${correct}\right) = ${cosAB}
+    `);
+
+    // Draw full pipeline canvas
+    const canvas = document.getElementById('fullCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const stageH = 80;
+    const stageGap = 15;
+    const stages = [
+        {label: 'EMBED', color: '#ff6b6b', desc: ''},
+        {label: 'ATTENTION (bilinear)', color: '#ffb347', desc: ''},
+        {label: 'MLP (trig identity)', color: '#4caf50', desc: ''},
+        {label: 'UNEMBED (interference)', color: '#7ecfff', desc: ''},
+        {label: 'SOFTMAX → answer', color: '#c77dff', desc: ''}
+    ];
+
+    const startY = 20;
+
+    for (let i = 0; i < stages.length; i++) {
+        const s = stages[i];
+        const y = startY + i * (stageH + stageGap);
+
+        // Box
+        ctx.fillStyle = s.color + '11';
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(20, y, W - 40, stageH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = s.color;
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.label, 35, y + 20);
+
+        // Content
+        ctx.fillStyle = '#ddd';
+        ctx.font = '11px monospace';
+
+        if (i === 0) {
+            ctx.fillText('a=' + a + ' → cos(w14·' + a + ')=' + cosA + '  sin(w14·' + a + ')=' + sinA, 35, y + 42);
+            ctx.fillText('b=' + b + ' → cos(w14·' + b + ')=' + cosB + '  sin(w14·' + b + ')=' + sinB + '  (×5 freqs)', 35, y + 60);
+        } else if (i === 1) {
+            const prod1 = (parseFloat(cosA) * parseFloat(cosB)).toFixed(4);
+            const prod2 = (parseFloat(sinA) * parseFloat(sinB)).toFixed(4);
+            ctx.fillText('attn_weight × value → cos(w·a)·cos(w·b) = ' + prod1, 35, y + 42);
+            ctx.fillText('                    → sin(w·a)·sin(w·b) = ' + prod2 + '  (bilinear mixing!)', 35, y + 60);
+        } else if (i === 2) {
+            const cosSum = Math.cos(w0 * correct).toFixed(4);
+            const sinSum = Math.sin(w0 * correct).toFixed(4);
+            ctx.fillText('cos(w·a)cos(w·b) - sin(w·a)sin(w·b) = cos(w·(a+b)) = cos(w·' + correct + ') = ' + cosSum, 35, y + 42);
+            ctx.fillText('sin(w·a)cos(w·b) + cos(w·a)sin(w·b) = sin(w·(a+b)) = sin(w·' + correct + ') = ' + sinSum, 35, y + 60);
+        } else if (i === 3) {
+            const sumAlphas = ALPHAS.reduce((s, v) => s + v, 0).toFixed(1);
+            ctx.fillText('logit(c) = Sum_k alpha_k · cos(w_k·(' + correct + ' - c))', 35, y + 42);
+            ctx.fillText('At c*=' + correct + ': all cos=1, sum=' + sumAlphas + '  |  At wrong c: waves cancel!', 35, y + 60);
+        } else if (i === 4) {
+            ctx.fillText('softmax picks the peak → P(c=' + correct + ') ≈ 1.000', 35, y + 42);
+            ctx.fillStyle = '#4caf50';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillText('ANSWER: (' + a + ' + ' + b + ') mod 113 = ' + correct + '  ✓', 35, y + 62);
+        }
+
+        // Arrow to next
+        if (i < stages.length - 1) {
+            const arrowY = y + stageH + stageGap / 2;
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(W / 2, y + stageH);
+            ctx.lineTo(W / 2, y + stageH + stageGap);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(W / 2 - 5, y + stageH + stageGap - 5);
+            ctx.lineTo(W / 2, y + stageH + stageGap);
+            ctx.lineTo(W / 2 + 5, y + stageH + stageGap - 5);
+            ctx.stroke();
+        }
+    }
+    ctx.textAlign = 'left';
+}
+
+['full_a', 'full_b'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateFullPipeline);
+});
+
+// ========== STATIC EQUATIONS (rendered once) ==========
+function renderStaticEquations() {
+    renderTeX('embedEqStatic', String.raw`
+        \text{embed}(a) = \begin{bmatrix} \cos(\omega_k \cdot a) \\ \sin(\omega_k \cdot a) \end{bmatrix}
+        \quad \text{where} \quad
+        \underbrace{\omega_k}_{\text{angular frequency}} = \frac{2\pi \cdot k}{113}
+        \quad \text{for } k \in \{14, 35, 41, 42, 52\}
+    `);
+
+    renderTeX('trigIdentityStatic', String.raw`
+        \boxed{
+        \cos(\omega \cdot (a + b)) = 
+        \underbrace{\cos(\omega \cdot a) \cdot \cos(\omega \cdot b)}_{\text{need to MULTIPLY these}} - 
+        \underbrace{\sin(\omega \cdot a) \cdot \sin(\omega \cdot b)}_{\text{and these}}
+        }
+    `);
+
+    renderTeX('bilinearEq1', String.raw`
+        f(x, y) = x \cdot y \quad \leftarrow \text{ this is bilinear! Linear in } x \text{ (fix } y\text{), linear in } y \text{ (fix } x\text{)}
+    `);
+
+    renderTeX('bilinearEq2', String.raw`
+        \underbrace{\text{output}}_{\text{contains } \cos(\omega a) \cdot \cos(\omega b)} = 
+        \underbrace{\text{attn\_weight}(a, b)}_{\text{depends on } \cos(\omega a)} \times 
+        \underbrace{\text{value}(b)}_{\text{depends on } \cos(\omega b)}
+    `);
+
+    renderTeX('ovCircuitEq', String.raw`
+        \underbrace{W_O \cdot W_V}_{\text{OV circuit}} \cdot \text{embed}(b) = \text{"what gets copied from token } b \text{ to the output"}
+    `);
+
+    renderTeX('interferenceEqStatic', String.raw`
+        \text{logit}(c) = \sum_{k \in \{14,35,41,42,52\}} \alpha_k \cdot \cos\!\left(\omega_k \cdot \underbrace{(a + b - c)}_{\text{= 0 when } c = c^*}\right)
+    `);
+
+    renderTeX('interferenceWhyEq', String.raw`
+        \text{At } c^* = (a+b) \bmod 113: \quad \cos(\omega_k \cdot 0) = 1 \text{ for ALL } k
+        \quad \Rightarrow \quad \text{logit}(c^*) = \sum_k \alpha_k = \text{MAXIMUM}
+    `);
+
+    renderTeX('softmaxEqStatic', String.raw`
+        \text{softmax}(\text{logit}_c) = \frac{e^{\text{logit}_c}}{\displaystyle\sum_{j=0}^{112} e^{\text{logit}_j}}
+        \qquad \text{Bigger logit} \rightarrow \text{bigger probability}
+    `);
+
+    renderTeX('softmaxExampleHigh', String.raw`
+        \text{logits} = [\ldots, 2, 1, \mathbf{260}, 3, 1, \ldots] \\
+        \text{softmax} \approx [0, 0, \mathbf{1.0}, 0, 0]
+    `);
+
+    renderTeX('softmaxExampleLow', String.raw`
+        \text{logits} = [\ldots, 2, 1, \mathbf{4}, 3, 1, \ldots] \\
+        \text{softmax} \approx [0.05, 0.02, \mathbf{0.4}, 0.15, 0.02]
+    `);
+}
+
+// ========== INITIALIZE EVERYTHING ==========
+renderStaticEquations();
+updateEmbed();
+updateTrig();
+updateBilinear();
+updateInterference();
+updateSoftmax();
+updateFullPipeline();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+/**
+ * MinimalLab - Self-contained namespace for the Minimal Neuron Lab
+ */
+const MinimalLab = {
+	config: {
+		id: 'lin',
+		inputs: ["x"],
+		outputs: ["y"],
+		layers: [], 
+		data: [[1, 2], [2, 4], [3, 6]],
+		model: null,
+		loss: [],
+		isTraining: false,
+		totalEpochs: 0
+	},
+
+	init: function(resetLoss = true) {
+		const c = this.config;
+		if (resetLoss) {
+			c.loss = [];
+			c.totalEpochs = 0;
+			const btn = document.getElementById(`btn-lin-train`);
+			if (btn) btn.innerText = "🚀 Start Training";
+		}
+
+		if (c.model) dispose(c.model);
+
+		c.model = tf.sequential();
+		c.model.add(tf.layers.dense({ 
+			units: 1, 
+			inputShape: [1], 
+			activation: null 
+		}));
+
+		const lrEl = document.getElementById('lin-lr');
+		const lr = lrEl ? parseFloat(lrEl.value) : 0.001;
+
+		c.model.compile({ 
+			optimizer: tf.train.sgd(lr), 
+			loss: 'meanSquaredError' 
+		});
+
+		this.updateVisuals(true);
+	},
+
+	toggleTraining: async function() {
+		const c = this.config;
+		if (c.isTraining) {
+			c.isTraining = false;
+			return;
+		}
+
+		c.isTraining = true;
+		const btn = document.getElementById(`btn-lin-train`);
+		if (btn) {
+			btn.className = "btn btn-stop";
+			btn.innerText = "🛑 Stop";
+		}
+
+		const xs = tensor2d(c.data.map(r => [r[0]]));
+		const ys = tensor2d(c.data.map(r => [r[1]]));
+		const epochs = parseInt(document.getElementById('lin-epochs')?.value) || 1000;
+
+		for (let i = 0; i < epochs && c.isTraining; i++) {
+			const h = await c.model.fit(xs, ys, { epochs: 1, verbose: 0 });
+			c.loss.push(h.history.loss[0]);
+			c.totalEpochs++;
+
+			if (i % 5 === 0 || i === epochs - 1) {
+				this.updateVisuals();
+				const cons = document.getElementById('lin-console');
+				if (cons) cons.innerText = `[Epoch ${c.totalEpochs}] Loss: ${h.history.loss[0].toFixed(6)}`;
+			}
+			await tf.nextFrame();
+		}
+
+		c.isTraining = false;
+		if (btn) {
+			btn.className = "btn btn-train";
+			btn.innerText = "🚀 Continue Training";
+		}
+		dispose(xs);
+		dispose(ys);
+	},
+
+	updateVisuals: function(force = false) {
+		const c = this.config;
+
+		const lossChart = document.getElementById('lin-loss-chart');
+		if (lossChart && typeof Plotly !== 'undefined') {
+			const layout = {
+				margin: {t:30, b:30, l:40, r:10},
+				title: 'Loss History',
+				yaxis: {type: 'log'},
+				autosize: true,
+				paper_bgcolor: themeColor('#fff'),
+				plot_bgcolor: themeColor('#fff')
+			};
+			Plotly.react('lin-loss-chart', [{
+				x: c.loss.map((_, i) => i),
+				y: c.loss,
+				type: 'scatter',
+				line: {color: '#ef4444'}
+			}], layout);
+		}
+
+		const dataChart = document.getElementById('lin-data-chart');
+		if (dataChart && typeof Plotly !== 'undefined') {
+			const xData = c.data.map(r => r[0]);
+			const yData = c.data.map(r => r[1]);
+
+			const testX = [];
+			for(let i=0; i<=7; i+=0.5) testX.push(i);
+			const predY = c.model.predict(tensor2d(testX, [testX.length, 1])).dataSync();
+
+			Plotly.react('lin-data-chart', [
+				{x: xData, y: yData, mode: 'markers', name: 'Actual'},
+				{x: testX, y: Array.from(predY), mode: 'lines', name: 'Model'}
+			], { margin: {t:30, b:30, l:30, r:10}, title: 'Model vs. data points', paper_bgcolor: themeColor('#fff'), plot_bgcolor: themeColor('#fff') });
+		}
+
+		const mon = document.getElementById('lin-math-monitor');
+		if (mon) {
+			const weights = c.model.layers[0].getWeights();
+			const w = weights[0].dataSync()[0];
+			const b = weights[1].dataSync()[0];
+			mon.innerHTML = `<div style="text-align:center; font-size:1.2em;">
+		$ \\text{Approximation: }y = f(x) = ${w} \\cdot x + ${b} $
+	    </div>`;
+			render_temml();
+		}
+	}
+};
+
+window.toggleTraining = (id) => {
+	if (id === 'lin') MinimalLab.toggleTraining();
+};
+
+window.initBlock = (id) => {
+	if (id === 'lin') MinimalLab.init();
+};
+
+// ============================================================
+// LAZY LOADING FOR MINIMAL NEURON MODULE
+// ============================================================
+
+const _mnLazyRegistry = [];
+let _mnLazyObserver = null;
+
+function _mnLazyRegister(elementId, initFn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    _mnLazyRegistry.push({ el, initFn, initialized: false });
+}
+
+function _mnLazyCreateObserver() {
+    if (_mnLazyObserver) return;
+
+    let ready = false;
+
+    _mnLazyObserver = new IntersectionObserver((entries) => {
+        if (!ready) return; // skip the initial "already visible" batch
+
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+
+            const match = _mnLazyRegistry.find(r => r.el === entry.target);
+            if (match && !match.initialized) {
+                match.initialized = true;
+                _mnLazyObserver.unobserve(match.el);
+                match.initFn();
+            }
+        });
+    }, {
+        rootMargin: rootMargin
+    });
+
+    _mnLazyRegistry.forEach(r => {
+        if (!r.initialized) {
+            _mnLazyObserver.observe(r.el);
+        }
+    });
+
+    // Allow callbacks only after the initial synchronous intersection reports
+    requestAnimationFrame(() => {
+        ready = true;
+    });
+}
+
+// ============================================================
+// REPLACEMENT: loadMinimalNeuronModule (drop-in replacement)
+// ============================================================
+
+async function loadMinimalNeuronModule() {
+    updateLoadingStatus("Loading section about minimal neurons...");
+
+    // Register the data chart container — when it comes into view,
+    // initialize the entire MinimalLab (model + visuals)
+    _mnLazyRegister('lin-data-chart', () => {
+        MinimalLab.init();
+    });
+
+    // Start observing
+    _mnLazyCreateObserver();
+
+    // Re-render plots when the user toggles dark/light mode so themeColor()
+    // picks up the new palette on the next call.
+    if (window.__MN_DARK) {
+        window.__MN_DARK.onChange(() => {
+            _mnLazyRegistry.forEach(r => { if (r.initialized) { try { r.initFn(); } catch (e) { /* ignore */ } } });
+        });
+    }
+
+    return Promise.resolve();
+}

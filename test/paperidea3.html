@@ -1,0 +1,2296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spatial Focus Explorer — Chaotic Lens Encoding</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050810;color:#e2e8f0;font-family:system-ui,sans-serif;overflow-y:auto;overflow-x:hidden}
+h1{font-size:1.15em;text-align:center;margin:10px 0 2px;color:#a29bfe;text-shadow:0 0 18px #a29bfe40}
+.subtitle{text-align:center;color:#64748b;font-size:0.72em;margin-bottom:8px;max-width:900px;margin-left:auto;margin-right:auto;line-height:1.5}
+.main{display:flex;gap:8px;padding:0 8px 12px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:7px}
+.col-left{width:310px;min-width:270px}
+.col-center{flex:1;min-width:460px;max-width:760px}
+.col-right{width:310px;min-width:260px}
+.panel{background:#0d1220;border:1px solid #1e293b;border-radius:9px;padding:9px;position:relative}
+.panel h2{font-size:0.82em;color:#a29bfe;margin-bottom:4px;border-bottom:1px solid #1e293b;padding-bottom:3px}
+.panel h3{font-size:0.75em;color:#00cec9;margin-bottom:3px}
+.panel p,.panel li{font-size:0.7em;color:#94a3b8;line-height:1.45}
+.panel ul{padding-left:13px;margin-bottom:3px}
+canvas{border-radius:5px;display:block}
+canvas.clickable{cursor:crosshair}
+.controls{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+button{background:#6c5ce720;border:1px solid #6c5ce740;color:#a29bfe;padding:3px 8px;border-radius:5px;cursor:pointer;font-size:0.68em;transition:all 0.15s}
+button:hover{background:#6c5ce740;border-color:#a29bfe}
+button.active{background:#6c5ce760;border-color:#a29bfe;color:#fff}
+button.red{background:#e74c3c20;border-color:#e74c3c40;color:#e74c3c}
+button.red:hover{background:#e74c3c40}
+.slider-row{display:flex;align-items:center;gap:4px;margin:3px 0;font-size:0.68em;color:#64748b}
+.slider-row input{width:70px;accent-color:#a29bfe}
+.slider-row .val{color:#fbbf24;min-width:28px}
+.legend{display:flex;gap:6px;flex-wrap:wrap;font-size:0.62em;color:#64748b;margin:3px 0}
+.legend span{display:flex;align-items:center;gap:2px}
+.legend .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.stalk-selector{display:flex;gap:3px;flex-wrap:wrap;margin:4px 0}
+.stalk-btn{width:28px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.6em;font-weight:bold;cursor:pointer;border:2px solid transparent;transition:all 0.12s}
+.stalk-btn:hover{transform:scale(1.08)}
+.stalk-btn.active{border-color:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,0.3)}
+.formula{font-family:'Courier New',monospace;color:#fbbf24;background:#0f172a;padding:2px 5px;border-radius:3px;font-size:0.78em;display:inline-block;margin:2px 0}
+.mode-label{font-size:0.65em;color:#00cec9;background:#00cec910;padding:2px 6px;border-radius:3px;display:inline-block;margin:2px 0}
+.info-box{background:#1a1040;border:1px solid #a29bfe30;border-radius:7px;padding:8px;margin-top:4px;font-size:0.7em;color:#94a3b8;line-height:1.5}
+.info-box b{color:#fbbf24}
+.info-box .hl{color:#fd79a8}
+.tab-bar{display:flex;gap:2px;margin-bottom:4px}
+.tab-bar button{flex:1;font-size:0.65em;padding:4px 2px}
+.layer-colors{display:flex;gap:3px;margin:3px 0;font-size:0.6em}
+.layer-colors .lc{padding:2px 6px;border-radius:3px;font-weight:bold}
+</style>
+</head>
+<body>
+
+<h1>🔍 Spatial Focus Explorer — Chaotic Lens Encoding</h1>
+<p class="subtitle">Move the tokens in the embedding space. The <b>positions</b> determine which parts of the image are in focus (sharp) and which are pixelated. The relationship is non-obvious — <b>explore it!</b> The total displacement from default positions controls the sway intensity.</p>
+
+<div class="main">
+
+<!-- LEFT COLUMN -->
+<div class="col col-left">
+  <div class="panel">
+    <h2>🌊 Embedding Space</h2>
+    <p>Drag tokens to change which image regions are focused. The mapping is chaotic — discover the pattern!</p>
+    <canvas id="cvEmbed" width="290" height="290" class="clickable"></canvas>
+    <div class="stalk-selector" id="stalkSelector"></div>
+    <p><span class="mode-label" id="modeLabel">Drag tokens to explore</span></p>
+  </div>
+
+  <div class="panel">
+    <h2>🎛️ Controls</h2>
+    <div class="controls">
+      <button onclick="Ctrl.play()" id="btnPlay">▶ Animate</button>
+      <button onclick="Ctrl.pause()">⏸ Pause</button>
+      <button onclick="Ctrl.reset()">↺ Reset</button>
+    </div>
+    <div class="slider-row">
+      <label>Box attract:</label>
+      <input type="range" id="slAttract" min="1" max="50" value="20" oninput="Ctrl.setAttraction(+this.value)">
+      <span class="val" id="vAttract">0.020</span>
+    </div>
+    <div class="controls">
+      <button class="red" onclick="Ctrl.clearBoxes()">✕ Clear Focus Boxes</button>
+    </div>
+    <div class="slider-row">
+      <label>Layers:</label>
+      <input type="range" id="slLayers" min="1" max="5" value="4" oninput="Ctrl.setLayers(+this.value)">
+      <span class="val" id="vLayers">4</span>
+    </div>
+    <div class="slider-row">
+      <label>Curvature K:</label>
+      <input type="range" id="slCurv" min="5" max="200" value="60" oninput="Ctrl.setCurvature(+this.value)">
+      <span class="val" id="vCurv">0.60</span>
+    </div>
+    <div class="slider-row">
+      <label>Focus radius:</label>
+      <input type="range" id="slFocus" min="5" max="80" value="25" oninput="Ctrl.setFocusRadius(+this.value)">
+      <span class="val" id="vFocus">0.25</span>
+    </div>
+    <div class="slider-row">
+      <label>Warp strength:</label>
+      <input type="range" id="slWarp" min="0" max="100" value="55" oninput="Ctrl.setWarp(+this.value)">
+      <span class="val" id="vWarp">0.55</span>
+    </div>
+    <div class="slider-row">
+      <label>Grid density:</label>
+      <input type="range" id="slGrid" min="6" max="28" value="16" oninput="Ctrl.setGridDensity(+this.value)">
+      <span class="val" id="vGrid">16</span>
+    </div>
+    <div class="slider-row">
+      <label>Pixelation max:</label>
+      <input type="range" id="slPixel" min="1" max="8" value="5" oninput="Ctrl.setPixelation(+this.value)">
+      <span class="val" id="vPixel">5</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📐 How It Works</h2>
+    <ul>
+      <li>Each token position is hashed through a <b>chaotic spatial map</b> (Arnold's cat map variant)</li>
+      <li>The hash determines a <b>focus point</b> on the image</li>
+      <li>Regions near focus points are <b>sharp</b>; distant regions are <b>pixelated</b></li>
+      <li>Total displacement of all tokens from defaults = <b>sway intensity</b></li>
+      <li>Each layer adds more warping complexity</li>
+      <li>The Jacobi matrix shows local space distortion per layer</li>
+    </ul>
+    <p><span class="formula">focus(token) = CatMap(pos) ⊕ layer_freq</span></p>
+    <div class="layer-colors" id="layerColorLegend"></div>
+  </div>
+</div>
+
+<!-- CENTER COLUMN -->
+<div class="col col-center">
+  <div class="panel" style="padding:5px">
+    <canvas id="cvMain" class="clickable"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:#64b5f6"></span> S0</span>
+      <span><span class="dot" style="background:#81c784"></span> S1</span>
+      <span><span class="dot" style="background:#ffd54f"></span> S2</span>
+      <span><span class="dot" style="background:#ff8a65"></span> S3</span>
+      <span><span class="dot" style="background:#ce93d8"></span> S4</span>
+      <span>🔍 Sharp regions = token focus zones</span>
+      <span>▦ Pixelated = unfocused</span>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT COLUMN -->
+<div class="col col-right">
+  <div class="panel">
+    <h2>🖼️ Focused Image</h2>
+    <canvas id="cvTarget" width="290" height="290" class="clickable"></canvas>
+    <p style="font-size:0.65em;color:#475569;text-align:center;margin-top:2px">Sharp where tokens focus, pixelated elsewhere. Move tokens to discover the mapping!</p>
+  </div>
+
+  <div class="panel">
+    <h3>Layer Warped Space</h3>
+    <div class="tab-bar" id="layerTabs"></div>
+    <canvas id="cvDetail" width="290" height="290"></canvas>
+    <p style="font-size:0.63em;color:#475569;margin-top:2px">Warped grid for selected layer. Deeper layers = more complex bending. Focus points shown as bright spots.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Jacobi Matrix — Layer Progression</h3>
+    <canvas id="cvJacobiMat" width="290" height="290"></canvas>
+    <p style="font-size:0.63em;color:#475569;margin-top:2px">2×2 Jacobi components per layer. Rows = layers, columns = ∂u/∂x, ∂u/∂y, ∂v/∂x, ∂v/∂y. Complexity grows downward.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Focus Strength per Token</h3>
+    <canvas id="cvContrib" width="290" height="160"></canvas>
+  </div>
+
+  <div class="panel info-box" id="infoBox">
+    <p>Drag tokens in the embedding space. Watch the image change — some parts become sharp, others pixelated. <b>Can you figure out the pattern?</b></p>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// HiDPI
+// ============================================================
+const DPR = window.devicePixelRatio || 1;
+function setupHiDPI(canvas, w, h) {
+  canvas.width = w * DPR; canvas.height = h * DPR;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d'); ctx.scale(DPR, DPR);
+  return ctx;
+}
+
+// ============================================================
+// Image Data — richer smiley with gradients
+// ============================================================
+const ImageModule = (() => {
+  const SZ = 48;
+  const image = new Float64Array(SZ * SZ);
+  for (let y = 0; y < SZ; y++) {
+    for (let x = 0; x < SZ; x++) {
+      const cx = x - SZ/2 + 0.5, cy = y - SZ/2 + 0.5;
+      const r = Math.sqrt(cx*cx + cy*cy);
+      let v = 0;
+      // Face outline
+      if (Math.abs(r - 19) < 2.5) v = 1;
+      // Face fill
+      if (r < 17) v = Math.max(v, 0.22 + 0.08 * Math.sin(cx * 0.3) * Math.cos(cy * 0.3));
+      // Eyes
+      if (Math.hypot(cx - 6.5, cy + 4) < 3.2) v = Math.max(v, 0.9 - Math.hypot(cx - 6.5, cy + 4) * 0.15);
+      if (Math.hypot(cx + 6.5, cy + 4) < 3.2) v = Math.max(v, 0.9 - Math.hypot(cx + 6.5, cy + 4) * 0.15);
+      // Eye highlights
+      if (Math.hypot(cx - 5.5, cy + 5) < 1.2) v = 1;
+      if (Math.hypot(cx + 5.5, cy + 5) < 1.2) v = 1;
+      // Mouth
+      if (r > 7 && r < 12 && cy > 4 && Math.abs(cx) < 11) v = Math.max(v, 0.85);
+      // Nose
+      if (Math.abs(cx) < 1.5 && cy > -2 && cy < 2) v = Math.max(v, 0.5);
+      // Cheek blush
+      const cheekL = Math.hypot(cx - 12, cy - 2);
+      const cheekR = Math.hypot(cx + 12, cy - 2);
+      if (cheekL < 4) v = Math.max(v, 0.35 * (1 - cheekL/4));
+      if (cheekR < 4) v = Math.max(v, 0.35 * (1 - cheekR/4));
+      // Eyebrows
+      if (Math.abs(cy + 9) < 1.2 && Math.abs(cx - 6.5) < 4) v = Math.max(v, 0.7);
+      if (Math.abs(cy + 9) < 1.2 && Math.abs(cx + 6.5) < 4) v = Math.max(v, 0.7);
+      image[y * SZ + x] = Math.min(1, v);
+    }
+  }
+  return { SZ, image };
+})();
+
+// ============================================================
+// Chaotic Spatial Hash — Arnold's Cat Map variant
+// This creates a non-obvious but deterministic mapping from
+// token embedding position to image focus point
+// ============================================================
+const ChaoticHash = (() => {
+  // Simplified: use a seeded sinusoidal fold instead of full Arnold cat map.
+  // Much easier to reason about: token position is smoothly (but non-linearly)
+  // mapped to a focus point. Moving a token "orbits" the focus point around.
+  function tokenToFocus(tokenX, tokenY, stalkIdx, layerIdx) {
+    const seed1 = stalkIdx * 0.618033988 + layerIdx * 0.414213562;
+    const seed2 = stalkIdx * 0.324719 + layerIdx * 0.731688;
+
+    // Two rounds of sinusoidal folding — non-linear but continuous,
+    // so nearby positions give nearby-ish (but sometimes jumping) results
+    let fx = tokenX + 0.15 * Math.sin(tokenY * 6.2832 + seed1 * 9.1) + seed1;
+    let fy = tokenY + 0.15 * Math.sin(tokenX * 6.2832 + seed2 * 7.3) + seed2;
+
+    // Second fold for more complexity per layer
+    fx += 0.08 * (layerIdx + 1) * Math.cos(fy * 4.0 + stalkIdx * 1.5);
+    fy += 0.08 * (layerIdx + 1) * Math.cos(fx * 4.0 + layerIdx * 2.3);
+
+    // Wrap to [0,1]
+    fx = fx % 1; if (fx < 0) fx += 1;
+    fy = fy % 1; if (fy < 0) fy += 1;
+
+    return { x: fx, y: fy };
+  }
+
+  return { tokenToFocus };
+})();
+
+// ============================================================
+// Stalks
+// ============================================================
+const StalkModule = (() => {
+  const N_STALKS = 5;
+  const SZ = ImageModule.SZ;
+  const COLORS = [[100,181,246],[129,199,132],[255,213,79],[255,138,101],[206,147,216]];
+  const NAMES = ['S0','S1','S2','S3','S4'];
+
+  const DEFAULT_POSITIONS = [];
+  const stalks = [];
+  for (let s = 0; s < N_STALKS; s++) {
+    const angle = s * Math.PI * 2 / N_STALKS + 0.3;
+    const radius = 0.25 + (s % 2) * 0.1;
+    const pos = { x: 0.5 + Math.cos(angle) * radius, y: 0.5 + Math.sin(angle) * radius };
+    DEFAULT_POSITIONS.push({ x: pos.x, y: pos.y });
+    stalks.push({
+      embedPoint: { x: pos.x, y: pos.y },
+      phase: s * 1.4 + 0.3,
+      color: COLORS[s],
+    });
+  }
+
+  function resetPositions() {
+    for (let s = 0; s < N_STALKS; s++) {
+      stalks[s].embedPoint = { x: DEFAULT_POSITIONS[s].x, y: DEFAULT_POSITIONS[s].y };
+    }
+  }
+
+  // Total displacement from defaults — drives sway
+  function totalDisplacement() {
+    let total = 0;
+    for (let s = 0; s < N_STALKS; s++) {
+      total += Math.hypot(
+        stalks[s].embedPoint.x - DEFAULT_POSITIONS[s].x,
+        stalks[s].embedPoint.y - DEFAULT_POSITIONS[s].y
+      );
+    }
+    return total;
+  }
+
+  return { N_STALKS, COLORS, NAMES, stalks, DEFAULT_POSITIONS, resetPositions, totalDisplacement };
+})();
+
+// ============================================================
+// State
+// ============================================================
+const State = (() => {
+  let selectedStalk = 0;
+  let visibleLayers = 4;
+  let curvatureK = 0.60;
+  let focusRadius = 0.25;
+  let warpStrength = 0.55;
+  let gridDensity = 16;
+  let maxPixelation = 5;
+  let time = 0;
+  let animating = true;
+  let detailLayer = 0;
+  let focusBoxes = [];
+  let isDrawingBox = false;
+  let boxStart = null;
+  let boxAttractionStrength = 0.02;
+  let _boxCurrent = null;
+
+  return {
+    get selectedStalk() { return selectedStalk; },
+    set selectedStalk(v) { selectedStalk = v; },
+    get visibleLayers() { return visibleLayers; },
+    set visibleLayers(v) { visibleLayers = v; },
+    get curvatureK() { return curvatureK; },
+    set curvatureK(v) { curvatureK = v; },
+    get focusRadius() { return focusRadius; },
+    set focusRadius(v) { focusRadius = v; },
+    get warpStrength() { return warpStrength; },
+    set warpStrength(v) { warpStrength = v; },
+    get gridDensity() { return gridDensity; },
+    set gridDensity(v) { gridDensity = v; },
+    get maxPixelation() { return maxPixelation; },
+    set maxPixelation(v) { maxPixelation = v; },
+    get time() { return time; },
+    set time(v) { time = v; },
+    get animating() { return animating; },
+    set animating(v) { animating = v; },
+    get detailLayer() { return detailLayer; },
+    set detailLayer(v) { detailLayer = v; },
+    get focusBoxes() { return focusBoxes; },
+    set focusBoxes(v) { focusBoxes = v; },
+    get isDrawingBox() { return isDrawingBox; },
+    set isDrawingBox(v) { isDrawingBox = v; },
+    get boxStart() { return boxStart; },
+    set boxStart(v) { boxStart = v; },
+    get boxAttractionStrength() { return boxAttractionStrength; },
+    set boxAttractionStrength(v) { boxAttractionStrength = v; },
+    get _boxCurrent() { return _boxCurrent; },
+    set _boxCurrent(v) { _boxCurrent = v; },
+  };
+})();
+
+// ============================================================
+// Focus Map — computes per-pixel focus (sharpness) from all tokens
+// ============================================================
+// ============================================================
+// REPLACE: FocusMap module
+// Now supports:
+//  - Stacked box selections: more boxes in an area = higher clarity (up to 1.0)
+//  - Max 25% of image can be at full clarity
+//  - Focus "bleed-out": smooth falloff from focused to pixelated
+//  - Non-selected areas become progressively more pixelated with more boxes
+// ============================================================
+const FocusMap = (() => {
+  const SZ = ImageModule.SZ;
+
+  let transportedMaps = [];
+  let rawMaps = [];
+  let transportCacheKey = '';
+
+  function computeTransportWeights() {
+    const N = StalkModule.N_STALKS;
+    const weights = [];
+    for (let i = 0; i < N; i++) {
+      weights[i] = new Float64Array(N);
+      const pi = StalkModule.stalks[i].embedPoint;
+      let totalW = 0;
+      for (let j = 0; j < N; j++) {
+        const pj = StalkModule.stalks[j].embedPoint;
+        const d = Math.hypot(pi.x - pj.x, pi.y - pj.y);
+        weights[i][j] = (i === j) ? 1.0 : 0.35 * Math.exp(-d * d / (2 * 0.12 * 0.12));
+        totalW += weights[i][j];
+      }
+      for (let j = 0; j < N; j++) weights[i][j] /= totalW;
+    }
+    return weights;
+  }
+
+  function computeRawStalkLayerMap(stalkIdx, layerIdx) {
+    const map = new Float64Array(SZ * SZ);
+    const st = StalkModule.stalks[stalkIdx];
+    const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, stalkIdx, layerIdx);
+    const layerWeight = (layerIdx + 1) / State.visibleLayers;
+    for (let y = 0; y < SZ; y++) {
+      for (let x = 0; x < SZ; x++) {
+        const nx = x / SZ, ny = y / SZ;
+        const d = Math.hypot(nx - fp.x, ny - fp.y);
+        map[y * SZ + x] = Math.exp(-d * d / (2 * State.focusRadius * State.focusRadius)) * layerWeight;
+      }
+    }
+    return map;
+  }
+
+  function computeAllMaps() {
+    const key = `${State.visibleLayers}-${State.focusRadius}-${State.curvatureK}-${State.focusBoxes.length}-${StalkModule.stalks.map(s => s.embedPoint.x.toFixed(4) + s.embedPoint.y.toFixed(4)).join(',')}`;
+    if (transportCacheKey === key) return;
+    transportCacheKey = key;
+
+    const N = StalkModule.N_STALKS;
+    const nLayers = State.visibleLayers;
+    const weights = computeTransportWeights();
+
+    rawMaps = [];
+    transportedMaps = [];
+
+    const residualStream = [];
+    for (let s = 0; s < N; s++) {
+      residualStream[s] = new Float64Array(SZ * SZ);
+    }
+
+    for (let l = 0; l < nLayers; l++) {
+      rawMaps[l] = [];
+      transportedMaps[l] = [];
+
+      for (let s = 0; s < N; s++) {
+        rawMaps[l][s] = computeRawStalkLayerMap(s, l);
+      }
+
+      for (let s = 0; s < N; s++) {
+        for (let i = 0; i < SZ * SZ; i++) {
+          residualStream[s][i] += rawMaps[l][s][i];
+        }
+      }
+
+      const transported = [];
+      for (let s = 0; s < N; s++) {
+        transported[s] = new Float64Array(SZ * SZ);
+        for (let j = 0; j < N; j++) {
+          const w = weights[s][j];
+          if (w < 0.001) continue;
+          for (let i = 0; i < SZ * SZ; i++) {
+            transported[s][i] += w * residualStream[j][i];
+          }
+        }
+      }
+
+      for (let s = 0; s < N; s++) {
+        residualStream[s] = transported[s];
+        transportedMaps[l][s] = new Float64Array(transported[s]);
+      }
+    }
+  }
+
+  // Compute per-pixel "box heat" — how many boxes overlap each pixel,
+  // with smooth bleed-out from box edges
+  function computeBoxHeatMap() {
+    const heat = new Float64Array(SZ * SZ);
+    const boxes = State.focusBoxes;
+    if (boxes.length === 0) return heat;
+
+    const bleedRadius = 0.08; // normalized bleed distance
+
+    for (let y = 0; y < SZ; y++) {
+      for (let x = 0; x < SZ; x++) {
+        const nx = x / SZ, ny = y / SZ;
+        let totalHeat = 0;
+
+        for (const box of boxes) {
+          // Signed distance to box interior (negative = inside)
+          const dx = Math.max(box.x - nx, 0, nx - (box.x + box.w));
+          const dy = Math.max(box.y - ny, 0, ny - (box.y + box.h));
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist <= 0) {
+            // Inside box: full contribution
+            totalHeat += 1.0;
+          } else if (dist < bleedRadius) {
+            // Bleed zone: smooth cubic falloff
+            const t = dist / bleedRadius;
+            const falloff = 1.0 - t * t * (3.0 - 2.0 * t); // smoothstep
+            totalHeat += falloff;
+          }
+        }
+
+        heat[y * SZ + x] = totalHeat;
+      }
+    }
+    return heat;
+  }
+
+  // Returns SZ×SZ focus values [0..1]
+  // With stacked boxes: more overlap = higher clarity
+  // Enforces max 25% of pixels at full clarity
+  // Non-selected areas get suppressed proportional to total box count
+function computeFocusMap() {
+    computeAllMaps();
+    const focus = new Float64Array(SZ * SZ); // all zeros by default
+    const nLayers = State.visibleLayers;
+    const N = StalkModule.N_STALKS;
+    const boxes = State.focusBoxes;
+
+    // ★ KEY CHANGE: If no boxes, return ALL ZEROS → everything maximally pixelated
+    if (boxes.length === 0) return focus;
+
+    // Compute box heat map (stacked selections)
+    const heat = computeBoxHeatMap();
+    const maxHeat = Math.max(1, boxes.length);
+
+    let totalSelectedArea = 0;
+    for (const box of boxes) {
+        totalSelectedArea += box.w * box.h;
+    }
+    totalSelectedArea = Math.min(1.0, totalSelectedArea);
+
+    const focusBoost = Math.pow(1.0 - totalSelectedArea, 0.5);
+    const suppressionStrength = Math.max(0.5, 3.0 * (1.0 - totalSelectedArea));
+    const baseWhenFullySelected = 0.05;
+
+    for (let i = 0; i < SZ * SZ; i++) {
+        const h = heat[i] / maxHeat;
+
+        if (h > 0.01) {
+            focus[i] = Math.min(1.0, baseWhenFullySelected + h * focusBoost);
+        } else {
+            // Outside all boxes: near-zero focus → maximally pixelated
+            focus[i] = 0.0;
+        }
+    }
+
+    return focus;
+}
+
+  function getAllFocusPoints() {
+    const points = [];
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const st = StalkModule.stalks[s];
+      for (let l = 0; l < State.visibleLayers; l++) {
+        const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, l);
+        points.push({ x: fp.x, y: fp.y, stalk: s, layer: l });
+      }
+    }
+    return points;
+  }
+
+  function getTransportWeights() { return computeTransportWeights(); }
+
+  function getTransportedMap(layer, stalk) {
+    computeAllMaps();
+    if (transportedMaps[layer] && transportedMaps[layer][stalk]) return transportedMaps[layer][stalk];
+    return null;
+  }
+
+  function getRawMap(layer, stalk) {
+    computeAllMaps();
+    if (rawMaps[layer] && rawMaps[layer][stalk]) return rawMaps[layer][stalk];
+    return null;
+  }
+
+  function invalidateCache() { transportCacheKey = ''; }
+
+  return { computeFocusMap, computeBoxHeatMap, getAllFocusPoints, getTransportWeights, getTransportedMap, getRawMap, invalidateCache };
+})();
+
+// ============================================================
+// Layer Warp Fields
+// ============================================================
+const MAX_LAYERS = 5;
+const LAYER_COLORS = [
+  [60, 120, 180],
+  [80, 170, 140],
+  [180, 180, 80],
+  [220, 140, 60],
+  [200, 80, 160],
+];
+
+const WarpModule = (() => {
+  const SZ = ImageModule.SZ;
+
+  function computeLayerWarpField(layerIdx) {
+    const nLayers = State.visibleLayers;
+    const layerFraction = (layerIdx + 1) / nLayers;
+    const warpScale = State.warpStrength * Math.pow(1.8, layerIdx) * 0.3;
+
+    const dx = new Float64Array(SZ * SZ);
+    const dy = new Float64Array(SZ * SZ);
+
+    // Collect fixed focus points for this layer
+    const focusPoints = [];
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const st = StalkModule.stalks[s];
+      const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, layerIdx);
+      focusPoints.push(fp);
+    }
+
+    // Each focus point creates a warp attractor that pulls SPACE toward it
+    // The focus points themselves are the fixed anchors — space deforms around them
+    for (let y = 0; y < SZ; y++) {
+      for (let x = 0; x < SZ; x++) {
+        const nx = x / SZ, ny = y / SZ;
+        let totalDx = 0, totalDy = 0;
+
+        for (let s = 0; s < StalkModule.N_STALKS; s++) {
+          const fp = focusPoints[s];
+
+          const ddx = fp.x - nx, ddy = fp.y - ny;
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy) + 0.001;
+
+          // Jacobi-like oscillatory field
+          const sqrtK = Math.sqrt(Math.max(0.01, State.curvatureK));
+          const J = Math.sin(sqrtK * dist * Math.PI * 3) / (sqrtK * dist * 5 + 1);
+
+          // Attraction toward focus point, modulated by Jacobi field
+          totalDx += ddx * J * warpScale;
+          totalDy += ddy * J * warpScale;
+
+          // Add rotational component for visual interest
+          const rotAngle = dist * sqrtK * 2 + s * 1.2;
+          totalDx += Math.cos(rotAngle) * J * warpScale * 0.3;
+          totalDy += Math.sin(rotAngle) * J * warpScale * 0.3;
+        }
+
+        dx[y * SZ + x] = totalDx / StalkModule.N_STALKS;
+        dy[y * SZ + x] = totalDy / StalkModule.N_STALKS;
+      }
+    }
+
+    // Zero out warp displacement AT the focus points themselves
+    // so the grid passes through them undisturbed — points stay fixed
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const fp = focusPoints[s];
+      const pinRadius = 3; // pixels around focus point to pin
+      const fpx = Math.floor(fp.x * SZ);
+      const fpy = Math.floor(fp.y * SZ);
+      for (let py = Math.max(0, fpy - pinRadius); py <= Math.min(SZ - 1, fpy + pinRadius); py++) {
+        for (let px = Math.max(0, fpx - pinRadius); px <= Math.min(SZ - 1, fpx + pinRadius); px++) {
+          const d = Math.hypot(px - fpx, py - fpy);
+          if (d <= pinRadius) {
+            const fade = d / pinRadius; // 0 at center, 1 at edge
+            const smoothFade = fade * fade * (3 - 2 * fade); // smoothstep
+            dx[py * SZ + px] *= smoothFade;
+            dy[py * SZ + px] *= smoothFade;
+          }
+        }
+      }
+    }
+
+    // Compute Jacobi matrix
+    const J00 = new Float64Array(SZ*SZ);
+    const J01 = new Float64Array(SZ*SZ);
+    const J10 = new Float64Array(SZ*SZ);
+    const J11 = new Float64Array(SZ*SZ);
+
+    for (let y = 0; y < SZ; y++) {
+      for (let x = 0; x < SZ; x++) {
+        const xp = Math.min(SZ-1, x+1), xm = Math.max(0, x-1);
+        const yp = Math.min(SZ-1, y+1), ym = Math.max(0, y-1);
+        const dxRange = xp - xm || 1;
+        const dyRange = yp - ym || 1;
+        J00[y*SZ+x] = 1 + (dx[y*SZ+xp] - dx[y*SZ+xm]) / dxRange;
+        J01[y*SZ+x] = (dx[yp*SZ+x] - dx[ym*SZ+x]) / dyRange;
+        J10[y*SZ+x] = (dy[y*SZ+xp] - dy[y*SZ+xm]) / dxRange;
+        J11[y*SZ+x] = 1 + (dy[yp*SZ+x] - dy[ym*SZ+x]) / dyRange;
+      }
+    }
+
+    return { dx, dy, J00, J01, J10, J11, warpScale, layerFraction, focusPoints };
+  }
+
+  let cachedFields = [];
+  let cacheKey = '';
+
+  function invalidateCache() { cacheKey = ''; }
+
+  function getLayerField(layerIdx) {
+    const key = `${layerIdx}-${State.visibleLayers}-${State.curvatureK}-${State.focusRadius}-${State.warpStrength}-${StalkModule.stalks.map(s=>s.embedPoint.x.toFixed(4)+s.embedPoint.y.toFixed(4)).join(',')}`;
+    if (cacheKey !== key) {
+      cachedFields = [];
+      for (let l = 0; l < State.visibleLayers; l++) {
+        cachedFields[l] = computeLayerWarpField(l);
+      }
+      cacheKey = key;
+    }
+    return cachedFields[layerIdx];
+  }
+
+  function sampleBilinear(field, nx, ny) {
+    const fx = Math.max(0, Math.min(SZ - 1.001, nx * (SZ - 1)));
+    const fy = Math.max(0, Math.min(SZ - 1.001, ny * (SZ - 1)));
+    const ix = Math.floor(fx), iy = Math.floor(fy);
+    const ix1 = Math.min(SZ-1, ix+1), iy1 = Math.min(SZ-1, iy+1);
+    const tx = fx - ix, ty = fy - iy;
+    const v00 = field[iy*SZ+ix], v10 = field[iy*SZ+ix1];
+    const v01 = field[iy1*SZ+ix], v11 = field[iy1*SZ+ix1];
+    return v00*(1-tx)*(1-ty) + v10*tx*(1-ty) + v01*(1-tx)*ty + v11*tx*ty;
+  }
+
+  return { computeLayerWarpField, getLayerField, sampleBilinear, invalidateCache };
+})();
+
+// ============================================================
+// Controls
+// ============================================================
+const Ctrl = (() => {
+  function play() { State.animating = true; document.getElementById('btnPlay').textContent = '▶ Playing...'; }
+  function pause() { State.animating = false; document.getElementById('btnPlay').textContent = '▶ Animate'; }
+  function reset() {
+    pause();
+    State.time = 0;
+    State.selectedStalk = 0;
+    State.visibleLayers = 4;
+    State.curvatureK = 0.60;
+    State.focusRadius = 0.25;
+    State.warpStrength = 0.55;
+    State.gridDensity = 16;
+    State.maxPixelation = 5;
+    State.detailLayer = 0;
+    StalkModule.resetPositions();
+    WarpModule.invalidateCache();
+    document.getElementById('slLayers').value = 4; document.getElementById('vLayers').textContent = '4';
+    document.getElementById('slCurv').value = 60; document.getElementById('vCurv').textContent = '0.60';
+    document.getElementById('slFocus').value = 25; document.getElementById('vFocus').textContent = '0.25';
+    document.getElementById('slWarp').value = 55; document.getElementById('vWarp').textContent = '0.55';
+    document.getElementById('slGrid').value = 16; document.getElementById('vGrid').textContent = '16';
+    document.getElementById('slPixel').value = 5; document.getElementById('vPixel').textContent = '5';
+    buildUI();
+    updateInfo();
+  }
+  function setLayers(v) { State.visibleLayers = v; document.getElementById('vLayers').textContent = v; WarpModule.invalidateCache(); buildUI(); }
+  function setCurvature(v) { State.curvatureK = v / 100; document.getElementById('vCurv').textContent = (v/100).toFixed(2); WarpModule.invalidateCache(); updateInfo(); }
+  function setFocusRadius(v) { State.focusRadius = v / 100; document.getElementById('vFocus').textContent = (v/100).toFixed(2); }
+  function setWarp(v) { State.warpStrength = v / 100; document.getElementById('vWarp').textContent = (v/100).toFixed(2); WarpModule.invalidateCache(); }
+  function setGridDensity(v) { State.gridDensity = v; document.getElementById('vGrid').textContent = v; }
+  function setPixelation(v) { State.maxPixelation = v; document.getElementById('vPixel').textContent = v; }
+  function setAttraction(v) { State.boxAttractionStrength = v / 1000; document.getElementById('vAttract').textContent = (v/1000).toFixed(3); }
+  function clearBoxes() { State.focusBoxes = []; document.getElementById('modeLabel').textContent = 'All focus boxes cleared'; }
+
+  return { play, pause, reset, setLayers, setCurvature, setFocusRadius, setWarp, setGridDensity, setPixelation, setAttraction, clearBoxes };
+})();
+
+// ============================================================
+// Canvas Setup
+// ============================================================
+const cvEmbed = document.getElementById('cvEmbed');
+const ctxEmbed = setupHiDPI(cvEmbed, 290, 290);
+const cvMain = document.getElementById('cvMain');
+const ctxMain = cvMain.getContext('2d');
+const cvTarget = document.getElementById('cvTarget');
+const ctxTarget = setupHiDPI(cvTarget, 290, 290);
+const cvDetail = document.getElementById('cvDetail');
+const ctxDetail = setupHiDPI(cvDetail, 290, 290);
+const cvJacobiMat = document.getElementById('cvJacobiMat');
+const ctxJacobiMat = setupHiDPI(cvJacobiMat, 290, 290);
+const cvContrib = document.getElementById('cvContrib');
+const ctxContrib = setupHiDPI(cvContrib, 290, 160);
+
+function resizeMain() {
+  const container = cvMain.parentElement;
+  const w = container.clientWidth - 10;
+  const h = Math.min(640, Math.max(420, window.innerHeight - 200));
+  cvMain.width = w * DPR; cvMain.height = h * DPR;
+  cvMain.style.width = w + 'px'; cvMain.style.height = h + 'px';
+  ctxMain.setTransform(1,0,0,1,0,0); ctxMain.scale(DPR, DPR);
+  return { w, h };
+}
+let mainDim = resizeMain();
+window.addEventListener('resize', () => { mainDim = resizeMain(); });
+
+// ============================================================
+// Render Embedding Space
+// ============================================================
+const RenderEmbed = (() => {
+  function render() {
+    const w = 290, h = 290;
+    ctxEmbed.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxEmbed.clearRect(0, 0, w, h);
+
+    // Clean dark background — NO chaotic hash color field
+    ctxEmbed.fillStyle = '#0a0e1a';
+    ctxEmbed.fillRect(0, 0, w, h);
+
+    // Subtle glow around each token position only
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const sc = StalkModule.COLORS[s];
+      const st = StalkModule.stalks[s];
+      const grd = ctxEmbed.createRadialGradient(
+        st.embedPoint.x * w, st.embedPoint.y * h, 0,
+        st.embedPoint.x * w, st.embedPoint.y * h, 30
+      );
+      grd.addColorStop(0, `rgba(${sc[0]},${sc[1]},${sc[2]},0.08)`);
+      grd.addColorStop(1, `rgba(${sc[0]},${sc[1]},${sc[2]},0)`);
+      ctxEmbed.fillStyle = grd;
+      ctxEmbed.beginPath();
+      ctxEmbed.arc(st.embedPoint.x * w, st.embedPoint.y * h, 30, 0, Math.PI * 2);
+      ctxEmbed.fill();
+    }
+
+    // Grid
+    ctxEmbed.strokeStyle = 'rgba(162,155,254,0.06)';
+    ctxEmbed.lineWidth = 0.5;
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      ctxEmbed.beginPath(); ctxEmbed.moveTo(t*w, 0); ctxEmbed.lineTo(t*w, h); ctxEmbed.stroke();
+      ctxEmbed.beginPath(); ctxEmbed.moveTo(0, t*h); ctxEmbed.lineTo(w, t*h); ctxEmbed.stroke();
+    }
+
+    // Draw stalks — NO focus point lines, NO dashed connections, NO arrows
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const st = StalkModule.stalks[s];
+      const sc = StalkModule.COLORS[s];
+      const isSelected = s === State.selectedStalk;
+
+      // Stalk dot
+      const sz = isSelected ? 8 : 5;
+      ctxEmbed.beginPath();
+      ctxEmbed.arc(st.embedPoint.x * w, st.embedPoint.y * h, sz, 0, Math.PI * 2);
+      const grad = ctxEmbed.createRadialGradient(
+        st.embedPoint.x * w, st.embedPoint.y * h, 0,
+        st.embedPoint.x * w, st.embedPoint.y * h, sz
+      );
+      grad.addColorStop(0, `rgba(${sc[0]},${sc[1]},${sc[2]},1)`);
+      grad.addColorStop(1, `rgba(${sc[0]},${sc[1]},${sc[2]},0.4)`);
+      ctxEmbed.fillStyle = grad;
+      ctxEmbed.fill();
+      if (isSelected) { ctxEmbed.strokeStyle = '#fbbf24'; ctxEmbed.lineWidth = 2; ctxEmbed.stroke(); }
+
+      // Default position ghost
+      const dp = StalkModule.DEFAULT_POSITIONS[s];
+      const displacement = Math.hypot(st.embedPoint.x - dp.x, st.embedPoint.y - dp.y);
+      if (displacement > 0.01) {
+        ctxEmbed.beginPath();
+        ctxEmbed.arc(dp.x * w, dp.y * h, 3, 0, Math.PI * 2);
+        ctxEmbed.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.2)`;
+        ctxEmbed.lineWidth = 1;
+        ctxEmbed.setLineDash([1, 2]);
+        ctxEmbed.stroke();
+        ctxEmbed.setLineDash([]);
+      }
+
+      // Label
+      ctxEmbed.font = `${isSelected ? 'bold ' : ''}8px monospace`;
+      ctxEmbed.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${isSelected ? 1 : 0.6})`;
+      ctxEmbed.textAlign = 'center';
+      ctxEmbed.fillText(StalkModule.NAMES[s], st.embedPoint.x * w, st.embedPoint.y * h - sz - 3);
+    }
+
+    // Total displacement indicator
+    const totalDisp = StalkModule.totalDisplacement();
+    ctxEmbed.font = '7px monospace';
+    ctxEmbed.fillStyle = 'rgba(255,220,100,0.6)';
+    ctxEmbed.textAlign = 'left';
+    ctxEmbed.fillText(`Σ displacement: ${totalDisp.toFixed(3)} → sway: ${(totalDisp * 15).toFixed(1)}°`, 4, h - 4);
+
+    ctxEmbed.font = 'bold 9px monospace';
+    ctxEmbed.fillStyle = 'rgba(162,155,254,0.6)';
+    ctxEmbed.textAlign = 'center';
+    ctxEmbed.fillText('Embedding Space', w / 2, 12);
+  }
+
+  return { render };
+})();
+
+// ============================================================
+// Render Focused Image (right panel)
+// ============================================================
+// ============================================================
+// REPLACE: RenderTarget module
+// Grid-in-grid rendering:
+//  - Low focus → large "lego block" pixels
+//  - High focus → tiny crisp pixels (grid inside grid)
+//  - Focus bleeds out visibly: you can SEE the transition
+//    from crisp SVG-like detail to chunky blocks
+//  - Stacked selections make the focused area even crisper
+// ============================================================
+const RenderTarget = (() => {
+    const SZ = ImageModule.SZ;
+
+    function render() {
+        const w = 290, h = 290;
+        ctxTarget.setTransform(DPR, 0, 0, DPR, 0, 0);
+        ctxTarget.clearRect(0, 0, w, h);
+        ctxTarget.fillStyle = '#0d1220';
+        ctxTarget.fillRect(0, 0, w, h);
+
+        const focusMap = FocusMap.computeFocusMap();
+        const image = ImageModule.image;
+        const maxPix = State.maxPixelation;
+
+        const imgMargin = 12;
+        const imgSize = Math.min(w, h) - imgMargin * 2;
+        const ox = (w - imgSize) / 2, oy = (h - imgSize) / 2;
+        const cellSize = imgSize / SZ;
+
+        // === Pass 1: Coarsest — fill everything at lego-block resolution ===
+        // Muted, desaturated, pixelated — NOT rainbow/LSD
+        for (let by = 0; by < SZ; by += maxPix) {
+            for (let bx = 0; bx < SZ; bx += maxPix) {
+                const cx = Math.min(SZ - 1, bx + Math.floor(maxPix / 2));
+                const cy = Math.min(SZ - 1, by + Math.floor(maxPix / 2));
+                const v = image[cy * SZ + cx];
+                const b = Math.max(0, Math.min(1, v));
+                const screenX = ox + bx * cellSize;
+                const screenY = oy + by * cellSize;
+                const blockW = Math.min(maxPix, SZ - bx) * cellSize;
+                const blockH = Math.min(maxPix, SZ - by) * cellSize;
+
+                // Muted blue-gray tones — clearly pixelated but not colorful
+                const r = Math.floor(12 + b * 45);
+                const g = Math.floor(15 + b * 55);
+                const bl = Math.floor(28 + b * 75);
+
+                ctxTarget.fillStyle = `rgb(${r},${g},${bl})`;
+                ctxTarget.fillRect(screenX, screenY, blockW + 0.5, blockH + 0.5);
+            }
+        }
+
+        // Draw block grid lines for the coarsest level (lego look)
+        ctxTarget.strokeStyle = 'rgba(30,41,59,0.5)';
+        ctxTarget.lineWidth = 0.5;
+        for (let by = 0; by <= SZ; by += maxPix) {
+            const sy = oy + by * cellSize;
+            ctxTarget.beginPath();
+            ctxTarget.moveTo(ox, sy);
+            ctxTarget.lineTo(ox + imgSize, sy);
+            ctxTarget.stroke();
+        }
+        for (let bx = 0; bx <= SZ; bx += maxPix) {
+            const sx = ox + bx * cellSize;
+            ctxTarget.beginPath();
+            ctxTarget.moveTo(sx, oy);
+            ctxTarget.lineTo(sx, oy + imgSize);
+            ctxTarget.stroke();
+        }
+
+        // === Passes 2..N: progressively finer grids where focus warrants it ===
+        const blockSizes = [];
+        for (let bs = maxPix; bs >= 1; bs = Math.max(1, Math.floor(bs / 2))) {
+            blockSizes.push(bs);
+            if (bs === 1) break;
+        }
+        if (blockSizes[blockSizes.length - 1] !== 1) blockSizes.push(1);
+
+        for (let bi = 1; bi < blockSizes.length; bi++) {
+            const bs = blockSizes[bi];
+            const focusThreshold = bi / blockSizes.length;
+
+            for (let by = 0; by < SZ; by += bs) {
+                for (let bx = 0; bx < SZ; bx += bs) {
+                    const cx = Math.min(SZ - 1, bx + Math.floor(bs / 2));
+                    const cy = Math.min(SZ - 1, by + Math.floor(bs / 2));
+                    const focus = focusMap[cy * SZ + cx];
+
+                    if (focus < focusThreshold * 0.6) continue;
+
+                    const alpha = Math.min(1.0, (focus - focusThreshold * 0.4) / (focusThreshold * 0.6 + 0.01));
+                    if (alpha <= 0.02) continue;
+
+                    const v = image[cy * SZ + cx];
+                    const b = Math.max(0, Math.min(1, v));
+
+                    // Focused areas: bright, warm, full color detail
+                    const warmth = focus;
+                    const r = Math.floor(20 + b * (120 + warmth * 105));
+                    const g = Math.floor(20 + b * (110 + warmth * 90));
+                    const bl2 = Math.floor(30 + b * (80 + warmth * 30));
+
+                    const screenX = ox + bx * cellSize;
+                    const screenY = oy + by * cellSize;
+                    const blockW = Math.min(bs, SZ - bx) * cellSize;
+                    const blockH = Math.min(bs, SZ - by) * cellSize;
+
+                    ctxTarget.globalAlpha = alpha;
+                    ctxTarget.fillStyle = `rgb(${r},${g},${bl2})`;
+                    ctxTarget.fillRect(screenX, screenY, blockW + 0.5, blockH + 0.5);
+                }
+            }
+        }
+
+        ctxTarget.globalAlpha = 1.0;
+
+        // === Lens Pointer Visualization — clean crosshairs only, no lines ===
+        for (let s = 0; s < StalkModule.N_STALKS; s++) {
+            const st = StalkModule.stalks[s];
+            const sc = StalkModule.COLORS[s];
+            const isSelected = s === State.selectedStalk;
+
+            let centX = 0, centY = 0;
+            for (let l = 0; l < State.visibleLayers; l++) {
+                const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, l);
+                centX += fp.x;
+                centY += fp.y;
+            }
+            centX /= State.visibleLayers;
+            centY /= State.visibleLayers;
+
+            const cpx = ox + centX * imgSize;
+            const cpy = oy + centY * imgSize;
+
+            const chSize = isSelected ? 10 : 6;
+            const chAlpha = isSelected ? 0.9 : 0.5;
+            ctxTarget.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${chAlpha})`;
+            ctxTarget.lineWidth = isSelected ? 2 : 1;
+            ctxTarget.beginPath(); ctxTarget.moveTo(cpx - chSize, cpy); ctxTarget.lineTo(cpx + chSize, cpy); ctxTarget.stroke();
+            ctxTarget.beginPath(); ctxTarget.moveTo(cpx, cpy - chSize); ctxTarget.lineTo(cpx, cpy + chSize); ctxTarget.stroke();
+            ctxTarget.beginPath(); ctxTarget.arc(cpx, cpy, chSize * 0.7, 0, Math.PI * 2); ctxTarget.stroke();
+
+            ctxTarget.font = `${isSelected ? 'bold ' : ''}8px monospace`;
+            ctxTarget.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${isSelected ? 1 : 0.6})`;
+            ctxTarget.textAlign = 'center';
+            ctxTarget.fillText(StalkModule.NAMES[s], cpx, cpy - chSize - 3);
+
+            // Small dots for individual layer focus points (no connecting lines)
+            for (let l = 0; l < State.visibleLayers; l++) {
+                const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, l);
+                const fpX = ox + fp.x * imgSize;
+                const fpY = oy + fp.y * imgSize;
+                const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+                ctxTarget.beginPath(); ctxTarget.arc(fpX, fpY, isSelected ? 2.5 : 1.5, 0, Math.PI * 2);
+                ctxTarget.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${isSelected ? 0.7 : 0.35})`; ctxTarget.fill();
+            }
+        }
+
+        // === Draw focus boxes ===
+        const totalSelectedArea = State.focusBoxes.reduce((sum, box) => sum + box.w * box.h, 0);
+        const clampedArea = Math.min(1.0, totalSelectedArea);
+
+        for (let i = 0; i < State.focusBoxes.length; i++) {
+            const box = State.focusBoxes[i];
+            const bx = ox + box.x * imgSize;
+            const by = oy + box.y * imgSize;
+            const bw = box.w * imgSize;
+            const bh = box.h * imgSize;
+
+            const pulseAlpha = 0.5 + 0.3 * Math.sin(State.time * 3 + i);
+
+            ctxTarget.strokeStyle = `rgba(251,191,36,${pulseAlpha})`;
+            ctxTarget.lineWidth = 1.5;
+            ctxTarget.setLineDash([4, 3]);
+            ctxTarget.strokeRect(bx, by, bw, bh);
+            ctxTarget.setLineDash([]);
+
+            ctxTarget.fillStyle = `rgba(251,191,36,0.04)`;
+            ctxTarget.fillRect(bx, by, bw, bh);
+
+            ctxTarget.font = 'bold 7px monospace';
+            ctxTarget.fillStyle = 'rgba(251,191,36,0.8)';
+            ctxTarget.textAlign = 'left';
+            ctxTarget.fillText(`#${i + 1} (${(box.w * box.h * 100).toFixed(0)}% area)`, bx + 2, by - 3);
+        }
+
+        if (State.focusBoxes.length > 0) {
+            const detailLevel = Math.pow(1.0 - clampedArea, 0.5);
+            ctxTarget.font = 'bold 8px monospace';
+            ctxTarget.fillStyle = 'rgba(251,191,36,0.9)';
+            ctxTarget.textAlign = 'center';
+            ctxTarget.fillText(
+                `Area: ${(clampedArea * 100).toFixed(0)}% → Detail: ${(detailLevel * 100).toFixed(0)}%`,
+                w / 2, h - 4
+            );
+        }
+
+        // If currently drawing a box, show preview
+        if (State.isDrawingBox && State.boxStart && State._boxCurrent) {
+            const bs = State.boxStart;
+            const bc = State._boxCurrent;
+            const bx = ox + Math.min(bs.x, bc.x) * imgSize;
+            const by = oy + Math.min(bs.y, bc.y) * imgSize;
+            const bw = Math.abs(bc.x - bs.x) * imgSize;
+            const bh = Math.abs(bc.y - bs.y) * imgSize;
+
+            ctxTarget.strokeStyle = 'rgba(251,191,36,0.9)';
+            ctxTarget.lineWidth = 2;
+            ctxTarget.setLineDash([2, 2]);
+            ctxTarget.strokeRect(bx, by, bw, bh);
+            ctxTarget.setLineDash([]);
+            ctxTarget.fillStyle = 'rgba(251,191,36,0.1)';
+            ctxTarget.fillRect(bx, by, bw, bh);
+
+            const previewArea = Math.abs(bc.x - bs.x) * Math.abs(bc.y - bs.y);
+            ctxTarget.font = '7px monospace';
+            ctxTarget.fillStyle = 'rgba(251,191,36,0.8)';
+            ctxTarget.textAlign = 'center';
+            ctxTarget.fillText(`${(previewArea * 100).toFixed(0)}%`, bx + bw / 2, by + bh / 2 + 3);
+        }
+
+        cvTarget._imgBounds = { x: ox, y: oy, w: imgSize, h: imgSize };
+    }
+
+    return { render };
+})();
+
+// ============================================================
+// Render Main Kelp Forest
+// ============================================================
+function drawStalkPlateWarpedGrid(ctx, ox, oy, size, layerIdx, stalkIdx, gridN, alpha) {
+  const SZ = ImageModule.SZ;
+  const field = WarpModule.getLayerField(layerIdx);
+  if (!field) return;
+  const { dx, dy } = field;
+  const sc = StalkModule.COLORS[stalkIdx];
+  const lc = LAYER_COLORS[Math.min(layerIdx, LAYER_COLORS.length - 1)];
+
+  // Draw warped grid lines
+  ctx.lineWidth = 0.4;
+  const steps = gridN * 2;
+
+  // Horizontal lines
+  for (let gy = 0; gy <= gridN; gy++) {
+    ctx.beginPath();
+    for (let gx = 0; gx <= steps; gx++) {
+      const nx = gx / steps;
+      const ny = Math.min(0.999, gy / gridN);
+      const ddx = WarpModule.sampleBilinear(dx, nx, ny);
+      const ddy = WarpModule.sampleBilinear(dy, nx, ny);
+      const px = ox + nx * size + ddx * size * 0.5;
+      const py = oy + ny * size + ddy * size * 0.5;
+      if (gx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${(alpha * 0.5).toFixed(3)})`;
+    ctx.stroke();
+  }
+
+  // Vertical lines
+  for (let gx = 0; gx <= gridN; gx++) {
+    ctx.beginPath();
+    for (let gy = 0; gy <= steps; gy++) {
+      const nx = Math.min(0.999, gx / gridN);
+      const ny = gy / steps;
+      const ddx = WarpModule.sampleBilinear(dx, nx, ny);
+      const ddy = WarpModule.sampleBilinear(dy, nx, ny);
+      const px = ox + nx * size + ddx * size * 0.5;
+      const py = oy + ny * size + ddy * size * 0.5;
+      if (gy === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${(alpha * 0.35).toFixed(3)})`;
+    ctx.stroke();
+  }
+
+  // Focus point for this stalk at this layer
+  const st = StalkModule.stalks[stalkIdx];
+  const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, stalkIdx, layerIdx);
+  const fpX = ox + fp.x * size;
+  const fpY = oy + fp.y * size;
+  ctx.beginPath();
+  ctx.arc(fpX, fpY, 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${(alpha * 0.9).toFixed(3)})`;
+  ctx.fill();
+}
+
+const RenderMain = (() => {
+  const SZ = ImageModule.SZ;
+
+  function render() {
+    const W = mainDim.w, H = mainDim.h;
+    ctxMain.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxMain.clearRect(0, 0, W, H);
+
+    // Background
+    const bgGrad = ctxMain.createRadialGradient(W / 2, H * 0.6, 0, W / 2, H * 0.6, Math.max(W, H) * 0.7);
+    bgGrad.addColorStop(0, '#0a1628');
+    bgGrad.addColorStop(1, '#050810');
+    ctxMain.fillStyle = bgGrad;
+    ctxMain.fillRect(0, 0, W, H);
+
+    const margin = 30;
+    const baseY = H - 40;
+    const topY = 100;
+    const layerSpacing = (baseY - topY) / (State.visibleLayers + 1);
+    const stalkSpacing = (W - 2 * margin) / (StalkModule.N_STALKS + 1);
+    const plateSize = Math.min(60, stalkSpacing * 0.65);
+
+    const totalDisp = StalkModule.totalDisplacement();
+    const swayIntensity = totalDisp * 15;
+
+    // Transport weights for visualization
+    const transportWeights = FocusMap.getTransportWeights();
+
+    // Base line
+    ctxMain.strokeStyle = 'rgba(162,155,254,0.2)';
+    ctxMain.lineWidth = 1;
+    ctxMain.beginPath();
+    ctxMain.moveTo(margin, baseY);
+    ctxMain.lineTo(W - margin, baseY);
+    ctxMain.stroke();
+    ctxMain.font = '8px monospace';
+    ctxMain.fillStyle = 'rgba(162,155,254,0.3)';
+    ctxMain.textAlign = 'center';
+    ctxMain.fillText(`Token Index Space — Sway: ${swayIntensity.toFixed(1)}° (from Σ displacement)`, W / 2, baseY + 15);
+
+    // Layer lines + residual stream labels
+    for (let l = 0; l < State.visibleLayers; l++) {
+      const ly = baseY - (l + 1) * layerSpacing;
+      const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+      ctxMain.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},0.08)`;
+      ctxMain.lineWidth = 0.5;
+      ctxMain.setLineDash([3, 8]);
+      ctxMain.beginPath();
+      ctxMain.moveTo(margin, ly);
+      ctxMain.lineTo(W - margin, ly);
+      ctxMain.stroke();
+      ctxMain.setLineDash([]);
+      ctxMain.font = '7px monospace';
+      ctxMain.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},0.5)`;
+      ctxMain.textAlign = 'right';
+      ctxMain.fillText(`L${l}`, margin - 4, ly + 3);
+
+      // Label: "parallel transport" on the residual stream between layers
+      if (l < State.visibleLayers - 1) {
+        const midY = ly - layerSpacing * 0.5;
+        ctxMain.font = '6px monospace';
+        ctxMain.fillStyle = 'rgba(251,191,36,0.25)';
+        ctxMain.textAlign = 'center';
+        ctxMain.fillText('↕ residual stream + parallel transport ↕', W / 2, midY);
+      }
+    }
+
+    WarpModule.invalidateCache();
+
+    // Precompute stalk plate positions for drawing transport connections
+    const stalkPlatePositions = [];
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      stalkPlatePositions[s] = [];
+      const st = StalkModule.stalks[s];
+      const baseX = margin + (s + 1) * stalkSpacing;
+      const dp = StalkModule.DEFAULT_POSITIONS[s];
+      const stalkDisp = Math.hypot(st.embedPoint.x - dp.x, st.embedPoint.y - dp.y);
+
+      for (let l = 0; l < State.visibleLayers; l++) {
+        const swayRad = swayIntensity * Math.PI / 180;
+        const swayX = Math.sin(State.time * 0.5 + st.phase + l * 0.45) * swayRad * 12 * (l + 1) / State.visibleLayers;
+        const ly = baseY - (l + 1) * layerSpacing;
+        const thisPlateSize = plateSize * (0.5 + stalkDisp * 1.5);
+        const clampedPlate = Math.min(plateSize * 1.2, Math.max(plateSize * 0.3, thisPlateSize));
+        stalkPlatePositions[s][l] = { x: baseX + swayX, y: ly, plate: clampedPlate };
+      }
+    }
+
+    // ── Draw parallel transport connections between stalks at each layer ──
+    for (let l = 0; l < State.visibleLayers; l++) {
+      for (let i = 0; i < StalkModule.N_STALKS; i++) {
+        for (let j = i + 1; j < StalkModule.N_STALKS; j++) {
+          const w_ij = transportWeights[i][j];
+          if (w_ij < 0.01) continue;
+
+          const posI = stalkPlatePositions[i][l];
+          const posJ = stalkPlatePositions[j][l];
+          const sci = StalkModule.COLORS[i];
+          const scj = StalkModule.COLORS[j];
+
+          // Arc upward proportional to weight
+          const midX = (posI.x + posJ.x) / 2;
+          const midY = posI.y - 8 - w_ij * 25;
+          const alpha = Math.min(0.7, w_ij * 2.5);
+
+          // Gradient line from stalk i color → gold → stalk j color
+          const grad = ctxMain.createLinearGradient(posI.x, posI.y, posJ.x, posJ.y);
+          grad.addColorStop(0, `rgba(${sci[0]},${sci[1]},${sci[2]},${alpha.toFixed(3)})`);
+          grad.addColorStop(0.5, `rgba(251,191,36,${(alpha * 0.6).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(${scj[0]},${scj[1]},${scj[2]},${alpha.toFixed(3)})`);
+
+          ctxMain.strokeStyle = grad;
+          ctxMain.lineWidth = 0.5 + w_ij * 4;
+          ctxMain.setLineDash([2, 2]);
+          ctxMain.beginPath();
+          ctxMain.moveTo(posI.x, posI.y);
+          ctxMain.quadraticCurveTo(midX, midY, posJ.x, posJ.y);
+          ctxMain.stroke();
+          ctxMain.setLineDash([]);
+
+          // Animated flow particles along the transport arc
+          const nParticles = Math.max(1, Math.floor(w_ij * 6));
+          for (let p = 0; p < nParticles; p++) {
+            const t = ((State.time * 0.8 + p / nParticles + l * 0.2) % 1);
+            const px = (1 - t) * (1 - t) * posI.x + 2 * (1 - t) * t * midX + t * t * posJ.x;
+            const py = (1 - t) * (1 - t) * posI.y + 2 * (1 - t) * t * midY + t * t * posJ.y;
+
+            ctxMain.beginPath();
+            ctxMain.arc(px, py, 1.2 + w_ij * 2, 0, Math.PI * 2);
+            ctxMain.fillStyle = `rgba(251,191,36,${(alpha * 0.8).toFixed(3)})`;
+            ctxMain.fill();
+          }
+
+          // Weight label at midpoint
+          if (w_ij > 0.05) {
+            ctxMain.font = '5px monospace';
+            ctxMain.fillStyle = `rgba(251,191,36,${(alpha * 0.7).toFixed(3)})`;
+            ctxMain.textAlign = 'center';
+            ctxMain.fillText(`${(w_ij * 100).toFixed(0)}%`, midX, midY - 3);
+          }
+        }
+      }
+    }
+
+    // ── Draw each stalk ──
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const st = StalkModule.stalks[s];
+      const sc = StalkModule.COLORS[s];
+      const baseX = margin + (s + 1) * stalkSpacing;
+      const isSelected = s === State.selectedStalk;
+
+      const dp = StalkModule.DEFAULT_POSITIONS[s];
+      const stalkDisp = Math.hypot(st.embedPoint.x - dp.x, st.embedPoint.y - dp.y);
+
+      const points = [];
+      for (let l = 0; l < State.visibleLayers; l++) {
+        const pos = stalkPlatePositions[s][l];
+        points.push({ x: pos.x, y: pos.y, layer: l });
+      }
+
+      // Draw stem segments
+      ctxMain.lineWidth = isSelected ? 3 : 2;
+      for (let p = 0; p < points.length; p++) {
+        const pt = points[p];
+        const alpha = 0.3 + stalkDisp * 2;
+        ctxMain.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${Math.min(1, isSelected ? alpha + 0.2 : alpha).toFixed(3)})`;
+        ctxMain.beginPath();
+        if (p === 0) {
+          ctxMain.moveTo(baseX, baseY);
+          ctxMain.quadraticCurveTo(baseX, (baseY + pt.y) / 2, pt.x, pt.y);
+        } else {
+          const prev = points[p - 1];
+          ctxMain.moveTo(prev.x, prev.y);
+          ctxMain.quadraticCurveTo(prev.x, (prev.y + pt.y) / 2, pt.x, pt.y);
+        }
+        ctxMain.stroke();
+      }
+
+      // Draw residual stream indicator along the stem (thin gold dashed line)
+      ctxMain.setLineDash([1, 3]);
+      ctxMain.strokeStyle = `rgba(251,191,36,${isSelected ? 0.3 : 0.1})`;
+      ctxMain.lineWidth = 1;
+      for (let p = 0; p < points.length; p++) {
+        const pt = points[p];
+        if (p === 0) {
+          ctxMain.beginPath();
+          ctxMain.moveTo(baseX + 4, baseY);
+          ctxMain.lineTo(pt.x + 4, pt.y);
+          ctxMain.stroke();
+        } else {
+          const prev = points[p - 1];
+          ctxMain.beginPath();
+          ctxMain.moveTo(prev.x + 4, prev.y);
+          ctxMain.lineTo(pt.x + 4, pt.y);
+          ctxMain.stroke();
+        }
+      }
+      ctxMain.setLineDash([]);
+
+      // Draw warped grid plates per layer
+      for (let p = 0; p < points.length; p++) {
+        const pt = points[p];
+        const layerIdx = pt.layer;
+        const clampedPlate = stalkPlatePositions[s][layerIdx].plate;
+        const alpha = isSelected ? 0.6 : 0.25;
+
+        // Plate background
+        ctxMain.fillStyle = `rgba(10,14,26,${(alpha * 0.7).toFixed(3)})`;
+        ctxMain.fillRect(pt.x - clampedPlate / 2 - 1, pt.y - clampedPlate / 2 - 1, clampedPlate + 2, clampedPlate + 2);
+
+        // Draw warped grid for this layer
+        drawStalkPlateWarpedGrid(
+          ctxMain,
+          pt.x - clampedPlate / 2,
+          pt.y - clampedPlate / 2,
+          clampedPlate,
+          layerIdx,
+          s,
+          Math.max(6, Math.floor(State.gridDensity * 0.5)),
+          alpha
+        );
+
+        // Show transported map as a subtle overlay on the plate
+        const tMap = FocusMap.getTransportedMap(layerIdx, s);
+        if (tMap) {
+          const pxSize = clampedPlate / SZ;
+          for (let iy = 0; iy < SZ; iy += 3) {
+            for (let ix = 0; ix < SZ; ix += 3) {
+              const val = Math.min(1, tMap[iy * SZ + ix]);
+              if (val < 0.1) continue;
+              ctxMain.fillStyle = `rgba(251,191,36,${(val * alpha * 0.3).toFixed(3)})`;
+              ctxMain.fillRect(
+                pt.x - clampedPlate / 2 + ix * pxSize,
+                pt.y - clampedPlate / 2 + iy * pxSize,
+                pxSize * 3 + 0.5,
+                pxSize * 3 + 0.5
+              );
+            }
+          }
+        }
+
+        // Layer color border
+        const lc = LAYER_COLORS[Math.min(layerIdx, LAYER_COLORS.length - 1)];
+        ctxMain.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${(alpha * 0.6).toFixed(3)})`;
+        ctxMain.lineWidth = isSelected ? 1.8 : 1;
+        ctxMain.strokeRect(pt.x - clampedPlate / 2, pt.y - clampedPlate / 2, clampedPlate, clampedPlate);
+
+        // Stalk inner border
+        ctxMain.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${(alpha * 0.3).toFixed(3)})`;
+        ctxMain.lineWidth = 0.5;
+        ctxMain.strokeRect(pt.x - clampedPlate / 2 + 1, pt.y - clampedPlate / 2 + 1, clampedPlate - 2, clampedPlate - 2);
+
+        // Layer label
+        ctxMain.font = '6px monospace';
+        ctxMain.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${(alpha * 0.8).toFixed(3)})`;
+        ctxMain.textAlign = 'left';
+        ctxMain.fillText(`L${layerIdx}`, pt.x - clampedPlate / 2 + 2, pt.y - clampedPlate / 2 + 7);
+
+        // Transport indicator: "T:XX%" showing how much this stalk received from others
+        let receivedTransport = 0;
+        for (let j = 0; j < StalkModule.N_STALKS; j++) {
+          if (j !== s) receivedTransport += transportWeights[s][j];
+        }
+        if (receivedTransport > 0.05) {
+          ctxMain.font = 'bold 5px monospace';
+          ctxMain.fillStyle = `rgba(251,191,36,${(alpha * 0.7).toFixed(3)})`;
+          ctxMain.textAlign = 'right';
+          ctxMain.fillText(`T:${(receivedTransport * 100).toFixed(0)}%`, pt.x + clampedPlate / 2 - 2, pt.y - clampedPlate / 2 + 7);
+        }
+
+        // Node dot
+        ctxMain.beginPath();
+        ctxMain.arc(pt.x, pt.y, 2 + stalkDisp * 3, 0, Math.PI * 2);
+        ctxMain.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.9)`;
+        ctxMain.fill();
+      }
+
+      // Base node
+      ctxMain.beginPath();
+      ctxMain.arc(baseX, baseY, isSelected ? 5 : 3.5, 0, Math.PI * 2);
+      ctxMain.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.8)`;
+      ctxMain.fill();
+      if (isSelected) {
+        ctxMain.strokeStyle = '#fbbf24';
+        ctxMain.lineWidth = 1.5;
+        ctxMain.stroke();
+      }
+
+      ctxMain.font = '8px monospace';
+      ctxMain.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.6)`;
+      ctxMain.textAlign = 'center';
+      ctxMain.fillText(StalkModule.NAMES[s], baseX, baseY + 13);
+    }
+
+    // ── Focused image at top (uses post-transport focus map) ──
+    const resolvedSize = Math.min(90, W * 0.13);
+    const resolvedX = W / 2;
+    const resolvedY = topY / 2 + 5;
+
+    const focusMapData = FocusMap.computeFocusMap();
+    const image = ImageModule.image;
+    const maxPix = State.maxPixelation;
+    const rps = resolvedSize / SZ;
+
+    ctxMain.fillStyle = 'rgba(10,14,26,0.85)';
+    ctxMain.fillRect(resolvedX - resolvedSize / 2 - 3, resolvedY - resolvedSize / 2 - 3, resolvedSize + 6, resolvedSize + 6);
+
+    // Pass 1: Draw pixelated base
+    const miniOx = resolvedX - resolvedSize / 2;
+    const miniOy = resolvedY - resolvedSize / 2;
+    for (let by = 0; by < SZ; by += maxPix) {
+      for (let bx = 0; bx < SZ; bx += maxPix) {
+        const cx = Math.min(SZ - 1, bx + Math.floor(maxPix / 2));
+        const cy = Math.min(SZ - 1, by + Math.floor(maxPix / 2));
+        const v = image[cy * SZ + cx];
+        const b = Math.max(0, Math.min(1, v));
+        const blockW = Math.min(maxPix, SZ - bx) * rps;
+        const blockH = Math.min(maxPix, SZ - by) * rps;
+        ctxMain.fillStyle = `rgb(${Math.floor(20 + b * 120)},${Math.floor(25 + b * 130)},${Math.floor(45 + b * 160)})`;
+        ctxMain.fillRect(miniOx + bx * rps, miniOy + by * rps, blockW + 0.5, blockH + 0.5);
+      }
+    }
+
+    // Pass 2: Overdraw crisp focused pixels
+    for (let y = 0; y < SZ; y++) {
+      for (let x = 0; x < SZ; x++) {
+        const focus = focusMapData[y * SZ + x];
+        if (focus < 0.15) continue;
+        const v = image[y * SZ + x];
+        const b = Math.max(0, Math.min(1, v));
+        ctxMain.globalAlpha = focus;
+        ctxMain.fillStyle = `rgb(${Math.floor(30 + b * 225)},${Math.floor(25 + b * 195)},${Math.floor(15 + b * 105)})`;
+        ctxMain.fillRect(miniOx + x * rps, miniOy + y * rps, rps + 0.5, rps + 0.5);
+      }
+    }
+    ctxMain.globalAlpha = 1.0;
+
+    ctxMain.strokeStyle = 'rgba(255,220,100,0.4)';
+    ctxMain.lineWidth = 1.5;
+    ctxMain.strokeRect(resolvedX - resolvedSize / 2 - 3, resolvedY - resolvedSize / 2 - 3, resolvedSize + 6, resolvedSize + 6);
+
+    ctxMain.font = '9px monospace';
+    ctxMain.fillStyle = 'rgba(255,220,100,0.6)';
+    ctxMain.textAlign = 'center';
+    ctxMain.fillText('Focused Image (post parallel transport)', resolvedX, resolvedY - resolvedSize / 2 - 7);
+
+    // ── Ambient particles ──
+    for (let i = 0; i < 15; i++) {
+      const px = (Math.sin(State.time * 0.2 + i * 2.5) * 0.5 + 0.5) * W;
+      const py = (Math.cos(State.time * 0.15 + i * 1.8) * 0.5 + 0.5) * H;
+      const pAlpha = 0.03 + 0.02 * Math.sin(State.time + i);
+      ctxMain.beginPath();
+      ctxMain.arc(px, py, 1 + Math.sin(State.time * 0.3 + i) * 0.5, 0, Math.PI * 2);
+      ctxMain.fillStyle = `rgba(162,155,254,${pAlpha.toFixed(3)})`;
+      ctxMain.fill();
+    }
+
+    // ── Transport summary legend at bottom ──
+    ctxMain.font = '7px monospace';
+    ctxMain.fillStyle = 'rgba(251,191,36,0.4)';
+    ctxMain.textAlign = 'center';
+    ctxMain.fillText('⟷ dashed arcs = parallel transport between stalks over residual stream', W / 2, baseY + 28);
+    ctxMain.fillText('● gold particles = focus map data flowing between heads', W / 2, baseY + 36);
+  }
+
+  return { render };
+})();
+
+// ============================================================
+// Render Detail — Layer warped grid (right panel)
+// ============================================================
+const RenderDetail = (() => {
+  const SZ = ImageModule.SZ;
+
+  function render() {
+    const w = 290, h = 290;
+    ctxDetail.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxDetail.clearRect(0, 0, w, h);
+    ctxDetail.fillStyle = '#0d1220';
+    ctxDetail.fillRect(0, 0, w, h);
+
+    const l = State.detailLayer;
+    const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+    const gridMargin = 15;
+    const gridSize = Math.min(w, h) - gridMargin * 2;
+
+    const field = WarpModule.getLayerField(l);
+    if (!field) return;
+    const { dx, dy, J00, J01, J10, J11, focusPoints } = field;
+    const gridN = State.gridDensity;
+
+    // Draw filled cells with distortion coloring
+    for (let gy = 0; gy < gridN; gy++) {
+      for (let gx = 0; gx < gridN; gx++) {
+        const corners = [
+          [gx / gridN, gy / gridN],
+          [(gx+1) / gridN, gy / gridN],
+          [(gx+1) / gridN, (gy+1) / gridN],
+          [gx / gridN, (gy+1) / gridN],
+        ];
+        const warped = corners.map(([nx, ny]) => {
+          const ddx = WarpModule.sampleBilinear(dx, nx, ny);
+          const ddy = WarpModule.sampleBilinear(dy, nx, ny);
+          return [gridMargin + nx * gridSize + ddx * gridSize, gridMargin + ny * gridSize + ddy * gridSize];
+        });
+
+        const cnx = (gx + 0.5) / gridN, cny = (gy + 0.5) / gridN;
+        const det = WarpModule.sampleBilinear(J00, cnx, cny) * WarpModule.sampleBilinear(J11, cnx, cny)
+                   - WarpModule.sampleBilinear(J01, cnx, cny) * WarpModule.sampleBilinear(J10, cnx, cny);
+        const distortion = Math.abs(det - 1);
+
+        // Find which focus point is closest (in UNWARPED space)
+        let maxFocusBright = 0;
+        let dominantStalk = 0;
+        for (let s = 0; s < StalkModule.N_STALKS; s++) {
+          const fp = focusPoints[s];
+          const d = Math.hypot(cnx - fp.x, cny - fp.y);
+          const fb = Math.exp(-d * d / (2 * 0.12 * 0.12));
+          if (fb > maxFocusBright) { maxFocusBright = fb; dominantStalk = s; }
+        }
+
+        const dsc = StalkModule.COLORS[dominantStalk];
+        const brightness = maxFocusBright * 0.6 + distortion * 0.4 + 0.05;
+        const r = Math.min(255, Math.floor(lc[0] * brightness * 0.5 + dsc[0] * maxFocusBright * 0.5 + distortion * 100));
+        const g = Math.min(255, Math.floor(lc[1] * brightness * 0.5 + dsc[1] * maxFocusBright * 0.5 + distortion * 40));
+        const b = Math.min(255, Math.floor(lc[2] * brightness * 0.5 + dsc[2] * maxFocusBright * 0.5 + distortion * 70));
+        const cellAlpha = 0.05 + brightness * 0.7;
+
+        ctxDetail.beginPath();
+        ctxDetail.moveTo(warped[0][0], warped[0][1]);
+        ctxDetail.lineTo(warped[1][0], warped[1][1]);
+        ctxDetail.lineTo(warped[2][0], warped[2][1]);
+        ctxDetail.lineTo(warped[3][0], warped[3][1]);
+        ctxDetail.closePath();
+        ctxDetail.fillStyle = `rgba(${r},${g},${b},${cellAlpha.toFixed(3)})`;
+        ctxDetail.fill();
+      }
+    }
+
+    // Warped grid lines
+    const lineAlpha = 0.4;
+    const steps = gridN * 2;
+
+    ctxDetail.lineWidth = 0.7;
+    for (let gy = 0; gy <= gridN; gy++) {
+      ctxDetail.beginPath();
+      for (let gx = 0; gx <= steps; gx++) {
+        const nx = gx / steps, ny = Math.min(0.999, gy / gridN);
+        const ddx = WarpModule.sampleBilinear(dx, nx, ny);
+        const ddy = WarpModule.sampleBilinear(dy, nx, ny);
+        const px = gridMargin + nx * gridSize + ddx * gridSize;
+        const py = gridMargin + ny * gridSize + ddy * gridSize;
+        if (gx === 0) ctxDetail.moveTo(px, py); else ctxDetail.lineTo(px, py);
+      }
+      ctxDetail.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${lineAlpha.toFixed(3)})`;
+      ctxDetail.stroke();
+    }
+
+    for (let gx = 0; gx <= gridN; gx++) {
+      ctxDetail.beginPath();
+      for (let gy = 0; gy <= steps; gy++) {
+        const nx = Math.min(0.999, gx / gridN), ny = gy / steps;
+        const ddx = WarpModule.sampleBilinear(dx, nx, ny);
+        const ddy = WarpModule.sampleBilinear(dy, nx, ny);
+        const px = gridMargin + nx * gridSize + ddx * gridSize;
+        const py = gridMargin + ny * gridSize + ddy * gridSize;
+        if (gy === 0) ctxDetail.moveTo(px, py); else ctxDetail.lineTo(px, py);
+      }
+      ctxDetail.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${lineAlpha.toFixed(3)})`;
+      ctxDetail.stroke();
+    }
+
+    // === Focus points drawn at FIXED unwarped positions ===
+    // The grid warps around them but the dots stay put — 
+    // this creates the illusion that the points are fixed anchors
+    // and the space is what's moving
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const sc = StalkModule.COLORS[s];
+      const fp = focusPoints[s];
+
+      // FIXED position — no warp applied to the dot
+      const fpX = gridMargin + fp.x * gridSize;
+      const fpY = gridMargin + fp.y * gridSize;
+
+      // Show where the grid WOULD place this point (warped position) as a ghost
+      const wdx = WarpModule.sampleBilinear(dx, fp.x, fp.y);
+      const wdy = WarpModule.sampleBilinear(dy, fp.x, fp.y);
+      const warpedX = fpX + wdx * gridSize;
+      const warpedY = fpY + wdy * gridSize;
+
+      // Ghost ring at warped position (should be very close due to pinning)
+      ctxDetail.beginPath();
+      ctxDetail.arc(warpedX, warpedY, 6, 0, Math.PI * 2);
+      ctxDetail.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.15)`;
+      ctxDetail.lineWidth = 0.5;
+      ctxDetail.stroke();
+
+      // Glow at fixed position
+      const grd = ctxDetail.createRadialGradient(fpX, fpY, 0, fpX, fpY, 18);
+      grd.addColorStop(0, `rgba(${sc[0]},${sc[1]},${sc[2]},0.5)`);
+      grd.addColorStop(0.5, `rgba(${sc[0]},${sc[1]},${sc[2]},0.15)`);
+      grd.addColorStop(1, `rgba(${sc[0]},${sc[1]},${sc[2]},0)`);
+      ctxDetail.fillStyle = grd;
+      ctxDetail.beginPath();
+      ctxDetail.arc(fpX, fpY, 18, 0, Math.PI * 2);
+      ctxDetail.fill();
+
+      // Pin marker — small diamond shape to emphasize "fixed"
+      const pinSz = 4;
+      ctxDetail.beginPath();
+      ctxDetail.moveTo(fpX, fpY - pinSz);
+      ctxDetail.lineTo(fpX + pinSz, fpY);
+      ctxDetail.lineTo(fpX, fpY + pinSz);
+      ctxDetail.lineTo(fpX - pinSz, fpY);
+      ctxDetail.closePath();
+      ctxDetail.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.95)`;
+      ctxDetail.fill();
+      ctxDetail.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctxDetail.lineWidth = 1;
+      ctxDetail.stroke();
+
+      // Label
+      ctxDetail.font = 'bold 7px monospace';
+      ctxDetail.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},0.9)`;
+      ctxDetail.textAlign = 'center';
+      ctxDetail.fillText(StalkModule.NAMES[s], fpX, fpY - pinSz - 4);
+    }
+
+    // Title
+    ctxDetail.font = 'bold 9px monospace';
+    ctxDetail.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},0.9)`;
+    ctxDetail.textAlign = 'center';
+    ctxDetail.fillText(`Layer ${l} — Space warps around fixed focus points`, w / 2, 11);
+
+    ctxDetail.font = '7px monospace';
+    ctxDetail.fillStyle = 'rgba(255,220,100,0.6)';
+    ctxDetail.textAlign = 'center';
+    ctxDetail.fillText(`warpScale=${field.warpScale.toFixed(3)} | K=${State.curvatureK.toFixed(2)} | focusR=${State.focusRadius.toFixed(2)}`, w / 2, h - 4);
+  }
+
+  return { render };
+})();
+
+// ============================================================
+// Render Jacobi Matrix — Layer Progression
+// ============================================================
+const RenderJacobiMat = (() => {
+  const SZ = ImageModule.SZ;
+
+  function render() {
+    const w = 290, h = 290;
+    ctxJacobiMat.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxJacobiMat.clearRect(0, 0, w, h);
+    ctxJacobiMat.fillStyle = '#0d1220';
+    ctxJacobiMat.fillRect(0, 0, w, h);
+
+    const nLayers = State.visibleLayers;
+    const compLabels = ['∂u/∂x', '∂u/∂y', '∂v/∂x', '∂v/∂y'];
+    const topMargin = 18;
+    const leftMargin = 4;
+    const gap = 2;
+    const cellW = (w - leftMargin * 2 - gap * 3) / 4;
+    const cellH = (h - topMargin - 8 - gap * (nLayers - 1)) / nLayers;
+    const ps = Math.min(cellW / SZ, cellH / SZ);
+
+    // Column headers
+    for (let c = 0; c < 4; c++) {
+      const cx = leftMargin + c * (cellW + gap) + cellW / 2;
+      ctxJacobiMat.font = 'bold 7px monospace';
+      ctxJacobiMat.fillStyle = 'rgba(0,206,201,0.7)';
+      ctxJacobiMat.textAlign = 'center';
+      ctxJacobiMat.fillText(compLabels[c], cx, 11);
+    }
+
+    for (let l = 0; l < nLayers; l++) {
+      const field = WarpModule.getLayerField(l);
+      if (!field) continue;
+      const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+      const components = [field.J00, field.J01, field.J10, field.J11];
+      const rowY = topMargin + l * (cellH + gap);
+
+      for (let c = 0; c < 4; c++) {
+        const comp = components[c];
+        const colX = leftMargin + c * (cellW + gap);
+
+        // Compute actual range for this component
+        let minV = Infinity, maxV = -Infinity;
+        for (let i = 0; i < SZ * SZ; i++) {
+          if (comp[i] < minV) minV = comp[i];
+          if (comp[i] > maxV) maxV = comp[i];
+        }
+
+        // Map the full actual range to [0, 1] for visualization
+        // This ensures we always see structure regardless of magnitude
+        const range = maxV - minV;
+        const safeRange = range < 1e-8 ? 1.0 : range;
+
+        for (let y = 0; y < SZ; y++) {
+          for (let x = 0; x < SZ; x++) {
+            // Normalize to [0, 1] across actual data range
+            const t = (comp[y * SZ + x] - minV) / safeRange;
+
+            // Diverging colormap: blue (low) -> dark mid -> warm (high)
+            // with layer tint mixed in so each layer row looks distinct
+            let r, g, b;
+            if (t < 0.5) {
+              // Low end: cool blue/cyan with layer tint
+              const s = (0.5 - t) * 2; // 1 at min, 0 at mid
+              r = Math.floor(10 + lc[0] * s * 0.3);
+              g = Math.floor(20 + lc[1] * s * 0.4 + (1 - s) * 15);
+              b = Math.floor(60 + s * 180);
+            } else {
+              // High end: warm orange/red with layer tint
+              const s = (t - 0.5) * 2; // 0 at mid, 1 at max
+              r = Math.floor(30 + s * 220);
+              g = Math.floor(15 + lc[1] * s * 0.3 + (1 - s) * 15);
+              b = Math.floor(10 + lc[2] * (1 - s) * 0.3);
+            }
+
+            // Add a base brightness so nothing is fully black
+            r = Math.min(255, Math.max(8, r));
+            g = Math.min(255, Math.max(8, g));
+            b = Math.min(255, Math.max(8, b));
+
+            ctxJacobiMat.fillStyle = `rgb(${r},${g},${b})`;
+            ctxJacobiMat.fillRect(colX + x * ps, rowY + y * ps, ps + 0.5, ps + 0.5);
+          }
+        }
+
+        // Border with layer color
+        ctxJacobiMat.strokeStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},0.3)`;
+        ctxJacobiMat.lineWidth = 0.5;
+        ctxJacobiMat.strokeRect(colX, rowY, SZ * ps, SZ * ps);
+
+        // Show value range as tiny label
+        ctxJacobiMat.font = '4px monospace';
+        ctxJacobiMat.fillStyle = 'rgba(148,163,184,0.5)';
+        ctxJacobiMat.textAlign = 'left';
+        ctxJacobiMat.fillText(`${minV.toFixed(2)}..${maxV.toFixed(2)}`, colX + 1, rowY + SZ * ps - 1);
+      }
+
+      // Layer label on the right
+      ctxJacobiMat.font = '6px monospace';
+      ctxJacobiMat.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},0.7)`;
+      ctxJacobiMat.textAlign = 'left';
+      ctxJacobiMat.fillText(`L${l}`, w - 14, rowY + SZ * ps / 2 + 2);
+    }
+
+    ctxJacobiMat.font = 'bold 7px monospace';
+    ctxJacobiMat.fillStyle = 'rgba(0,206,201,0.5)';
+    ctxJacobiMat.textAlign = 'center';
+    ctxJacobiMat.fillText('Jacobi Matrix J — Layer Progression (rows=layers)', w / 2, h - 3);
+  }
+
+  return { render };
+})();
+
+// ============================================================
+// Render Contribution — Focus Strength per Token
+// ============================================================
+const RenderContrib = (() => {
+  function render() {
+    const w = 290, h = 160;
+    ctxContrib.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxContrib.clearRect(0, 0, w, h);
+    ctxContrib.fillStyle = '#0d1220';
+    ctxContrib.fillRect(0, 0, w, h);
+
+    const barH = 18;
+    const gap = 4;
+    const startY = 20;
+    const barX = 50;
+    const barW = w - barX - 30;
+
+    ctxContrib.font = 'bold 8px monospace';
+    ctxContrib.fillStyle = 'rgba(0,206,201,0.7)';
+    ctxContrib.textAlign = 'center';
+    ctxContrib.fillText('Per-Token Focus Strength (chaotic hash coverage)', w / 2, 12);
+
+    const totalDisp = StalkModule.totalDisplacement();
+
+    for (let s = 0; s < StalkModule.N_STALKS; s++) {
+      const y = startY + s * (barH + gap);
+      const sc = StalkModule.COLORS[s];
+      const st = StalkModule.stalks[s];
+      const isSelected = s === State.selectedStalk;
+
+      // Compute this stalk's total focus coverage
+      let coverage = 0;
+      for (let l = 0; l < State.visibleLayers; l++) {
+        const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, l);
+        // How much of the image does this focus point cover?
+        coverage += State.focusRadius * (l + 1) / State.visibleLayers;
+      }
+      coverage = Math.min(1, coverage / State.visibleLayers);
+
+      // Per-stalk displacement
+      const dp = StalkModule.DEFAULT_POSITIONS[s];
+      const stalkDisp = Math.hypot(st.embedPoint.x - dp.x, st.embedPoint.y - dp.y);
+
+      ctxContrib.font = `${isSelected ? 'bold ' : ''}8px monospace`;
+      ctxContrib.fillStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${isSelected ? 1 : 0.7})`;
+      ctxContrib.textAlign = 'right';
+      ctxContrib.fillText(StalkModule.NAMES[s], barX - 6, y + barH / 2 + 3);
+
+      ctxContrib.fillStyle = 'rgba(30,41,59,0.7)';
+      ctxContrib.fillRect(barX, y, barW, barH);
+
+      const fillW = barW * coverage;
+      const barGrad = ctxContrib.createLinearGradient(barX, y, barX + fillW, y);
+      barGrad.addColorStop(0, `rgba(${sc[0]},${sc[1]},${sc[2]},0.8)`);
+      barGrad.addColorStop(1, `rgba(${sc[0]},${sc[1]},${sc[2]},0.4)`);
+      ctxContrib.fillStyle = barGrad;
+      ctxContrib.fillRect(barX, y, fillW, barH);
+
+      ctxContrib.strokeStyle = `rgba(${sc[0]},${sc[1]},${sc[2]},${isSelected ? 0.8 : 0.3})`;
+      ctxContrib.lineWidth = isSelected ? 1.5 : 0.7;
+      ctxContrib.strokeRect(barX, y, barW, barH);
+
+      ctxContrib.font = '7px monospace';
+      ctxContrib.fillStyle = 'rgba(255,255,255,0.7)';
+      ctxContrib.textAlign = 'left';
+      ctxContrib.fillText(`${(coverage * 100).toFixed(0)}%`, barX + fillW + 4, y + barH / 2 + 3);
+
+      // Show displacement
+      ctxContrib.font = '6px monospace';
+      ctxContrib.fillStyle = 'rgba(148,163,184,0.4)';
+      ctxContrib.textAlign = 'left';
+      ctxContrib.fillText(`Δ=${stalkDisp.toFixed(3)} | layers: ${State.visibleLayers}`, barX + 2, y + barH - 2);
+    }
+
+    ctxContrib.font = '7px monospace';
+    ctxContrib.fillStyle = 'rgba(255,220,100,0.5)';
+    ctxContrib.textAlign = 'center';
+    ctxContrib.fillText(`Σ displacement: ${totalDisp.toFixed(3)} → sway: ${(totalDisp * 15).toFixed(1)}°`, w / 2, h - 6);
+  }
+
+  return { render };
+})();
+
+// ============================================================
+// UI Builders
+// ============================================================
+function buildUI() {
+  // Stalk selector
+  const el = document.getElementById('stalkSelector');
+  let html = '';
+  for (let s = 0; s < StalkModule.N_STALKS; s++) {
+    const c = StalkModule.COLORS[s];
+    html += `<div class="stalk-btn ${s === State.selectedStalk ? 'active' : ''}" onclick="selectStalk(${s})" id="sbtn${s}" style="background:rgba(${c[0]},${c[1]},${c[2]},0.25);color:rgb(${c[0]},${c[1]},${c[2]})">${StalkModule.NAMES[s]}</div>`;
+  }
+  el.innerHTML = html;
+
+  // Layer tabs
+  const tabs = document.getElementById('layerTabs');
+  let tabHtml = '';
+  for (let l = 0; l < State.visibleLayers; l++) {
+    const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+    tabHtml += `<button id="ltab${l}" style="color:rgb(${lc[0]},${lc[1]},${lc[2]})" class="${l === State.detailLayer ? 'active' : ''}" onclick="selectDetailLayer(${l})">L${l}</button>`;
+  }
+  tabs.innerHTML = tabHtml;
+
+  // Layer color legend
+  const legend = document.getElementById('layerColorLegend');
+  let legendHtml = '';
+  for (let l = 0; l < MAX_LAYERS; l++) {
+    const lc = LAYER_COLORS[l];
+    legendHtml += `<span class="lc" style="background:rgba(${lc[0]},${lc[1]},${lc[2]},0.2);color:rgb(${lc[0]},${lc[1]},${lc[2]})">L${l}</span>`;
+  }
+  legend.innerHTML = legendHtml;
+}
+
+function selectStalk(s) {
+  State.selectedStalk = s;
+  document.querySelectorAll('.stalk-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('sbtn' + s).classList.add('active');
+}
+
+function selectDetailLayer(l) {
+  State.detailLayer = l;
+  document.querySelectorAll('#layerTabs button').forEach(el => el.classList.remove('active'));
+  document.getElementById('ltab' + l).classList.add('active');
+}
+
+function updateInfo() {
+  const el = document.getElementById('infoBox');
+  const totalDisp = StalkModule.totalDisplacement();
+  const swayDeg = (totalDisp * 15).toFixed(1);
+
+  let html = `<p><b>Total displacement:</b> ${totalDisp.toFixed(3)} → <b>Sway: ${swayDeg}°</b></p>`;
+  html += `<p>The chaotic hash (Arnold's cat map) maps each token position to focus points on the image. The mapping is <span class="hl">non-obvious</span> — small moves can shift focus dramatically!</p>`;
+
+  // Show focus points for selected stalk
+  const s = State.selectedStalk;
+  const st = StalkModule.stalks[s];
+  const sc = StalkModule.COLORS[s];
+  html += `<p style="margin-top:3px"><b style="color:rgb(${sc[0]},${sc[1]},${sc[2]})">${StalkModule.NAMES[s]}</b> at (${st.embedPoint.x.toFixed(3)}, ${st.embedPoint.y.toFixed(3)})</p>`;
+
+  for (let l = 0; l < State.visibleLayers; l++) {
+    const fp = ChaoticHash.tokenToFocus(st.embedPoint.x, st.embedPoint.y, s, l);
+    const lc = LAYER_COLORS[Math.min(l, LAYER_COLORS.length - 1)];
+    html += `<span style="color:rgb(${lc[0]},${lc[1]},${lc[2]});font-size:0.65em;margin-right:4px">L${l}→(${fp.x.toFixed(2)},${fp.y.toFixed(2)})</span>`;
+  }
+
+  html += `<p style="font-size:0.65em;color:#475569;margin-top:4px">The Arnold cat map creates a <b>chaotic but deterministic</b> mapping. Small position changes can cause large focus shifts. Explore!</p>`;
+
+  el.innerHTML = html;
+}
+
+// ============================================================
+// Click Handlers
+// ============================================================
+
+// Embedding space: move selected stalk or select stalk
+cvEmbed.addEventListener('click', (e) => {
+  const rect = cvEmbed.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width;
+  const my = (e.clientY - rect.top) / rect.height;
+  const nx = Math.max(0.05, Math.min(0.95, mx));
+  const ny = Math.max(0.05, Math.min(0.95, my));
+
+  let clickedStalk = -1;
+  for (let s = 0; s < StalkModule.N_STALKS; s++) {
+    const d = Math.hypot(nx - StalkModule.stalks[s].embedPoint.x, ny - StalkModule.stalks[s].embedPoint.y);
+    if (d < 0.05) { clickedStalk = s; break; }
+  }
+
+  if (clickedStalk >= 0 && clickedStalk !== State.selectedStalk) {
+    selectStalk(clickedStalk);
+  } else {
+    StalkModule.stalks[State.selectedStalk].embedPoint = { x: nx, y: ny };
+    WarpModule.invalidateCache();
+  }
+  updateInfo();
+});
+
+// Embedding space: drag support
+let embedDragging = false;
+let dragStalkIdx = -1;
+
+cvEmbed.addEventListener('mousedown', (e) => {
+  const rect = cvEmbed.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width;
+  const my = (e.clientY - rect.top) / rect.height;
+
+  // Check if near any stalk
+  for (let s = 0; s < StalkModule.N_STALKS; s++) {
+    const d = Math.hypot(mx - StalkModule.stalks[s].embedPoint.x, my - StalkModule.stalks[s].embedPoint.y);
+    if (d < 0.06) {
+      embedDragging = true;
+      dragStalkIdx = s;
+      selectStalk(s);
+      break;
+    }
+  }
+});
+
+cvEmbed.addEventListener('mousemove', (e) => {
+  if (!embedDragging || dragStalkIdx < 0) return;
+  const rect = cvEmbed.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width;
+  const my = (e.clientY - rect.top) / rect.height;
+  StalkModule.stalks[dragStalkIdx].embedPoint = {
+    x: Math.max(0.05, Math.min(0.95, mx)),
+    y: Math.max(0.05, Math.min(0.95, my))
+  };
+  WarpModule.invalidateCache();
+  updateInfo();
+});
+
+window.addEventListener('mouseup', () => { embedDragging = false; dragStalkIdx = -1; });
+
+// Touch support for embedding space
+cvEmbed.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const rect = cvEmbed.getBoundingClientRect();
+  const touch = e.touches[0];
+  const mx = (touch.clientX - rect.left) / rect.width;
+  const my = (touch.clientY - rect.top) / rect.height;
+
+  for (let s = 0; s < StalkModule.N_STALKS; s++) {
+    const d = Math.hypot(mx - StalkModule.stalks[s].embedPoint.x, my - StalkModule.stalks[s].embedPoint.y);
+    if (d < 0.08) {
+      embedDragging = true;
+      dragStalkIdx = s;
+      selectStalk(s);
+      break;
+    }
+  }
+}, { passive: false });
+
+cvEmbed.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!embedDragging || dragStalkIdx < 0) return;
+  const rect = cvEmbed.getBoundingClientRect();
+  const touch = e.touches[0];
+  const mx = (touch.clientX - rect.left) / rect.width;
+  const my = (touch.clientY - rect.top) / rect.height;
+  StalkModule.stalks[dragStalkIdx].embedPoint = {
+    x: Math.max(0.05, Math.min(0.95, mx)),
+    y: Math.max(0.05, Math.min(0.95, my))
+  };
+  WarpModule.invalidateCache();
+  updateInfo();
+}, { passive: false });
+
+cvEmbed.addEventListener('touchend', () => { embedDragging = false; dragStalkIdx = -1; });
+
+// ── Remove old cvTarget click handler and replace with box-drawing ──
+
+// Helper: convert mouse event to normalized image coords
+function targetEventToNorm(e) {
+  const rect = cvTarget.getBoundingClientRect();
+  const bounds = cvTarget._imgBounds;
+  if (!bounds) return null;
+  const scaleX = rect.width / 290, scaleY = rect.height / 290;
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const nx = (mx / scaleX - bounds.x) / bounds.w;
+  const ny = (my / scaleY - bounds.y) / bounds.h;
+  if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return null;
+  return { x: nx, y: ny };
+}
+
+function targetTouchToNorm(touch) {
+  const rect = cvTarget.getBoundingClientRect();
+  const bounds = cvTarget._imgBounds;
+  if (!bounds) return null;
+  const scaleX = rect.width / 290, scaleY = rect.height / 290;
+  const mx = touch.clientX - rect.left, my = touch.clientY - rect.top;
+  const nx = (mx / scaleX - bounds.x) / bounds.w;
+  const ny = (my / scaleY - bounds.y) / bounds.h;
+  if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return null;
+  return { x: nx, y: ny };
+}
+
+// Mouse box drawing on target image
+cvTarget.addEventListener('mousedown', (e) => {
+  const pt = targetEventToNorm(e);
+  if (!pt) return;
+  State.isDrawingBox = true;
+  State.boxStart = pt;
+  State._boxCurrent = pt;
+});
+
+cvTarget.addEventListener('mousemove', (e) => {
+  if (!State.isDrawingBox) return;
+  const pt = targetEventToNorm(e);
+  if (pt) State._boxCurrent = pt;
+});
+
+cvTarget.addEventListener('mouseup', (e) => {
+  if (!State.isDrawingBox) return;
+  State.isDrawingBox = false;
+  const pt = targetEventToNorm(e);
+  if (pt && State.boxStart) {
+    const x = Math.min(State.boxStart.x, pt.x);
+    const y = Math.min(State.boxStart.y, pt.y);
+    const w = Math.abs(pt.x - State.boxStart.x);
+    const h = Math.abs(pt.y - State.boxStart.y);
+    if (w > 0.02 && h > 0.02) {
+      State.focusBoxes.push({ x, y, w, h });
+      needsInitialAttraction = true; // ← Trigger one-time brute-force snap
+      document.getElementById('modeLabel').textContent =
+        `Added focus box #${State.focusBoxes.length} — tokens will migrate there`;
+    }
+  }
+  State.boxStart = null;
+  State._boxCurrent = null;
+});
+
+cvTarget.addEventListener('mouseleave', () => {
+  if (State.isDrawingBox) {
+    State.isDrawingBox = false;
+    State.boxStart = null;
+    State._boxCurrent = null;
+  }
+});
+
+// Touch box drawing on target image
+cvTarget.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const pt = targetTouchToNorm(e.touches[0]);
+  if (!pt) return;
+  State.isDrawingBox = true;
+  State.boxStart = pt;
+  State._boxCurrent = pt;
+}, { passive: false });
+
+cvTarget.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!State.isDrawingBox) return;
+  const pt = targetTouchToNorm(e.touches[0]);
+  if (pt) State._boxCurrent = pt;
+}, { passive: false });
+
+cvTarget.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (!State.isDrawingBox || !State.boxStart || !State._boxCurrent) {
+    State.isDrawingBox = false;
+    return;
+  }
+  const pt = State._boxCurrent;
+  const x = Math.min(State.boxStart.x, pt.x);
+  const y = Math.min(State.boxStart.y, pt.y);
+  const w = Math.abs(pt.x - State.boxStart.x);
+  const h = Math.abs(pt.y - State.boxStart.y);
+  if (w > 0.02 && h > 0.02) {
+    State.focusBoxes.push({ x, y, w, h });
+    needsInitialAttraction = true; // ← Trigger one-time brute-force snap
+    document.getElementById('modeLabel').textContent =
+      `Added focus box #${State.focusBoxes.length} — tokens will migrate there`;
+  }
+  State.isDrawingBox = false;
+  State.boxStart = null;
+  State._boxCurrent = null;
+}, { passive: false });
+
+// ============================================================
+// Animation Loop
+// ============================================================
+let frameCount = 0;
+
+// ── Token Attraction: nudge tokens so their focus points land inside drawn boxes ──
+// ============================================================
+// REPLACE: applyBoxAttraction()
+// Instant snap — no gradient descent, no animation.
+// For each box, find the token embedding position that directly
+// maps focus points INTO the box via inverse chaotic hash search.
+// Uses a precomputed lookup grid for O(1) jump-back.
+// ============================================================
+// ═══ Smooth per-frame nudge — O(stalks × layers), NOT O(stalks × GRID² × layers) ═══
+function applyBoxAttraction() {
+    if (State.focusBoxes.length === 0) return;
+
+    const N = StalkModule.N_STALKS;
+    const nLayers = State.visibleLayers;
+    const nBoxes = State.focusBoxes.length;
+
+    // Grid search resolution for inverse hash lookup
+    const GRID = 40;
+    const step = 0.9 / GRID; // search within [0.05, 0.95]
+
+    for (let s = 0; s < N; s++) {
+        const targetBox = State.focusBoxes[s % nBoxes];
+        const goalX = targetBox.x + targetBox.w / 2;
+        const goalY = targetBox.y + targetBox.h / 2;
+
+        // Check if already converged — all focus points inside box
+        let allInside = true;
+        for (let l = 0; l < nLayers; l++) {
+            const fp = ChaoticHash.tokenToFocus(
+                StalkModule.stalks[s].embedPoint.x,
+                StalkModule.stalks[s].embedPoint.y, s, l
+            );
+            if (fp.x < targetBox.x || fp.x > targetBox.x + targetBox.w ||
+                fp.y < targetBox.y || fp.y > targetBox.y + targetBox.h) {
+                allInside = false;
+                break;
+            }
+        }
+        if (allInside) continue;
+
+        // ★ Brute-force grid search: find embedding position whose average
+        // focus centroid is closest to box center. Do it ONCE, instantly.
+        let bestX = StalkModule.stalks[s].embedPoint.x;
+        let bestY = StalkModule.stalks[s].embedPoint.y;
+        let bestDist = Infinity;
+
+        for (let gy = 0; gy <= GRID; gy++) {
+            for (let gx = 0; gx <= GRID; gx++) {
+                const ex = 0.05 + gx * step;
+                const ey = 0.05 + gy * step;
+                let cx = 0, cy = 0;
+                for (let l = 0; l < nLayers; l++) {
+                    const fp = ChaoticHash.tokenToFocus(ex, ey, s, l);
+                    cx += fp.x;
+                    cy += fp.y;
+                }
+                cx /= nLayers;
+                cy /= nLayers;
+                const d = (cx - goalX) * (cx - goalX) + (cy - goalY) * (cy - goalY);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestX = ex;
+                    bestY = ey;
+                }
+            }
+        }
+
+        // ★ Snap instantly — no animation, no lerp
+        StalkModule.stalks[s].embedPoint.x = bestX;
+        StalkModule.stalks[s].embedPoint.y = bestY;
+    }
+
+    WarpModule.invalidateCache();
+    FocusMap.invalidateCache();
+}
+
+let needsInitialAttraction = false; // Flag for one-time brute-force snap
+
+function animate(timestamp) {
+    if (State.animating) {
+        State.time += 0.016;
+    }
+
+    // ★ Only run attraction ONCE when a new box is added — instant snap
+    if (needsInitialAttraction) {
+        applyBoxAttraction();
+        needsInitialAttraction = false;
+        updateInfo();
+    }
+    // ★ No per-frame attraction call anymore — points are fixed after snap
+
+    frameCount++;
+    const doFullRender = frameCount % 2 === 0 || !State.animating;
+
+    RenderEmbed.render();
+    RenderMain.render();
+
+    if (doFullRender) {
+        RenderTarget.render();
+        RenderDetail.render();
+        RenderJacobiMat.render();
+        RenderContrib.render();
+    }
+
+    requestAnimationFrame(animate);
+}
+
+
+// ============================================================
+// Init
+// ============================================================
+buildUI();
+updateInfo();
+Ctrl.play();
+animate(0);
+
+</script>
+</body>
+</html>

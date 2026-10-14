@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer Layers as Space-Morphing Maps — Interactive Explorer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --text: #e0e0e0;
+    --muted: #888;
+    --border: #2a2d3a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 { font-size: 2.2em; margin-bottom: 12px; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--muted); max-width: 700px; margin: 0 auto; font-size: 1.05em; }
+
+  /* Progress bar */
+  .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); z-index: 1000; transition: width 0.3s; }
+
+  /* Sections */
+  .section {
+    padding: 50px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .section h2 {
+    font-size: 1.6em;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .section .step-label {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.75em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .section p, .section li { color: var(--text); margin-bottom: 10px; }
+  .section ul { padding-left: 20px; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .card h3 { color: var(--accent); margin-bottom: 10px; }
+
+  /* Canvas containers */
+  .canvas-wrap {
+    background: #12141c;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 8px;
+    max-width: 100%;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  .control-group label { font-size: 0.82em; color: var(--muted); font-weight: 600; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 180px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  input[type=text], input[type=number], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+  }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: background 0.2s;
+  }
+  button:hover { background: #5a52e0; }
+  .btn-secondary { background: #2a2d3a; }
+  .btn-secondary:hover { background: #3a3d4a; }
+
+  /* Analogy boxes */
+  .analogy {
+    background: linear-gradient(135deg, #1e2235, #1a1d27);
+    border-left: 4px solid var(--accent2);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-style: italic;
+  }
+  .analogy strong { color: var(--accent2); font-style: normal; }
+
+  /* Tooltip */
+  .info-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 0.7em;
+    line-height: 18px;
+    cursor: help;
+    margin-left: 4px;
+    position: relative;
+  }
+  .info-badge:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+    font-style: normal;
+  }
+
+  /* Matrix display */
+  .matrix-display {
+    display: inline-grid;
+    gap: 2px;
+    background: var(--bg);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+  }
+  .matrix-display .cell {
+    padding: 4px 8px;
+    text-align: right;
+    border-radius: 3px;
+    min-width: 50px;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.85em;
+    font-weight: 600;
+  }
+  .tab.active { background: var(--card); color: var(--accent); border-bottom-color: var(--card); }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .hero h1 { font-size: 1.5em; }
+    input[type=range] { width: 130px; }
+    .controls { gap: 10px; }
+  }
+
+  .value-display {
+    font-family: 'Courier New', monospace;
+    color: var(--accent3);
+    font-weight: bold;
+    font-size: 0.95em;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.82em;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.85em;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <h1>🌀 Transformer Layers as Space-Morphing Maps</h1>
+  <p>An interactive guide to understanding how neural networks warp space instead of just moving points around. No math PhD required — just curiosity and sliders.</p>
+</div>
+
+<div class="container">
+
+<!-- ==================== SECTION 0: The Big Idea ==================== -->
+<div class="section" id="sec0">
+  <span class="step-label">Step 0 — The Big Idea</span>
+  <h2>What if neural networks don't move points — they bend space?</h2>
+
+  <div class="analogy">
+    <strong>🍎 Gravity analogy:</strong> Einstein showed that gravity doesn't "pull" objects through space — it <em>curves space itself</em>, and objects follow the curves. This paper proposes the same idea for AI: transformer layers don't push token vectors around a fixed space — they <em>warp the space</em> those vectors live in.
+  </div>
+
+  <p>In a standard transformer (like GPT), each word in your sentence becomes a vector — a list of numbers. As it passes through each layer, those numbers change. The usual story is: "the layer moved the point." The new story is: "the layer <strong>reshaped the entire space</strong>, and the point just went along for the ride."</p>
+
+  <div class="card">
+    <h3>🎮 Try it: Point-Moving vs. Space-Morphing</h3>
+    <p>Click on the left canvas to place a point. On the left, the point moves to a new location (traditional view). On the right, the <em>entire grid</em> warps and the point moves with it (new view). Same result — different way of thinking about it.</p>
+    <div class="two-col">
+      <div class="canvas-wrap">
+        <strong>Traditional: Point moves</strong>
+        <canvas id="c0a" width="340" height="340"></canvas>
+      </div>
+      <div class="canvas-wrap">
+        <strong>New view: Space warps</strong>
+        <canvas id="c0b" width="340" height="340"></canvas>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>Warp Strength</label>
+        <input type="range" id="s0warp" min="0" max="100" value="50">
+      </div>
+      <div class="control-group">
+        <label>Warp Type</label>
+        <select id="s0type">
+          <option value="swirl">Swirl</option>
+          <option value="expand">Expand</option>
+          <option value="squeeze">Squeeze</option>
+          <option value="wave">Wave</option>
+        </select>
+      </div>
+      <button id="s0reset">Reset Points</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 1: Fibre Bundles ==================== -->
+<div class="section" id="sec1">
+  <span class="step-label">Step 1 — Fibre Bundles (Don't Panic)</span>
+  <h2>What's a Fibre Bundle?</h2>
+
+  <div class="analogy">
+    <strong>🏢 Building analogy:</strong> Imagine a skyscraper where each floor is a different "version" of the same room. The building's address is the <em>base</em> (which token position we're talking about). Each floor is a <em>fibre</em> (the representation at a particular layer). The whole building is the <em>fibre bundle</em>. An elevator ride from floor to floor is a <em>layer map</em>.
+  </div>
+
+  <p>In a transformer with <strong>L layers</strong> and <strong>n tokens</strong>:</p>
+  <ul>
+    <li><strong>Base space:</strong> The token positions {1, 2, 3, …, n} — like addresses on a street</li>
+    <li><strong>Fibre:</strong> At each position, a stack of representation spaces — one per layer — like floors in a building</li>
+    <li><strong>Layer map:</strong> The function that transforms floor ℓ into floor ℓ+1 — the "elevator" that reshapes the room as you ride it</li>
+  </ul>
+
+  <div class="card">
+    <h3>🎮 Build Your Own Fibre Bundle</h3>
+    <p>Type a sentence below. Each word becomes a "building" (fibre). Watch how the representation at each token changes across layers. The lateral movement shows how the space is being warped differently for each word.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Your sentence</label>
+        <input type="text" id="s1text" value="the cat sat on the mat" style="width:300px">
+      </div>
+      <div class="control-group">
+        <label>Number of layers</label>
+        <input type="range" id="s1layers" min="2" max="16" value="8">
+        <span class="value-display" id="s1layersVal">8</span>
+      </div>
+      <div class="control-group">
+        <label>Warp complexity</label>
+        <input type="range" id="s1complexity" min="1" max="10" value="5">
+      </div>
+      <button id="s1go">Generate</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c1" width="800" height="450"></canvas>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:#6c63ff"></div> Token fibres</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ff6584"></div> Large displacement (active morphing)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#43e97b"></div> Small displacement (stable)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 2: The Jacobian ==================== -->
+<div class="section" id="sec2">
+  <span class="step-label">Step 2 — The Jacobian: X-Ray of a Warp</span>
+  <h2>How Do We Measure Space-Warping?</h2>
+
+  <div class="analogy">
+    <strong>🔬 Microscope analogy:</strong> If you zoom in on a tiny patch of the warped space, it looks almost like a simple linear stretch/rotate/squish. The <em>Jacobian matrix</em> captures exactly that local stretch-rotate-squish. It's like putting the warp under a microscope.
+  </div>
+
+  <p>The Jacobian is a matrix <strong>J</strong> that tells you, at every point in space, how the warp behaves locally. From it we extract:</p>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>📊 Divergence (trace of J)</h3>
+      <p>Is the space <span style="color:#ff6584">expanding</span> or <span style="color:#6c9fff">contracting</span> at this point? Positive = expansion, negative = contraction.</p>
+    </div>
+    <div class="card">
+      <h3>🌀 Curl (antisymmetric part)</h3>
+      <p>Is the space <em>rotating</em> at this point? High curl = lots of swirling, mixing information between dimensions.</p>
+    </div>
+    <div class="card">
+      <h3>📐 Shear (traceless symmetric part)</h3>
+      <p>Is the space being <em>stretched unevenly</em>? Like pulling taffy — some directions stretch while others compress, but the total volume stays the same.</p>
+    </div>
+    <div class="card">
+      <h3>📏 Determinant</h3>
+      <p>The overall volume change. det > 1 means expansion, 0 < det < 1 means contraction, det < 0 means the space got flipped inside-out!</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎮 Interactive Jacobian Decomposition</h3>
+    <p>Enter a 2×2 matrix (a tiny Jacobian) and see it decomposed into its symmetric (stretch) and antisymmetric (rotation) parts. The visualization shows what each part does to a unit square.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>J[0,0]</label>
+        <input type="number" id="j00" value="1.5" step="0.1" style="width:70px">
+      </div>
+      <div class="control-group">
+        <label>J[0,1]</label>
+        <input type="number" id="j01" value="0.8" step="0.1" style="width:70px">
+      </div>
+      <div class="control-group">
+        <label>J[1,0]</label>
+        <input type="number" id="j10" value="-0.3" step="0.1" style="width:70px">
+      </div>
+      <div class="control-group">
+        <label>J[1,1]</label>
+        <input type="number" id="j11" value="0.9" step="0.1" style="width:70px">
+      </div>
+      <button id="s2go">Decompose</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c2" width="800" height="300"></canvas>
+    </div>
+    <div id="s2stats" style="margin-top:10px; font-family: monospace; font-size:0.9em;"></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 3: Proven Properties ==================== -->
+<div class="section" id="sec3">
+  <span class="step-label">Step 3 — Mathematically Proven Properties</span>
+  <h2>What We Can Prove (Verified in Coq!)</h2>
+
+  <p>The paper comes with a <strong>machine-checked proof</strong> (in the Coq theorem prover) that the Jacobian decomposition has beautiful mathematical properties. Here are the key ones — all formally verified:</p>
+
+  <div class="card">
+    <h3>🧩 The 10 Proven Properties</h3>
+    <p>Click each property to see it visualized with your matrix from above.</p>
+    <div id="proofList"></div>
+  </div>
+
+  <div class="card">
+    <h3>🎮 Verify Properties Yourself</h3>
+    <p>Pick a property and watch the computation happen step by step with your own matrix values.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Property to verify</label>
+        <select id="s3prop">
+          <option value="decomp">J = J_sym + J_antisym</option>
+          <option value="symT">J_sym is symmetric (J_sym^T = J_sym)</option>
+          <option value="antiT">J_antisym is antisymmetric (J_antisym^T = -J_antisym)</option>
+          <option value="trJ">tr(J) = tr(J_sym) (divergence from strain only)</option>
+          <option value="trAnti">tr(J_antisym) = 0 (rotation is trace-free)</option>
+          <option value="ortho">⟨J_sym, J_antisym⟩_F = 0 (orthogonal!)</option>
+          <option value="shear">tr(Shear) = 0 (shear is trace-free)</option>
+          <option value="residual">Residual: tr(I + Δ) = n + tr(Δ)</option>
+        </select>
+      </div>
+      <button id="s3go">Verify</button>
+    </div>
+    <div id="s3result" class="card" style="display:none; background:#12141c;"></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 4: Deformed Grid ==================== -->
+<div class="section" id="sec4">
+  <span class="step-label">Step 4 — See the Warp</span>
+  <h2>The Deformed Grid: Watching Space Bend</h2>
+
+  <div class="analogy">
+    <strong>🗺️ Map analogy:</strong> Imagine drawing a perfect grid on a rubber sheet, then stretching and twisting the sheet. The deformed grid lines show you exactly how the space was warped. Blue regions got squeezed, red regions got stretched.
+  </div>
+
+  <div class="card">
+    <h3>🎮 Layer-by-Layer Grid Deformation</h3>
+    <p>Use the layer slider to step through a simulated transformer. Watch how each layer warps the grid differently. Notice: inner layers create the biggest warps!</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Layer <span class="value-display" id="s4layerVal">0</span> / <span id="s4layerMax">11</span></label>
+        <input type="range" id="s4layer" min="0" max="11" value="0">
+      </div>
+      <div class="control-group">
+        <label>Grid density</label>
+        <input type="range" id="s4density" min="5" max="25" value="12">
+      </div>
+      <div class="control-group">
+        <label>Warp strength</label>
+        <input type="range" id="s4strength" min="0" max="100" value="60">
+      </div>
+      <div class="control-group">
+        <label>Show strain colors</label>
+        <input type="checkbox" id="s4strain" checked>
+      </div>
+      <button id="s4animate" data-playing="false">▶ Animate Layers</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c4" width="800" height="500"></canvas>
+    </div>
+    <div id="s4info" style="font-family:monospace; font-size:0.85em; margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 5: Jacobian Field ==================== -->
+<div class="section" id="sec5">
+  <span class="step-label">Step 5 — The Jacobian Field</span>
+  <h2>Mapping the Warp Everywhere</h2>
+
+  <p>Instead of looking at the deformed grid, we can compute the Jacobian at <em>every point</em> and visualize the result as a field — like a weather map showing wind patterns, but for space-warping.</p>
+
+  <div class="card">
+    <h3>🎮 Interactive Jacobian Field</h3>
+    <p>Choose what to display: divergence (expansion/contraction), curl (rotation), shear (distortion), or all combined. Hover over any point to see its local Jacobian values.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Display mode</label>
+        <select id="s5mode">
+          <option value="divergence">Divergence (expansion/contraction)</option>
+          <option value="curl">Curl (rotation)</option>
+          <option value="shear">Shear (distortion)</option>
+          <option value="composite">All combined</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Layer</label>
+        <input type="range" id="s5layer" min="0" max="11" value="5">
+        <span class="value-display" id="s5layerVal">5</span>
+      </div>
+      <div class="control-group">
+        <label>Show flow arrows</label>
+        <input type="checkbox" id="s5arrows" checked>
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c5" width="800" height="500"></canvas>
+      <div id="s5hover" style="font-family:monospace; font-size:0.82em; color:var(--muted); margin-top:6px;">Hover over the field to inspect values</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 6: Residual Stream ==================== -->
+<div class="section" id="sec6">
+  <span class="step-label">Step 6 — The Residual Stream</span>
+  <h2>Waves of Warping</h2>
+
+  <div class="analogy">
+    <strong>🌊 Wave analogy:</strong> Each layer adds a small "delta" warp to a running total. It's like waves on the ocean — each wave adds to the surface, and the final shape is the sum of all waves. The residual connection (skip connection) is the ocean surface that carries all the waves.
+  </div>
+
+  <p>Mathematically: <code>h[layer+1] = h[layer] + Δ[layer]</code>. The Jacobian of this is <code>J = I + J_delta</code>, and the proven property tells us: <strong>tr(I + J_delta) = n + tr(J_delta)</strong> — the divergence of the full layer is the dimension plus the divergence of just the delta.</p>
+
+  <div class="card">
+    <h3>🎮 Residual Stream Accumulation</h3>
+    <p>Watch how small per-layer deltas accumulate into the final representation. Each layer's contribution is shown separately and as a running sum.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Number of layers</label>
+        <input type="range" id="s6layers" min="2" max="16" value="8">
+        <span class="value-display" id="s6layersVal">8</span>
+      </div>
+      <div class="control-group">
+        <label>Delta magnitude</label>
+        <input type="range" id="s6mag" min="1" max="50" value="20">
+      </div>
+      <button id="s6regen">Regenerate Deltas</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c6" width="800" height="400"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 7: Inner vs Outer Layers ==================== -->
+<div class="section" id="sec7">
+  <span class="step-label">Step 7 — Inner vs. Outer Layers</span>
+  <h2>The Middle Does the Heavy Lifting</h2>
+
+  <div class="analogy">
+    <strong>🏭 Factory analogy:</strong> The first layers are the "loading dock" — they translate raw input into the factory's internal language. The middle layers are the "assembly line" — where the real work happens, with big, complex transformations. The last layers are the "shipping department" — they translate the result back into a form the outside world can read.
+  </div>
+
+  <div class="card">
+    <h3>🎮 Layer Activity Profile</h3>
+    <p>This chart shows how much "geometric activity" (warp magnitude) happens at each layer. Notice the characteristic pattern: low → high → low, with the last layer often showing a "reversal" — it un-warps the space back toward the original configuration.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Total layers</label>
+        <input type="range" id="s7layers" min="4" max="24" value="12">
+        <span class="value-display" id="s7layersVal">12</span>
+      </div>
+      <div class="control-group">
+        <label>Reversal strength</label>
+        <input type="range" id="s7reversal" min="0" max="100" value="70">
+      </div>
+      <button id="s7regen">Regenerate</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c7" width="800" height="350"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 8: Holographic Scrambling ==================== -->
+<div class="section" id="sec8">
+  <span class="step-label">Step 8 — Holographic Scrambling</span>
+  <h2>Information is Everywhere (and Nowhere)</h2>
+
+  <div class="analogy">
+    <strong>🌈 Hologram analogy:</strong> Cut a hologram in half and you still see the whole image — just blurrier. Similarly, in a transformer, the concept "cat" isn't stored in one neuron — it's <em>spread across many neurons and many layers</em>. Remove some neurons and you lose resolution, but not the concept entirely. This is <em>polysemanticity</em>: each neuron participates in encoding many concepts.
+  </div>
+
+  <div class="card">
+    <h3>🎮 Holographic Encoding Simulator</h3>
+    <p>Place "concepts" (colored dots) in a low-dimensional space. Watch them get scrambled into a high-dimensional encoding where each dimension contains a mix of all concepts. Then try removing dimensions and see how the reconstruction degrades gracefully — like cutting a hologram.</p>
+    <div class="controls">
+      <div class="control-group">
+        <label>Number of concepts</label>
+        <input type="range" id="s8concepts" min="2" max="8" value="4">
+        <span class="value-display" id="s8conceptsVal">4</span>
+      </div>
+      <div class="control-group">
+        <label>Encoding dimensions</label>
+        <input type="range" id="s8dims" min="2" max="16" value="8">
+        <span class="value-display" id="s8dimsVal">8</span>
+      </div>
+      <div class="control-group">
+        <label>Dimensions to remove</label>
+        <input type="range" id="s8remove" min="0" max="15" value="0">
+        <span class="value-display" id="s8removeVal">0</span>
+      </div>
+      <button id="s8go">Encode & Decode</button>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="c8" width="800" height="400"></canvas>
+    </div>
+    <div id="s8info" style="font-family:monospace; font-size:0.85em; margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 9: Summary ==================== -->
+<div class="section" id="sec9">
+  <span class="step-label">Step 9 — Putting It All Together</span>
+  <h2>The Full Picture</h2>
+
+  <div class="card">
+    <h3>🗺️ Concept Map</h3>
+    <p>Here's how all the ideas connect. Click any node to scroll to that section.</p>
+    <div class="canvas-wrap">
+      <canvas id="c9" width="800" height="420"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Key Takeaways</h3>
+    <ul>
+      <li><strong>Transformer layers warp space</strong> — they don't just move points, they reshape the entire geometry of the representation space.</li>
+      <li><strong>The Jacobian captures the warp locally</strong> — it decomposes cleanly into symmetric (stretch/shear) and antisymmetric (rotation) parts, proven orthogonal in Coq.</li>
+      <li><strong>Divergence comes only from strain</strong> — rotation doesn't change volume. The antisymmetric part is always trace-free.</li>
+      <li><strong>Shear is pure shape-change</strong> — it distorts without changing volume (also trace-free, proven in Coq).</li>
+      <li><strong>The residual stream accumulates warps</strong> — each layer adds a delta, and the identity contributes dimension <em>n</em> to the divergence.</li>
+      <li><strong>Inner layers do the heavy lifting</strong> — outer layers translate between human-readable and internal representations.</li>
+      <li><strong>Information is holographically distributed</strong> — like a hologram, removing parts degrades gracefully rather than catastrophically.</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<footer>
+  <p>Interactive companion to <em>"Transformer Layers as Fibre Bundle Morphisms"</em> by Norman Koch (April 2026).</p>
+  <p>Coq proofs: <a href="https://github.com/NormanTUD/llm_grid/">github.com/NormanTUD/llm_grid</a></p>
+</footer>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function hsl(h, s, l) { return `hsl(${h},${s}%,${l}%)`; }
+
+function drawArrow(ctx, x1, y1, x2, y2, headLen = 8) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const angle = Math.atan2(dy, dx);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.stroke();
+}
+
+function colorMap(val, min, max) {
+  const t = clamp((val - min) / (max - min || 1), 0, 1);
+  if (t < 0.5) {
+    const s = t / 0.5;
+    return `rgb(${Math.round(30 + 80 * (1 - s))}, ${Math.round(100 + 155 * (1 - s))}, ${Math.round(255)})`;
+  } else {
+    const s = (t - 0.5) / 0.5;
+    return `rgb(${Math.round(255)}, ${Math.round(100 + 80 * (1 - s))}, ${Math.round(100 * (1 - s))})`;
+  }
+}
+
+function divergenceColor(val) {
+  const t = clamp(val, -1, 1);
+  if (t < 0) {
+    const s = -t;
+    return `rgba(100, 150, 255, ${s * 0.8})`;
+  } else {
+    const s = t;
+    return `rgba(255, 100, 130, ${s * 0.8})`;
+  }
+}
+
+// Seeded random for reproducibility
+let _seed = 42;
+function seededRandom() {
+  _seed = (_seed * 16807 + 0) % 2147483647;
+  return (_seed - 1) / 2147483646;
+}
+function resetSeed(s) { _seed = s || 42; }
+
+// ============================================================
+// PROGRESS BAR
+// ============================================================
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  const p = h > 0 ? (window.scrollY / h) * 100 : 0;
+  document.getElementById('progressBar').style.width = p + '%';
+});
+
+// ============================================================
+// SECTION 0: Point-Moving vs Space-Morphing
+// ============================================================
+(function() {
+  const ca = document.getElementById('c0a');
+  const cb = document.getElementById('c0b');
+  const ctxA = ca.getContext('2d');
+  const ctxB = cb.getContext('2d');
+  const slider = document.getElementById('s0warp');
+  const typeSelect = document.getElementById('s0type');
+  const resetBtn = document.getElementById('s0reset');
+
+  let points = [{x: 170, y: 170}];
+  const W = ca.width, H = ca.height;
+
+  function warpPoint(x, y, strength, type) {
+    const cx = W / 2, cy = H / 2;
+    const dx = x - cx, dy = y - cy;
+    const r = Math.sqrt(dx * dx + dy * dy) + 0.001;
+    const s = strength / 100;
+    let nx, ny;
+    switch (type) {
+      case 'swirl':
+        const angle = s * 2.0 * Math.exp(-r / 150);
+        nx = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
+        ny = cy + dx * Math.sin(angle) + dy * Math.cos(angle);
+        break;
+      case 'expand':
+        const scale = 1 + s * 0.8 * Math.exp(-r / 200);
+        nx = cx + dx * scale;
+        ny = cy + dy * scale;
+        break;
+      case 'squeeze':
+        const sq = 1 - s * 0.5 * Math.exp(-r / 200);
+        nx = cx + dx * sq;
+        ny = cy + dy * (2 - sq);
+        break;
+      case 'wave':
+        nx = x + s * 30 * Math.sin(y / 40);
+        ny = y + s * 30 * Math.cos(x / 40);
+        break;
+      default:
+        nx = x; ny = y;
+    }
+    return {x: nx, y: ny};
+  }
+
+  function drawGrid(ctx, warp, strength, type) {
+    ctx.strokeStyle = 'rgba(108, 99, 255, 0.25)';
+    ctx.lineWidth = 1;
+    const step = 25;
+    // Horizontal lines
+    for (let y = 0; y <= H; y += step) {
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 3) {
+        const p = warp ? warpPoint(x, y, strength, type) : {x, y};
+        if (x === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+    // Vertical lines
+    for (let x = 0; x <= W; x += step) {
+      ctx.beginPath();
+      for (let y = 0; y <= H; y += 3) {
+        const p = warp ? warpPoint(x, y, strength, type) : {x, y};
+        if (y === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function draw() {
+    const strength = parseFloat(slider.value);
+    const type = typeSelect.value;
+
+    // Canvas A: point moves, grid stays
+    ctxA.fillStyle = '#12141c';
+    ctxA.fillRect(0, 0, W, H);
+    drawGrid(ctxA, false, 0, type);
+    points.forEach(p => {
+      // Original point
+      ctxA.fillStyle = 'rgba(108, 99, 255, 0.4)';
+      ctxA.beginPath();
+      ctxA.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      ctxA.fill();
+      // Moved point
+      const wp = warpPoint(p.x, p.y, strength, type);
+      ctxA.fillStyle = '#ff6584';
+      ctxA.beginPath();
+      ctxA.arc(wp.x, wp.y, 7, 0, Math.PI * 2);
+      ctxA.fill();
+      // Arrow
+      ctxA.strokeStyle = '#ff6584';
+      ctxA.lineWidth = 2;
+      drawArrow(ctxA, p.x, p.y, wp.x, wp.y, 10);
+    });
+
+    // Canvas B: grid warps, point goes with it
+    ctxB.fillStyle = '#12141c';
+    ctxB.fillRect(0, 0, W, H);
+    drawGrid(ctxB, true, strength, type);
+    points.forEach(p => {
+      const wp = warpPoint(p.x, p.y, strength, type);
+      ctxB.fillStyle = '#ff6584';
+      ctxB.beginPath();
+      ctxB.arc(wp.x, wp.y, 7, 0, Math.PI * 2);
+      ctxB.fill();
+    });
+  }
+
+  ca.addEventListener('click', (e) => {
+    const rect = ca.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    points.push({x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY});
+    draw();
+  });
+
+  cb.addEventListener('click', (e) => {
+    const rect = cb.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    points.push({x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY});
+    draw();
+  });
+
+  slider.addEventListener('input', draw);
+  typeSelect.addEventListener('change', draw);
+  resetBtn.addEventListener('click', () => { points = [{x: 170, y: 170}]; draw(); });
+
+  draw();
+})();
+
+// ============================================================
+// SECTION 1: Fibre Bundle Builder
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c1');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  function generate() {
+    const text = document.getElementById('s1text').value.trim();
+    const tokens = text.split(/\s+/);
+    const numLayers = parseInt(document.getElementById('s1layers').value);
+    document.getElementById('s1layersVal').textContent = numLayers;
+    const complexity = parseInt(document.getElementById('s1complexity').value);
+
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const marginX = 60, marginY = 40;
+    const plotW = W - 2 * marginX;
+    const plotH = H - 2 * marginY;
+    const tokenSpacing = plotW / (tokens.length + 1);
+    const layerSpacing = plotH / (numLayers + 1);
+
+    // Generate fibre paths
+    resetSeed(42);
+    const fibres = tokens.map((tok, ti) => {
+      const baseX = marginX + tokenSpacing * (ti + 1);
+      const path = [];
+      let offsetX = 0;
+      for (let l = 0; l <= numLayers; l++) {
+        const layerActivity = Math.sin(Math.PI * l / numLayers) * complexity;
+        offsetX += (seededRandom() - 0.5) * layerActivity * 12;
+        path.push({
+          x: baseX + offsetX,
+          y: marginY + layerSpacing * l,
+          displacement: Math.abs(offsetX)
+        });
+      }
+      return {token: tok, path};
+    });
+
+    // Draw layer lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let l = 0; l <= numLayers; l++) {
+      const y = marginY + layerSpacing * l;
+      ctx.beginPath();
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(W - marginX, y);
+      ctx.stroke();
+      ctx.fillStyle = '#555';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`L${l}`, marginX - 8, y + 4);
+    }
+
+    // Draw fibres
+    fibres.forEach((fibre, fi) => {
+      const hue = (fi / tokens.length) * 300;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      fibre.path.forEach((p, li) => {
+        const maxDisp = complexity * 12 * 3;
+        const t = clamp(p.displacement / maxDisp, 0, 1);
+        ctx.strokeStyle = `hsl(${lerp(140, 350, t)}, 80%, ${lerp(60, 55, t)}%)`;
+        if (li === 0) ctx.moveTo(p.x, p.y);
+        else {
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.strokeStyle = `hsl(${lerp(140, 350, t)}, 80%, ${lerp(60, 55, t)}%)`;
+          ctx.moveTo(fibre.path[li - 1].x, fibre.path[li - 1].y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+          ctx.beginPath();
+        }
+      });
+      ctx.stroke();
+
+      // Draw dots at each layer
+      fibre.path.forEach((p, li) => {
+        const maxDisp = complexity * 12 * 3;
+        const t = clamp(p.displacement / maxDisp, 0, 1);
+        ctx.fillStyle = `hsl(${lerp(140, 350, t)}, 80%, ${lerp(60, 55, t)}%)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Token label at bottom
+      ctx.fillStyle = '#ccc';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(fibre.token, marginX + tokenSpacing * (fi + 1), H - 10);
+    });
+
+    // Title
+    ctx.fillStyle = '#888';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('← Token positions →', W / 2, H - 2);
+    ctx.save();
+    ctx.translate(12, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Layers →', 0, 0);
+    ctx.restore();
+  }
+
+  document.getElementById('s1go').addEventListener('click', generate);
+  document.getElementById('s1layers').addEventListener('input', () => {
+    document.getElementById('s1layersVal').textContent = document.getElementById('s1layers').value;
+  });
+  generate();
+})();
+
+// ============================================================
+// SECTION 2: Jacobian Decomposition
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c2');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const statsEl = document.getElementById('s2stats');
+
+  function getJ() {
+    return [
+      [parseFloat(document.getElementById('j00').value), parseFloat(document.getElementById('j01').value)],
+      [parseFloat(document.getElementById('j10').value), parseFloat(document.getElementById('j11').value)]
+    ];
+  }
+
+  function decompose() {
+    const J = getJ();
+    const sym = [
+      [(J[0][0] + J[0][0]) / 2, (J[0][1] + J[1][0]) / 2],
+      [(J[1][0] + J[0][1]) / 2, (J[1][1] + J[1][1]) / 2]
+    ];
+    const anti = [
+      [(J[0][0] - J[0][0]) / 2, (J[0][1] - J[1][0]) / 2],
+      [(J[1][0] - J[0][1]) / 2, (J[1][1] - J[1][1]) / 2]
+    ];
+
+    const trace = J[0][0] + J[1][1];
+    const det = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+    const curlMag = Math.sqrt(anti[0][1] * anti[0][1] + anti[1][0] * anti[1][0]);
+    const traceSym = sym[0][0] + sym[1][1];
+    const traceAnti = anti[0][0] + anti[1][1];
+
+    // Draw
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const panels = [
+      {label: 'Original J', mat: J, cx: W * 0.17, cy: H * 0.5, color: '#6c63ff'},
+      {label: '= J_sym (stretch)', mat: sym, cx: W * 0.5, cy: H * 0.5, color: '#43e97b'},
+      {label: '+ J_antisym (rotate)', mat: anti, cx: W * 0.83, cy: H * 0.5, color: '#ff6584'}
+    ];
+
+    panels.forEach(panel => {
+      const size = 80;
+      const cx = panel.cx, cy = panel.cy;
+
+      // Draw unit square transformed
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      const scale = size / 2;
+
+      // Original square (faint)
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      corners.forEach((c, i) => {
+        const px = cx + c[0] * scale;
+        const py = cy + c[1] * scale;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      });
+      ctx.closePath();
+      ctx.stroke();
+
+      // Transformed shape
+      ctx.strokeStyle = panel.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      const numPts = 40;
+      for (let side = 0; side < 4; side++) {
+        const c1 = corners[side];
+        const c2 = corners[(side + 1) % 4];
+        for (let t = 0; t <= 10; t++) {
+          const frac = t / 10;
+          const x = lerp(c1[0], c2[0], frac);
+          const y = lerp(c1[1], c2[1], frac);
+          const tx = panel.mat[0][0] * x + panel.mat[0][1] * y;
+          const ty = panel.mat[1][0] * x + panel.mat[1][1] * y;
+          const px = cx + tx * scale;
+          const py = cy + ty * scale;
+          if (side === 0 && t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Fill lightly
+      ctx.fillStyle = panel.color.replace(')', ', 0.08)').replace('rgb', 'rgba').replace('#', '');
+      // Just use a simple transparent fill
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = panel.color;
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // Label
+      ctx.fillStyle = panel.color;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(panel.label, cx, cy - size - 10);
+
+      // Matrix values
+      ctx.font = '11px monospace';
+      ctx.fillStyle = '#aaa';
+      ctx.fillText(`[${panel.mat[0][0].toFixed(2)}, ${panel.mat[0][1].toFixed(2)}]`, cx, cy + size + 20);
+      ctx.fillText(`[${panel.mat[1][0].toFixed(2)}, ${panel.mat[1][1].toFixed(2)}]`, cx, cy + size + 35);
+    });
+
+    // Plus and equals signs
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('=', W * 0.335, H * 0.5 + 5);
+    ctx.fillText('+', W * 0.665, H * 0.5 + 5);
+
+    // Stats
+    statsEl.innerHTML = `
+      <span style="color:#6c63ff">tr(J) = ${trace.toFixed(4)}</span> &nbsp;|&nbsp;
+      <span style="color:#43e97b">tr(J_sym) = ${traceSym.toFixed(4)}</span> &nbsp;|&nbsp;
+      <span style="color:#ff6584">tr(J_antisym) = ${traceAnti.toFixed(4)}</span> &nbsp;|&nbsp;
+      det(J) = ${det.toFixed(4)} &nbsp;|&nbsp;
+      |curl| = ${curlMag.toFixed(4)}
+      <br><span style="color:#43e97b">✓ tr(J) = tr(J_sym)</span> &nbsp;
+      <span style="color:#ff6584">✓ tr(J_antisym) = 0</span>
+    `;
+  }
+
+  document.getElementById('s2go').addEventListener('click', decompose);
+  decompose();
+})();
+
+// ============================================================
+// SECTION 3: Proof Properties
+// ============================================================
+(function() {
+  const proofList = document.getElementById('proofList');
+  const resultEl = document.getElementById('s3result');
+
+  const proofs = [
+    {name: 'J = J_sym + J_antisym', desc: 'Every matrix decomposes into symmetric + antisymmetric parts.', coq: 'jacobian_decomposition_general'},
+    {name: 'J_sym^T = J_sym', desc: 'The symmetric part is truly symmetric (transpose equals itself).', coq: 'sym_is_symmetric_general'},
+    {name: 'J_antisym^T = -J_antisym', desc: 'The antisymmetric part flips sign under transpose.', coq: 'antisym_is_antisymmetric_general'},
+    {name: '⟨J_sym, J_antisym⟩_F = 0', desc: 'The two parts are orthogonal under the Frobenius inner product — they are geometrically perpendicular in matrix space.', coq: 'frobenius_sym_antisym_orthogonal'},
+    {name: 'tr(J) = tr(J_sym)', desc: 'Divergence (volume change) comes entirely from the symmetric (strain) part.', coq: 'divergence_from_symmetric_part_general'},
+    {name: 'tr(J_antisym) = 0', desc: 'Rotation never changes volume — the antisymmetric part is always trace-free.', coq: 'antisym_trace_zero_general'},
+    {name: 'sym(sym(J)) = sym(J)', desc: 'Applying the symmetric projection twice gives the same result — it\'s a true projection (idempotent).', coq: 'sym_idempotent_general'},
+    {name: 'antisym(antisym(J)) = antisym(J)', desc: 'Same for the antisymmetric projection.', coq: 'antisym_idempotent_general'},
+    {name: 'sym(antisym(J)) = 0', desc: 'The symmetric part of an antisymmetric matrix is zero — the projections annihilate each other.', coq: 'sym_of_antisym_zero_general'},
+    {name: 'antisym(sym(J)) = 0', desc: 'And vice versa.', coq: 'antisym_of_sym_zero_general'},
+  ];
+
+  proofs.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 14px; margin:6px 0; background:#12141c; border-radius:8px; cursor:pointer; border-left:3px solid var(--accent); transition: background 0.2s;';
+    div.innerHTML = `<strong style="color:#6c63ff">${i + 1}.</strong> <code>${p.name}</code> <span style="color:#888; font-size:0.85em;">— ${p.desc}</span><br><span style="font-size:0.75em; color:#555;">Coq: ${p.coq}</span>`;
+    div.addEventListener('mouseenter', () => div.style.background = '#1e2235');
+    div.addEventListener('mouseleave', () => div.style.background = '#12141c');
+    proofList.appendChild(div);
+  });
+
+  document.getElementById('s3go').addEventListener('click', () => {
+    const prop = document.getElementById('s3prop').value;
+    const J = [
+      [parseFloat(document.getElementById('j00').value), parseFloat(document.getElementById('j01').value)],
+      [parseFloat(document.getElementById('j10').value), parseFloat(document.getElementById('j11').value)]
+    ];
+    const sym = [
+      [(J[0][0] + J[0][0]) / 2, (J[0][1] + J[1][0]) / 2],
+      [(J[1][0] + J[0][1]) / 2, (J[1][1] + J[1][1]) / 2]
+    ];
+    const anti = [
+      [0, (J[0][1] - J[1][0]) / 2],
+      [(J[1][0] - J[0][1]) / 2, 0]
+    ];
+
+    resultEl.style.display = 'block';
+    let html = '';
+
+    const fmt = (v) => v.toFixed(6);
+    const matStr = (m) => `[[${fmt(m[0][0])}, ${fmt(m[0][1])}], [${fmt(m[1][0])}, ${fmt(m[1][1])}]]`;
+
+    switch (prop) {
+      case 'decomp':
+        const sum = [[sym[0][0] + anti[0][0], sym[0][1] + anti[0][1]], [sym[1][0] + anti[1][0], sym[1][1] + anti[1][1]]];
+        html = `<strong>J = J_sym + J_antisym</strong><br>
+          J = ${matStr(J)}<br>
+          J_sym = ${matStr(sym)}<br>
+          J_antisym = ${matStr(anti)}<br>
+          J_sym + J_antisym = ${matStr(sum)}<br>
+          <span style="color:#43e97b">✓ Match: ${Math.abs(J[0][0] - sum[0][0]) < 1e-10 && Math.abs(J[0][1] - sum[0][1]) < 1e-10 && Math.abs(J[1][0] - sum[1][0]) < 1e-10 && Math.abs(J[1][1] - sum[1][1]) < 1e-10}</span>`;
+        break;
+      case 'symT':
+        const symT = [[sym[0][0], sym[1][0]], [sym[0][1], sym[1][1]]];
+        html = `<strong>J_sym^T = J_sym</strong><br>
+          J_sym = ${matStr(sym)}<br>
+          J_sym^T = ${matStr(symT)}<br>
+          <span style="color:#43e97b">✓ Symmetric: ${Math.abs(sym[0][1] - sym[1][0]) < 1e-10}</span>`;
+        break;
+      case 'antiT':
+        const antiT = [[anti[0][0], anti[1][0]], [anti[0][1], anti[1][1]]];
+        const negAnti = [[-anti[0][0], -anti[0][1]], [-anti[1][0], -anti[1][1]]];
+        html = `<strong>J_antisym^T = -J_antisym</strong><br>
+          J_antisym = ${matStr(anti)}<br>
+          J_antisym^T = ${matStr(antiT)}<br>
+          -J_antisym = ${matStr(negAnti)}<br>
+          <span style="color:#43e97b">✓ Antisymmetric: ${Math.abs(antiT[0][1] - negAnti[0][1]) < 1e-10}</span>`;
+        break;
+      case 'trJ':
+        html = `<strong>tr(J) = tr(J_sym)</strong><br>
+          tr(J) = ${fmt(J[0][0] + J[1][1])}<br>
+          tr(J_sym) = ${fmt(sym[0][0] + sym[1][1])}<br>
+          <span style="color:#43e97b">✓ Equal: ${Math.abs((J[0][0] + J[1][1]) - (sym[0][0] + sym[1][1])) < 1e-10}</span>`;
+        break;
+      case 'trAnti':
+        html = `<strong>tr(J_antisym) = 0</strong><br>
+          J_antisym = ${matStr(anti)}<br>
+          tr(J_antisym) = ${fmt(anti[0][0] + anti[1][1])}<br>
+          <span style="color:#43e97b">✓ Zero: ${Math.abs(anti[0][0] + anti[1][1]) < 1e-10}</span>`;
+        break;
+      case 'ortho':
+        // Frobenius inner product: sum of element-wise products
+        const fip = sym[0][0]*anti[0][0] + sym[0][1]*anti[0][1] + sym[1][0]*anti[1][0] + sym[1][1]*anti[1][1];
+        html = `<strong>⟨J_sym, J_antisym⟩_F = 0</strong><br>
+          Frobenius inner product = Σ(sym_ij * antisym_ij)<br>
+          = ${fmt(sym[0][0])}×${fmt(anti[0][0])} + ${fmt(sym[0][1])}×${fmt(anti[0][1])} + ${fmt(sym[1][0])}×${fmt(anti[1][0])} + ${fmt(sym[1][1])}×${fmt(anti[1][1])}<br>
+          = ${fmt(fip)}<br>
+          <span style="color:#43e97b">✓ Orthogonal: ${Math.abs(fip) < 1e-10}</span><br>
+          <em style="color:#888">This means the strain and rotation parts are geometrically perpendicular in matrix space!</em>`;
+        break;
+      case 'shear':
+        const trSym = sym[0][0] + sym[1][1];
+        const shear = [
+          [sym[0][0] - trSym/2, sym[0][1]],
+          [sym[1][0], sym[1][1] - trSym/2]
+        ];
+        const trShear = shear[0][0] + shear[1][1];
+        html = `<strong>tr(Shear) = 0</strong><br>
+          Shear = J_sym - (tr(J_sym)/n) × I<br>
+          tr(J_sym) = ${fmt(trSym)}, n = 2<br>
+          Shear = ${matStr(shear)}<br>
+          tr(Shear) = ${fmt(trShear)}<br>
+          <span style="color:#43e97b">✓ Trace-free: ${Math.abs(trShear) < 1e-10}</span><br>
+          <em style="color:#888">Shear changes shape without changing volume — proven in Coq as shear_trace_free_general</em>`;
+        break;
+      case 'residual':
+        const Idelta = [
+          [1 + J[0][0], J[0][1]],
+          [J[1][0], 1 + J[1][1]]
+        ];
+        const trIdelta = Idelta[0][0] + Idelta[1][1];
+        const trDelta = J[0][0] + J[1][1];
+        html = `<strong>tr(I + Δ) = n + tr(Δ)</strong><br>
+          Treating J as the delta (Δ), the residual Jacobian is I + Δ:<br>
+          I + Δ = ${matStr(Idelta)}<br>
+          tr(I + Δ) = ${fmt(trIdelta)}<br>
+          n + tr(Δ) = 2 + ${fmt(trDelta)} = ${fmt(2 + trDelta)}<br>
+          <span style="color:#43e97b">✓ Equal: ${Math.abs(trIdelta - (2 + trDelta)) < 1e-10}</span><br>
+          <em style="color:#888">The identity contributes dimension n to the divergence — proven in Coq as residual_divergence_general</em>`;
+        break;
+    }
+    resultEl.innerHTML = html;
+  });
+})();
+
+// ============================================================
+// SECTION 4: Deformed Grid
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c4');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const infoEl = document.getElementById('s4info');
+  let animId = null;
+
+  // Generate per-layer warp parameters
+  function generateLayerWarps(numLayers) {
+    resetSeed(123);
+    const warps = [];
+    for (let l = 0; l < numLayers; l++) {
+      const activity = Math.sin(Math.PI * l / (numLayers - 1));
+      // Last layer reversal
+      const reversal = (l === numLayers - 1) ? -0.6 : 0;
+      warps.push({
+        cx: 0.3 + seededRandom() * 0.4,
+        cy: 0.3 + seededRandom() * 0.4,
+        swirlAngle: (seededRandom() - 0.5) * activity * 2 + reversal,
+        expandScale: 1 + (seededRandom() - 0.5) * activity * 0.5,
+        waveAmpX: (seededRandom() - 0.5) * activity * 0.08,
+        waveAmpY: (seededRandom() - 0.5) * activity * 0.08,
+        waveFreq: 2 + seededRandom() * 4,
+        activity: activity
+      });
+    }
+    return warps;
+  }
+
+  const numLayers = 12;
+  let layerWarps = generateLayerWarps(numLayers);
+
+  function applyWarp(x, y, warp, strength) {
+    const s = strength / 100;
+    const cx = warp.cx, cy = warp.cy;
+    const dx = x - cx, dy = y - cy;
+    const r = Math.sqrt(dx * dx + dy * dy) + 0.001;
+
+    // Swirl
+    const angle = s * warp.swirlAngle * Math.exp(-r * 3);
+    let nx = cx + dx * Math.cos(angle) - dy * Math.sin(angle);
+    let ny = cy + dx * Math.sin(angle) + dy * Math.cos(angle);
+
+    // Expand
+    const scale = 1 + s * (warp.expandScale - 1) * Math.exp(-r * 2);
+    nx = cx + (nx - cx) * scale;
+    ny = cy + (ny - cy) * scale;
+
+    // Wave
+    nx += s * warp.waveAmpX * Math.sin(y * warp.waveFreq * Math.PI * 2);
+    ny += s * warp.waveAmpY * Math.cos(x * warp.waveFreq * Math.PI * 2);
+
+    return {x: nx, y: ny};
+  }
+
+  function applyCumulativeWarp(x, y, upToLayer, strength) {
+    let px = x, py = y;
+    for (let l = 0; l <= upToLayer; l++) {
+      const result = applyWarp(px, py, layerWarps[l], strength);
+      px = result.x;
+      py = result.y;
+    }
+    return {x: px, y: py};
+  }
+
+  function draw() {
+    const layer = parseInt(document.getElementById('s4layer').value);
+    const density = parseInt(document.getElementById('s4density').value);
+    const strength = parseFloat(document.getElementById('s4strength').value);
+    const showStrain = document.getElementById('s4strain').checked;
+
+    document.getElementById('s4layerVal').textContent = layer;
+
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const margin = 40;
+    const plotW = W - 2 * margin;
+    const plotH = H - 2 * margin;
+
+    function toScreen(nx, ny) {
+      return {x: margin + nx * plotW, y: margin + ny * plotH};
+    }
+
+    // Draw deformed grid
+    const step = 1 / density;
+
+    // Compute strain for coloring
+    function getStrain(x, y) {
+      const eps = 0.005;
+      const p = applyCumulativeWarp(x, y, layer, strength);
+      const px = applyCumulativeWarp(x + eps, y, layer, strength);
+      const py = applyCumulativeWarp(x, y + eps, layer, strength);
+      const dxdx = (px.x - p.x) / eps;
+      const dydx = (px.y - p.y) / eps;
+      const dxdy = (py.x - p.x) / eps;
+      const dydy = (py.y - p.y) / eps;
+      const div = dxdx + dydy;
+      return div;
+    }
+
+    // Horizontal lines
+    for (let yi = 0; yi <= density; yi++) {
+      const y = yi * step;
+      ctx.beginPath();
+      ctx.lineWidth = 1.2;
+      for (let xi = 0; xi <= density * 4; xi++) {
+        const x = xi / (density * 4);
+        const warped = applyCumulativeWarp(x, y, layer, strength);
+        const sp = toScreen(warped.x, warped.y);
+
+        if (showStrain) {
+          const strain = getStrain(x, y);
+          const t = clamp(strain / 4, -1, 1);
+          if (t < 0) {
+            ctx.strokeStyle = `rgba(100, 150, 255, ${0.3 + Math.abs(t) * 0.5})`;
+          } else {
+            ctx.strokeStyle = `rgba(255, 100, 130, ${0.3 + t * 0.5})`;
+          }
+        } else {
+          ctx.strokeStyle = 'rgba(108, 99, 255, 0.4)';
+        }
+
+        if (xi === 0) {
+          ctx.moveTo(sp.x, sp.y);
+        } else {
+          ctx.lineTo(sp.x, sp.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(sp.x, sp.y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Vertical lines
+    for (let xi = 0; xi <= density; xi++) {
+      const x = xi * step;
+      ctx.beginPath();
+      ctx.lineWidth = 1.2;
+      for (let yi = 0; yi <= density * 4; yi++) {
+        const y = yi / (density * 4);
+        const warped = applyCumulativeWarp(x, y, layer, strength);
+        const sp = toScreen(warped.x, warped.y);
+
+        if (showStrain) {
+          const strain = getStrain(x, y);
+          const t = clamp(strain / 4, -1, 1);
+          if (t < 0) {
+            ctx.strokeStyle = `rgba(100, 150, 255, ${0.3 + Math.abs(t) * 0.5})`;
+          } else {
+            ctx.strokeStyle = `rgba(255, 100, 130, ${0.3 + t * 0.5})`;
+          }
+        } else {
+          ctx.strokeStyle = 'rgba(108, 99, 255, 0.4)';
+        }
+
+        if (yi === 0) {
+          ctx.moveTo(sp.x, sp.y);
+        } else {
+          ctx.lineTo(sp.x, sp.y);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(sp.x, sp.y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Layer info
+    const warp = layerWarps[Math.min(layer, layerWarps.length - 1)];
+    infoEl.innerHTML = `Layer ${layer}/${numLayers - 1} | Activity: ${(warp.activity * 100).toFixed(0)}% | ` +
+      `Swirl: ${warp.swirlAngle.toFixed(3)} | Scale: ${warp.expandScale.toFixed(3)} | ` +
+      `<span style="color:${layer === numLayers - 1 ? '#ff6584' : '#43e97b'}">${layer === numLayers - 1 ? '⟲ REVERSAL LAYER' : 'Computing...'}</span>`;
+  }
+
+  document.getElementById('s4layer').addEventListener('input', draw);
+  document.getElementById('s4density').addEventListener('input', draw);
+  document.getElementById('s4strength').addEventListener('input', draw);
+  document.getElementById('s4strain').addEventListener('change', draw);
+
+  document.getElementById('s4animate').addEventListener('click', function() {
+    const btn = this;
+    if (btn.dataset.playing === 'true') {
+      btn.dataset.playing = 'false';
+      btn.textContent = '▶ Animate Layers';
+      if (animId) cancelAnimationFrame(animId);
+      return;
+    }
+    btn.dataset.playing = 'true';
+    btn.textContent = '⏸ Pause';
+    const slider = document.getElementById('s4layer');
+    let current = 0;
+    let lastTime = 0;
+    function step(time) {
+      if (btn.dataset.playing !== 'true') return;
+      if (time - lastTime > 600) {
+        slider.value = current;
+        draw();
+        current = (current + 1) % numLayers;
+        lastTime = time;
+      }
+      animId = requestAnimationFrame(step);
+    }
+    animId = requestAnimationFrame(step);
+  });
+
+  draw();
+})();
+
+// ============================================================
+// SECTION 5: Jacobian Field
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c5');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const hoverEl = document.getElementById('s5hover');
+
+  function generateFieldParams(layer) {
+    resetSeed(200 + layer * 37);
+    return {
+      cx: 0.3 + seededRandom() * 0.4,
+      cy: 0.3 + seededRandom() * 0.4,
+      swirlStrength: (seededRandom() - 0.5) * Math.sin(Math.PI * layer / 11) * 3,
+      expandStrength: (seededRandom() - 0.5) * Math.sin(Math.PI * layer / 11) * 2,
+      waveAmp: seededRandom() * Math.sin(Math.PI * layer / 11) * 0.5,
+      waveFreq: 2 + seededRandom() * 3
+    };
+  }
+
+  function computeJacobian(x, y, params) {
+    const cx = params.cx, cy = params.cy;
+    const dx = x - cx, dy = y - cy;
+    const r = Math.sqrt(dx * dx + dy * dy) + 0.01;
+    const decay = Math.exp(-r * 4);
+
+    const sAngle = params.swirlStrength * decay;
+    const eScale = params.expandStrength * decay;
+    const wAmp = params.waveAmp;
+    const wFreq = params.waveFreq;
+
+    // Approximate Jacobian components
+    const J00 = 1 + eScale * (1 - 4 * dx * dx) + wAmp * wFreq * Math.PI * 2 * Math.cos(y * wFreq * Math.PI * 2) * 0;
+    const J01 = -sAngle + wAmp * wFreq * Math.PI * 2 * Math.cos(y * wFreq * Math.PI * 2);
+    const J10 = sAngle - wAmp * wFreq * Math.PI * 2 * Math.sin(x * wFreq * Math.PI * 2);
+    const J11 = 1 + eScale * (1 - 4 * dy * dy);
+
+    return {J00, J01, J10, J11};
+  }
+
+  function draw() {
+    const mode = document.getElementById('s5mode').value;
+    const layer = parseInt(document.getElementById('s5layer').value);
+    const showArrows = document.getElementById('s5arrows').checked;
+    document.getElementById('s5layerVal').textContent = layer;
+
+    const params = generateFieldParams(layer);
+
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const margin = 30;
+    const plotW = W - 2 * margin;
+    const plotH = H - 2 * margin;
+    const res = 30;
+    const cellW = plotW / res;
+    const cellH = plotH / res;
+
+    for (let xi = 0; xi < res; xi++) {
+      for (let yi = 0; yi < res; yi++) {
+        const x = (xi + 0.5) / res;
+        const y = (yi + 0.5) / res;
+        const J = computeJacobian(x, y, params);
+
+        const div = (J.J00 - 1) + (J.J11 - 1); // divergence
+        const curl = (J.J10 - J.J01) / 2;
+        const symOff = (J.J01 + J.J10) / 2;
+        const shear = Math.sqrt(symOff * symOff + ((J.J00 - J.J11) / 2) ** 2);
+
+        let value, maxVal;
+        switch (mode) {
+          case 'divergence':
+            value = div;
+            maxVal = 2;
+            break;
+          case 'curl':
+            value = curl;
+            maxVal = 2;
+            break;
+          case 'shear':
+            value = shear;
+            maxVal = 1.5;
+            break;
+          case 'composite':
+            value = div;
+            maxVal = 2;
+            break;
+        }
+
+        const px = margin + xi * cellW;
+        const py = margin + yi * cellH;
+
+        // Background color
+        if (mode === 'shear') {
+          const t = clamp(value / maxVal, 0, 1);
+          ctx.fillStyle = `rgba(255, 200, 50, ${t * 0.6})`;
+        } else {
+          const t = clamp(value / maxVal, -1, 1);
+          if (t < 0) {
+            ctx.fillStyle = `rgba(100, 150, 255, ${Math.abs(t) * 0.6})`;
+          } else {
+            ctx.fillStyle = `rgba(255, 100, 130, ${t * 0.6})`;
+          }
+        }
+        ctx.fillRect(px, py, cellW + 1, cellH + 1);
+
+        // Arrows
+        if (showArrows && xi % 3 === 0 && yi % 3 === 0) {
+          const acx = px + cellW / 2;
+          const acy = py + cellH / 2;
+          const flowX = (J.J00 - 1) * 12;
+          const flowY = (J.J11 - 1) * 12;
+          const curlX = -curl * 10;
+          const curlY = curl * 10;
+
+          if (mode === 'curl' || mode === 'composite') {
+            ctx.strokeStyle = 'rgba(67, 233, 123, 0.7)';
+            ctx.lineWidth = 1.5;
+            drawArrow(ctx, acx, acy, acx + curlX, acy + curlY, 5);
+          }
+          if (mode === 'divergence' || mode === 'composite') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            drawArrow(ctx, acx, acy, acx + flowX, acy + flowY, 5);
+          }
+        }
+      }
+    }
+
+    // Labels
+    ctx.fillStyle = '#888';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    const modeLabels = {
+      divergence: 'Divergence: Red = expansion, Blue = contraction',
+      curl: 'Curl: Red = clockwise, Blue = counter-clockwise',
+      shear: 'Shear magnitude: Yellow = high distortion',
+      composite: 'Composite: Background = divergence, Green arrows = curl'
+    };
+    ctx.fillText(modeLabels[mode], W / 2, H - 5);
+    ctx.fillText(`Layer ${layer}`, W / 2, 15);
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;
+    const my = (e.clientY - rect.top) / rect.height;
+    const margin = 30;
+    const x = (mx * W - margin) / (W - 2 * margin);
+    const y = (my * H - margin) / (H - 2 * margin);
+
+    if (x < 0 || x > 1 || y < 0 || y > 1) {
+      hoverEl.textContent = 'Hover over the field to inspect values';
+      return;
+    }
+
+    const layer = parseInt(document.getElementById('s5layer').value);
+    const params = generateFieldParams(layer);
+    const J = computeJacobian(x, y, params);
+    const div = (J.J00 - 1) + (J.J11 - 1);
+    const curl = (J.J10 - J.J01) / 2;
+    const symOff = (J.J01 + J.J10) / 2;
+    const shear = Math.sqrt(symOff * symOff + ((J.J00 - J.J11) / 2) ** 2);
+    const det = J.J00 * J.J11 - J.J01 * J.J10;
+
+    hoverEl.innerHTML = `pos=(${x.toFixed(2)}, ${y.toFixed(2)}) | ` +
+      `<span style="color:#ff6584">div=${div.toFixed(3)}</span> | ` +
+      `<span style="color:#43e97b">curl=${curl.toFixed(3)}</span> | ` +
+      `<span style="color:#ffc832">shear=${shear.toFixed(3)}</span> | ` +
+      `det=${det.toFixed(3)} | J=[[${J.J00.toFixed(2)},${J.J01.toFixed(2)}],[${J.J10.toFixed(2)},${J.J11.toFixed(2)}]]`;
+  });
+
+  document.getElementById('s5mode').addEventListener('change', draw);
+  document.getElementById('s5layer').addEventListener('input', draw);
+  document.getElementById('s5arrows').addEventListener('change', draw);
+
+  draw();
+})();
+
+// ============================================================
+// SECTION 6: Residual Stream
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c6');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  let deltas = [];
+
+  function generateDeltas() {
+    const numLayers = parseInt(document.getElementById('s6layers').value);
+    const mag = parseFloat(document.getElementById('s6mag').value);
+    document.getElementById('s6layersVal').textContent = numLayers;
+
+    resetSeed(77);
+    deltas = [];
+    for (let l = 0; l < numLayers; l++) {
+      const activity = Math.sin(Math.PI * l / (numLayers - 1));
+      const dims = 8;
+      const delta = [];
+      for (let d = 0; d < dims; d++) {
+        delta.push((seededRandom() - 0.5) * activity * mag / 10);
+      }
+      deltas.push(delta);
+    }
+    draw();
+  }
+
+  function draw() {
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    if (deltas.length === 0) return;
+
+    const numLayers = deltas.length;
+    const dims = deltas[0].length;
+    const margin = {top: 40, bottom: 40, left: 60, right: 30};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    // Compute cumulative sums
+    const cumulative = [new Array(dims).fill(0)];
+    for (let l = 0; l < numLayers; l++) {
+      const prev = cumulative[l];
+      const next = prev.map((v, d) => v + deltas[l][d]);
+      cumulative.push(next);
+    }
+
+    // Find range
+    let maxVal = 0;
+    cumulative.forEach(c => c.forEach(v => { if (Math.abs(v) > maxVal) maxVal = Math.abs(v); }));
+    maxVal = Math.max(maxVal, 0.1);
+
+    // Draw delta bars (top half)
+    const barH = plotH * 0.4;
+    const barW = plotW / numLayers;
+
+    ctx.fillStyle = '#888';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Per-layer deltas (each color = one dimension)', W / 2, margin.top - 10);
+
+    for (let l = 0; l < numLayers; l++) {
+      const x = margin.left + l * barW;
+      for (let d = 0; d < dims; d++) {
+        const hue = (d / dims) * 300;
+        const val = deltas[l][d];
+        const barHeight = (val / maxVal) * barH * 0.4;
+        const barY = margin.top + barH / 2;
+        ctx.fillStyle = hsl(hue, 70, 55);
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(x + (d / dims) * barW * 0.8 + barW * 0.1, barY - Math.max(0, barHeight), barW * 0.8 / dims, Math.abs(barHeight));
+        ctx.globalAlpha = 1;
+      }
+      // Layer label
+      ctx.fillStyle = '#666';
+      ctx.font = '9px monospace';
+      ctx.fillText(`L${l}`, x + barW / 2, margin.top + barH + 12);
+    }
+
+    // Divider
+    const divY = margin.top + barH + 20;
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, divY);
+    ctx.lineTo(W - margin.right, divY);
+    ctx.stroke();
+
+    // Draw cumulative lines (bottom half)
+    const lineH = plotH * 0.45;
+    const lineTop = divY + 15;
+
+    ctx.fillStyle = '#888';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cumulative residual stream (running sum)', W / 2, lineTop - 2);
+
+    for (let d = 0; d < dims; d++) {
+      const hue = (d / dims) * 300;
+      ctx.strokeStyle = hsl(hue, 70, 55);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let l = 0; l <= numLayers; l++) {
+        const x = margin.left + (l / numLayers) * plotW;
+        const y = lineTop + lineH / 2 - (cumulative[l][d] / maxVal) * lineH * 0.4;
+        if (l === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Zero line
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, lineTop + lineH / 2);
+    ctx.lineTo(W - margin.right, lineTop + lineH / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  document.getElementById('s6layers').addEventListener('input', generateDeltas);
+  document.getElementById('s6mag').addEventListener('input', generateDeltas);
+  document.getElementById('s6regen').addEventListener('click', () => { resetSeed(Math.random() * 10000 | 0); generateDeltas(); });
+
+  generateDeltas();
+})();
+
+// ============================================================
+// SECTION 7: Inner vs Outer Layers
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c7');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  function draw() {
+    const numLayers = parseInt(document.getElementById('s7layers').value);
+    const reversalStrength = parseFloat(document.getElementById('s7reversal').value) / 100;
+    document.getElementById('s7layersVal').textContent = numLayers;
+
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const margin = {top: 40, bottom: 50, left: 60, right: 30};
+    const plotW = W - margin.left - margin.right;
+    const plotH = H - margin.top - margin.bottom;
+
+    resetSeed(42);
+
+    // Generate activity profile
+    const activities = [];
+    let maxAct = 0;
+    for (let l = 0; l < numLayers; l++) {
+      const t = l / (numLayers - 1);
+      let activity = Math.sin(Math.PI * t) * (0.7 + seededRandom() * 0.6);
+      // Last layer reversal
+      if (l === numLayers - 1) {
+        activity = -reversalStrength * (0.5 + seededRandom() * 0.5);
+      }
+      activities.push(activity);
+      if (Math.abs(activity) > maxAct) maxAct = Math.abs(activity);
+    }
+
+    const barW = plotW / numLayers * 0.7;
+    const gap = plotW / numLayers * 0.3;
+
+    // Zero line
+    const zeroY = margin.top + plotH * 0.55;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(margin.left, zeroY);
+    ctx.lineTo(W - margin.right, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Draw bars
+    for (let l = 0; l < numLayers; l++) {
+      const x = margin.left + (l / numLayers) * plotW + (plotW / numLayers - barW) / 2;
+      const activity = activities[l];
+      const barHeight = (Math.abs(activity) / maxAct) * plotH * 0.45;
+      const isNeg = activity < 0;
+
+      // Color based on activity
+      let color;
+      if (isNeg) {
+        color = '#ff6584'; // reversal
+      } else if (Math.abs(activity) > maxAct * 0.6) {
+        color = '#6c63ff'; // high activity
+      } else {
+        color = '#43e97b'; // low activity
+      }
+
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.8;
+      if (isNeg) {
+        ctx.fillRect(x, zeroY, barW, barHeight);
+      } else {
+        ctx.fillRect(x, zeroY - barHeight, barW, barHeight);
+      }
+      ctx.globalAlpha = 1;
+
+      // Border
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      if (isNeg) {
+        ctx.strokeRect(x, zeroY, barW, barHeight);
+      } else {
+        ctx.strokeRect(x, zeroY - barHeight, barW, barHeight);
+      }
+
+      // Layer label
+      ctx.fillStyle = '#888';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`L${l}`, x + barW / 2, H - margin.bottom + 15);
+
+      // Role label for key layers
+      ctx.font = '9px sans-serif';
+      if (l === 0) {
+        ctx.fillStyle = '#43e97b';
+        ctx.fillText('input', x + barW / 2, H - margin.bottom + 28);
+      } else if (l === numLayers - 1) {
+        ctx.fillStyle = '#ff6584';
+        ctx.fillText('reversal', x + barW / 2, H - margin.bottom + 28);
+      } else if (l === Math.floor(numLayers / 2)) {
+        ctx.fillStyle = '#6c63ff';
+        ctx.fillText('peak', x + barW / 2, H - margin.bottom + 28);
+      }
+    }
+
+    // Title and labels
+    ctx.fillStyle = '#aaa';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Geometric Activity per Layer (Warp Magnitude)', W / 2, margin.top - 15);
+
+    ctx.fillStyle = '#666';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('expansion ↑', margin.left - 5, zeroY - 20);
+    ctx.fillText('reversal ↓', margin.left - 5, zeroY + 30);
+
+    // Legend
+    const legendY = margin.top;
+    const legendItems = [
+      {color: '#43e97b', label: 'Low activity (translate)'},
+      {color: '#6c63ff', label: 'High activity (compute)'},
+      {color: '#ff6584', label: 'Reversal (un-morph)'}
+    ];
+    legendItems.forEach((item, i) => {
+      const lx = W - margin.right - 180;
+      const ly = legendY + i * 18;
+      ctx.fillStyle = item.color;
+      ctx.fillRect(lx, ly, 12, 12);
+      ctx.fillStyle = '#aaa';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(item.label, lx + 18, ly + 10);
+    });
+  }
+
+  document.getElementById('s7layers').addEventListener('input', draw);
+  document.getElementById('s7reversal').addEventListener('input', draw);
+  document.getElementById('s7regen').addEventListener('click', () => { resetSeed(Math.random() * 10000 | 0); draw(); });
+
+  draw();
+})();
+
+// ============================================================
+// SECTION 8: Holographic Encoding
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c8');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const infoEl = document.getElementById('s8info');
+
+  const conceptColors = ['#6c63ff', '#ff6584', '#43e97b', '#ffc832', '#ff9a44', '#44d7ff', '#d44fff', '#ff4488'];
+
+  function draw() {
+    const numConcepts = parseInt(document.getElementById('s8concepts').value);
+    const numDims = parseInt(document.getElementById('s8dims').value);
+    const numRemove = parseInt(document.getElementById('s8remove').value);
+    document.getElementById('s8conceptsVal').textContent = numConcepts;
+    document.getElementById('s8dimsVal').textContent = numDims;
+    document.getElementById('s8removeVal').textContent = numRemove;
+
+    // Clamp remove
+    const actualRemove = Math.min(numRemove, numDims - 1);
+
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    const margin = {top: 50, bottom: 40, left: 40, right: 40};
+    const panelW = (W - margin.left - margin.right - 40) / 3;
+    const panelH = H - margin.top - margin.bottom;
+
+    // Generate original concepts (2D positions)
+    resetSeed(99);
+    const originals = [];
+    for (let c = 0; c < numConcepts; c++) {
+      originals.push({
+        x: 0.2 + seededRandom() * 0.6,
+        y: 0.2 + seededRandom() * 0.6,
+        label: `C${c + 1}`
+      });
+    }
+
+    // Generate random encoding matrix (numDims x 2)
+    const encMatrix = [];
+    for (let d = 0; d < numDims; d++) {
+      encMatrix.push([
+        (seededRandom() - 0.5) * 2,
+        (seededRandom() - 0.5) * 2
+      ]);
+    }
+
+    // Encode: project 2D -> numDims
+    const encoded = originals.map(o => {
+      const enc = [];
+      for (let d = 0; d < numDims; d++) {
+        enc.push(encMatrix[d][0] * o.x + encMatrix[d][1] * o.y);
+      }
+      return enc;
+    });
+
+    // Decode: project back numDims -> 2D (pseudo-inverse via transpose)
+    // With removed dimensions set to 0
+    const decoded = encoded.map(enc => {
+      let x = 0, y = 0, normX = 0, normY = 0;
+      for (let d = 0; d < numDims; d++) {
+        if (d >= numDims - actualRemove) continue; // Remove last dims
+        x += encMatrix[d][0] * enc[d];
+        y += encMatrix[d][1] * enc[d];
+        normX += encMatrix[d][0] * encMatrix[d][0];
+        normY += encMatrix[d][1] * encMatrix[d][1];
+      }
+      return {
+        x: normX > 0 ? x / normX : 0,
+        y: normY > 0 ? y / normY : 0
+      };
+    });
+
+    // Panel titles
+    const panels = [
+      {title: 'Original (2D)', x: margin.left},
+      {title: `Encoded (${numDims}D → bars)`, x: margin.left + panelW + 20},
+      {title: `Decoded (${numDims - actualRemove}D kept)`, x: margin.left + 2 * (panelW + 20)}
+    ];
+
+    panels.forEach(p => {
+      ctx.fillStyle = '#888';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.title, p.x + panelW / 2, margin.top - 10);
+
+      // Panel border
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(p.x, margin.top, panelW, panelH);
+    });
+
+    // Panel 1: Original concepts as dots
+    originals.forEach((o, i) => {
+      const px = panels[0].x + o.x * panelW;
+      const py = margin.top + o.y * panelH;
+      ctx.fillStyle = conceptColors[i % conceptColors.length];
+      ctx.beginPath();
+      ctx.arc(px, py, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(o.label, px, py + 4);
+    });
+
+    // Panel 2: Encoded as bar charts
+    const barGroupW = panelW / numConcepts;
+    const barW = Math.max(2, barGroupW * 0.6 / numDims);
+    let maxEnc = 0;
+    encoded.forEach(e => e.forEach(v => { if (Math.abs(v) > maxEnc) maxEnc = Math.abs(v); }));
+    maxEnc = Math.max(maxEnc, 0.1);
+
+    encoded.forEach((enc, ci) => {
+      const groupX = panels[1].x + ci * barGroupW + barGroupW * 0.2;
+      const midY = margin.top + panelH / 2;
+
+      enc.forEach((val, di) => {
+        const bx = groupX + di * barW;
+        const bh = (val / maxEnc) * panelH * 0.35;
+        const removed = di >= numDims - actualRemove;
+
+        ctx.fillStyle = removed ? 'rgba(255,255,255,0.1)' : conceptColors[ci % conceptColors.length];
+        ctx.globalAlpha = removed ? 0.3 : 0.7;
+        if (val >= 0) {
+          ctx.fillRect(bx, midY - bh, barW - 1, bh);
+        } else {
+          ctx.fillRect(bx, midY, barW - 1, -bh);
+        }
+        ctx.globalAlpha = 1;
+      });
+
+      // Label
+      ctx.fillStyle = conceptColors[ci % conceptColors.length];
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(originals[ci].label, groupX + (numDims * barW) / 2, margin.top + panelH - 5);
+    });
+
+    // Panel 3: Decoded concepts
+    decoded.forEach((d, i) => {
+      const px = panels[2].x + clamp(d.x, 0, 1) * panelW;
+      const py = margin.top + clamp(d.y, 0, 1) * panelH;
+
+      // Ghost of original
+      const ox = panels[2].x + originals[i].x * panelW;
+      const oy = margin.top + originals[i].y * panelH;
+      ctx.strokeStyle = conceptColors[i % conceptColors.length];
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(ox, oy, 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // Decoded dot
+      ctx.fillStyle = conceptColors[i % conceptColors.length];
+      ctx.beginPath();
+      ctx.arc(px, py, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(originals[i].label, px, py + 4);
+
+      // Error line
+      ctx.strokeStyle = 'rgba(255,100,130,0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Compute reconstruction error
+    let totalError = 0;
+    decoded.forEach((d, i) => {
+      const dx = d.x - originals[i].x;
+      const dy = d.y - originals[i].y;
+      totalError += Math.sqrt(dx * dx + dy * dy);
+    });
+    totalError /= numConcepts;
+
+    infoEl.innerHTML = `Dimensions kept: <span style="color:#43e97b">${numDims - actualRemove}/${numDims}</span> | ` +
+      `Avg reconstruction error: <span style="color:${totalError < 0.1 ? '#43e97b' : totalError < 0.3 ? '#ffc832' : '#ff6584'}">${totalError.toFixed(4)}</span> | ` +
+      `<em style="color:#888">Like a hologram: remove parts → lose resolution, not content</em>`;
+  }
+
+  document.getElementById('s8go').addEventListener('click', draw);
+  document.getElementById('s8concepts').addEventListener('input', () => {
+    document.getElementById('s8conceptsVal').textContent = document.getElementById('s8concepts').value;
+  });
+  document.getElementById('s8dims').addEventListener('input', () => {
+    document.getElementById('s8dimsVal').textContent = document.getElementById('s8dims').value;
+    document.getElementById('s8remove').max = parseInt(document.getElementById('s8dims').value) - 1;
+  });
+  document.getElementById('s8remove').addEventListener('input', () => {
+    document.getElementById('s8removeVal').textContent = document.getElementById('s8remove').value;
+    draw();
+  });
+
+  draw();
+})();
+
+// ============================================================
+// SECTION 9: Concept Map
+// ============================================================
+(function() {
+  const canvas = document.getElementById('c9');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const nodes = [
+    {id: 0, label: 'Fibre Bundle\nFramework', x: W * 0.5, y: 50, color: '#6c63ff', section: 'sec1'},
+    {id: 1, label: 'Space-Morphing\n(not point-moving)', x: W * 0.15, y: 130, color: '#ff6584', section: 'sec0'},
+    {id: 2, label: 'Jacobian\nField', x: W * 0.5, y: 170, color: '#43e97b', section: 'sec2'},
+    {id: 3, label: 'Divergence\n(volume)', x: W * 0.2, y: 270, color: '#ffc832', section: 'sec5'},
+    {id: 4, label: 'Curl\n(rotation)', x: W * 0.4, y: 270, color: '#44d7ff', section: 'sec5'},
+    {id: 5, label: 'Shear\n(distortion)', x: W * 0.6, y: 270, color: '#d44fff', section: 'sec5'},
+    {id: 6, label: 'Residual\nStream', x: W * 0.85, y: 130, color: '#ff9a44', section: 'sec6'},
+    {id: 7, label: 'Inner vs Outer\nLayers', x: W * 0.85, y: 270, color: '#ff4488', section: 'sec7'},
+    {id: 8, label: 'Holographic\nScrambling', x: W * 0.15, y: 370, color: '#6c63ff', section: 'sec8'},
+    {id: 9, label: 'Coq Proofs\n(verified!)', x: W * 0.5, y: 370, color: '#43e97b', section: 'sec3'},
+    {id: 10, label: 'Deformed\nGrid', x: W * 0.8, y: 370, color: '#ff6584', section: 'sec4'},
+  ];
+
+  const edges = [
+    [0, 1], [0, 2], [0, 6],
+    [2, 3], [2, 4], [2, 5],
+    [6, 7], [6, 2],
+    [1, 8], [2, 9], [2, 10],
+    [3, 9], [4, 9], [5, 9],
+    [7, 10]
+  ];
+
+  function draw() {
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw edges
+    edges.forEach(([a, b]) => {
+      const na = nodes[a], nb = nodes[b];
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(na.x, na.y);
+      ctx.lineTo(nb.x, nb.y);
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    nodes.forEach(node => {
+      const lines = node.label.split('\n');
+      const boxW = 100, boxH = 36;
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.roundRect(node.x - boxW / 2 + 2, node.y - boxH / 2 + 2, boxW, boxH, 8);
+      ctx.fill();
+
+      // Box
+      ctx.fillStyle = node.color + '22';
+      ctx.strokeStyle = node.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(node.x - boxW / 2, node.y - boxH / 2, boxW, boxH, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Text
+      ctx.fillStyle = '#eee';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      lines.forEach((line, li) => {
+        ctx.fillText(line, node.x, node.y - 4 + li * 14);
+      });
+    });
+  }
+
+  // Click to scroll
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const my = (e.clientY - rect.top) * (H / rect.height);
+
+    nodes.forEach(node => {
+      const dx = mx - node.x, dy = my - node.y;
+      if (Math.abs(dx) < 55 && Math.abs(dy) < 22) {
+        const el = document.getElementById(node.section);
+        if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    });
+  });
+
+  // Hover cursor
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const my = (e.clientY - rect.top) * (H / rect.height);
+    let hovering = false;
+    nodes.forEach(node => {
+      const dx = mx - node.x, dy = my - node.y;
+      if (Math.abs(dx) < 55 && Math.abs(dy) < 22) hovering = true;
+    });
+    canvas.style.cursor = hovering ? 'pointer' : 'default';
+  });
+
+  draw();
+})();
+
+// ============================================================
+// roundRect polyfill for older browsers
+// ============================================================
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = {tl: r, tr: r, br: r, bl: r};
+    this.moveTo(x + r.tl, y);
+    this.lineTo(x + w - r.tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    this.lineTo(x + w, y + h - r.br);
+    this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    this.lineTo(x + r.bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    this.lineTo(x, y + r.tl);
+    this.quadraticCurveTo(x, y, x + r.tl, y);
+    this.closePath();
+    return this;
+  };
+}
+
+</script>
+</body>
+</html>

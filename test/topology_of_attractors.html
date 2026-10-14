@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topologie von Attraktoren – TDA auf LLM-Aktivierungen</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+.plot-bundle-large { height: 720px !important; }
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+header {
+    text-align: center;
+    padding: 20px 0 30px;
+    border-bottom: 1px solid rgba(148,163,184,0.15);
+    margin-bottom: 30px;
+}
+h1 {
+    font-size: 1.9em;
+    margin: 0 0 8px;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+header p { color: #94a3b8; margin: 0; font-size: 0.95em; }
+
+.step {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(148,163,184,0.15);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+}
+.step h2 {
+    margin: 0 0 6px;
+    font-size: 1.25em;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    border-radius: 50%;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.9em;
+    flex-shrink: 0;
+}
+.step p { color: #cbd5e1; line-height: 1.6; margin: 6px 0; }
+.step .desc { color: #94a3b8; font-size: 0.9em; margin-bottom: 14px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+.controls {
+    background: rgba(15, 23, 42, 0.6);
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin: 12px 0;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.controls label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.88em; color: #cbd5e1;
+}
+.controls input[type=range] { width: 180px; accent-color: #6366f1; }
+.controls select, .controls button {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.88em;
+    cursor: pointer;
+}
+.controls button:hover { background: #334155; }
+.val {
+    font-family: monospace;
+    color: #a78bfa;
+    font-weight: bold;
+    min-width: 40px;
+    display: inline-block;
+}
+
+.plot { background: #0b1220; border-radius: 8px; border: 1px solid rgba(148,163,184,0.1); }
+.plot-3d { height: 380px; }
+.plot-2d { height: 320px; }
+.plot-barcode { height: 280px; }
+
+.info-box {
+    background: rgba(99, 102, 241, 0.08);
+    border-left: 3px solid #a78bfa;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 12px 0;
+    font-size: 0.88em;
+    line-height: 1.6;
+}
+.info-box b { color: #c4b5fd; }
+
+.betti-display {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    padding: 12px; background: rgba(15,23,42,0.5); border-radius: 8px;
+    margin-top: 10px;
+}
+.betti {
+    padding: 8px 14px;
+    background: #1e293b;
+    border-radius: 6px;
+    border-left: 3px solid;
+    font-family: monospace;
+    font-size: 0.95em;
+}
+.betti.b0 { border-color: #3b82f6; }
+.betti.b1 { border-color: #10b981; }
+.betti.b2 { border-color: #f59e0b; }
+.betti .lbl { color: #94a3b8; }
+.betti .num { color: #f1f5f9; font-weight: bold; font-size: 1.1em; margin-left: 6px; }
+
+.classify-result {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(167,139,250,0.15));
+    border: 1px solid rgba(167,139,250,0.3);
+    border-radius: 10px;
+    margin-top: 12px;
+    font-size: 0.95em;
+}
+.classify-result .match { font-weight: bold; color: #f472b6; font-size: 1.1em; }
+
+.legend { font-size: 0.78em; color: #94a3b8; margin-top: 6px; }
+kbd {
+    background: #334155;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+}
+.formula {
+    font-family: 'Cambria Math', 'Times New Roman', serif;
+    background: rgba(15,23,42,0.6);
+    padding: 8px 14px;
+    border-radius: 6px;
+    display: inline-block;
+    color: #f0abfc;
+    font-style: italic;
+    margin: 4px 0;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+    <h1>Topologie von Attraktoren</h1>
+    <p>Vom rohen Aktivierungspunktehaufen zur klassifizierten topologischen Struktur — die Pipeline für TDA auf LLM-internals</p>
+</header>
+
+<!-- ═══════════════════ STEP 1: Point Cloud ═══════════════════ -->
+<div class="step">
+    <h2><span class="step-num">1</span>Rohe Punktwolke (Aktivierungen)</h2>
+    <p class="desc">Stell dir vor: du hast an einem Layer die Aktivierungen für viele Kontexte gesammelt, die alle "Berlin" implizieren. Auf zwei Dimensionen projiziert (PCA/UMAP oder direkt zwei ausgewählte Dimensionen) ergibt sich eine Wolke. <b>Aber:</b> die eigentliche Struktur ist hochdimensional — hier synthetisieren wir bekannte Formen um zu sehen wie sich TDA verhält.</p>
+
+    <div class="controls">
+        <label>Attraktor-Typ:
+            <select id="shape-select">
+                <option value="circle">Kreis (S¹) — Punkt-Attraktor mit Zyklus</option>
+                <option value="torus">Torus (T² = S¹×S¹) — 2 verschachtelte Zyklen</option>
+                <option value="two-circles">Zwei Kreise — zwei getrennte Zyklen</option>
+                <option value="sphere">Sphäre (S²) — geschlossene 2D-Fläche</option>
+                <option value="figure8">Figur 8 — verbundene Zyklen</option>
+                <option value="cluster">3 Cluster (Punkt-Attraktoren)</option>
+                <option value="random">Zufällige Wolke (Nullhypothese)</option>
+            </select>
+        </label>
+        <label>Anzahl Punkte:
+            <input type="range" id="n-points" min="30" max="200" step="10" value="80">
+            <span class="val" id="n-points-val">80</span>
+        </label>
+        <label>Rauschen:
+            <input type="range" id="noise" min="0" max="0.3" step="0.01" value="0.05">
+            <span class="val" id="noise-val">0.05</span>
+        </label>
+        <button id="regenerate">🎲 Neu generieren</button>
+    </div>
+
+    <div id="plot-cloud" class="plot plot-3d"></div>
+    <div class="legend">Ziehen zum Rotieren, Scrollen zum Zoomen. Jeder Punkt = ein Aktivierungsvektor an einer Schicht für einen Kontext.</div>
+</div>
+
+<!-- ═══════════════════ STEP 2: VR Filtration ═══════════════════ -->
+<div class="step">
+    <h2><span class="step-num">2</span>Vietoris-Rips Filtration</h2>
+    <p class="desc">Wir verbinden Punkte durch Simplizes (Kanten, Dreiecke, Tetraeder), sobald ihr Abstand kleiner als ε ist. Bei kleinem ε: nur isolierte Punkte. Bei großem ε: alles verschmilzt zu einem Blob. <b>Dazwischen</b> sieht man die echte Struktur.</p>
+
+    <div class="controls">
+        <label>ε (Filtrationsparameter):
+            <input type="range" id="epsilon" min="0" max="3" step="0.02" value="0.5">
+            <span class="val" id="epsilon-val">0.50</span>
+        </label>
+        <button id="animate-eps">▶ Filtration animieren</button>
+        <label>Simplex-Dim anzeigen:
+            <select id="max-dim">
+                <option value="1">bis Kanten (1-Simplex)</option>
+                <option value="2" selected>bis Dreiecke (2-Simplex)</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <div id="plot-vr" class="plot plot-3d"></div>
+            <div class="legend">Der VR-Komplex bei aktuellem ε. Kanten = Paare mit Abstand ≤ ε. Dreiecke = alle 3 Paare erfüllen die Bedingung.</div>
+        </div>
+        <div>
+            <div id="plot-barcode" class="plot plot-barcode"></div>
+            <div class="legend">Persistenz-Barcode: horizontale Linien zeigen, für welche ε-Bereiche topologische Features existieren. Die vertikale Linie markiert das aktuelle ε.</div>
+        </div>
+    </div>
+
+    <div class="betti-display" id="betti-display">
+        <div class="betti b0"><span class="lbl">β₀ (Komponenten):</span><span class="num" id="b0-val">–</span></div>
+        <div class="betti b1"><span class="lbl">β₁ (Löcher/Zyklen):</span><span class="num" id="b1-val">–</span></div>
+        <div class="betti b2"><span class="lbl">β₂ (Hohlräume):</span><span class="num" id="b2-val">–</span></div>
+    </div>
+    <div class="info-box">
+        <b>Betti-Zahlen</b> zählen die topologischen Features bei aktuellem ε: β₀ = Anzahl Zusammenhangskomponenten, β₁ = Anzahl unabhängiger Schleifen (1-dim Löcher), β₂ = Anzahl geschlossener Hohlräume (2-dim Löcher, wie das Innere einer Kugel).
+    </div>
+</div>
+
+<!-- ═══════════════════ STEP 3: Persistence Diagram ═══════════════════ -->
+<div class="step">
+    <h2><span class="step-num">3</span>Persistenz-Diagramm & Klassifikation</h2>
+    <p class="desc">Statt Barcode kann man Features als Punkte (birth, death) plotten. Features weit über der Diagonalen = lange Persistenz = echte Struktur. Nah an der Diagonale = kurzlebig = Rauschen. Die <b>Signatur</b> (Anzahl langlebiger β₁, β₂, ...) klassifiziert die Topologie.</p>
+
+    <div class="grid-2">
+        <div>
+            <div id="plot-persistence" class="plot plot-2d"></div>
+            <div class="legend">Punkte weit über der Diagonalen sind signifikant. Farbe = Dimension des Features.</div>
+        </div>
+        <div>
+            <div id="plot-signature" class="plot plot-2d"></div>
+            <div class="legend">Persistenz-Signatur: Länge der obersten Barcodes pro Dimension.</div>
+        </div>
+    </div>
+
+    <div class="classify-result" id="classify-result">
+        <span>Klassifikation läuft...</span>
+    </div>
+
+    <div class="info-box">
+        <b>Vergleich mit bekannten Topologien</b> (Wasserstein-artige Distanz auf Betti-Signaturen):
+        <ul style="margin: 6px 0; padding-left: 20px; color: #cbd5e1;">
+            <li>Punkt: β = (1, 0, 0)</li>
+            <li>Kreis S¹: β = (1, 1, 0)</li>
+            <li>Torus T²: β = (1, 2, 1)</li>
+            <li>Sphäre S²: β = (1, 0, 1)</li>
+            <li>Figur 8 (Wedge S¹∨S¹): β = (1, 2, 0)</li>
+            <li>Zwei disjunkte Kreise: β = (2, 2, 0)</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ═══════════════════ STEP 4: Takens Embedding ═══════════════════ -->
+<div class="step">
+    <h2><span class="step-num">4</span>Bonus: Takens' Embedding — Attraktor aus Zeitreihe</h2>
+    <p class="desc">Takens' Theorem: Wenn du <b>nur eine skalare Observable</b> eines dynamischen Systems hast (z.B. eine einzige Dimension der Aktivierung über verschiedene Token), kannst du den vollen Attraktor rekonstruieren durch <span class="formula">v(t) = (x(t), x(t+τ), x(t+2τ), ..., x(t+(m-1)τ))</span> — sofern die Embedding-Dimension m ≥ 2d+1 (d = Dimension des echten Attraktors).</p>
+
+    <div class="controls">
+        <label>Zeitreihe:
+            <select id="ts-select">
+                <option value="sin">Sinus (Kreis-Attraktor)</option>
+                <option value="lorenz">Lorenz (Chaos)</option>
+                <option value="doublesin">2 Sinusse (Torus)</option>
+                <option value="noise">Rauschen (kein Attraktor)</option>
+            </select>
+        </label>
+        <label>Delay τ:
+            <input type="range" id="tau" min="1" max="40" step="1" value="8">
+            <span class="val" id="tau-val">8</span>
+        </label>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <div id="plot-timeseries" class="plot plot-2d"></div>
+            <div class="legend">Die skalare Observable x(t). Du siehst nur diese eine Zeile.</div>
+        </div>
+        <div>
+            <div id="plot-takens" class="plot plot-3d"></div>
+            <div class="legend">Rekonstruierter Attraktor via Delay-Embedding in 3D. Diffeomorph zum echten Attraktor!</div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <b>Warum das für LLMs interessant ist:</b> Wenn du an einer Schicht die Aktivierung einer <i>einzigen</i> Neurone über einen Kontext-Verlauf beobachtest, könntest du theoretisch den vollen dynamischen Attraktor rekonstruieren, der den kompletten Zustand approximiert — ohne alle Dimensionen zu brauchen. In der Praxis: Kombination mit persistenter Homologie auf dem Takens-embedding.
+    </div>
+</div>
+
+<!-- ═══════════════════ STEP 5: Total Space Bild ═══════════════════ -->
+<div class="step">
+    <h2><span class="step-num">5</span>Konzeptuell: Faserbündel-Bild</h2>
+    <p class="desc">Deine Intuition: Der Kontext ist Basis-Mannigfaltigkeit, jede Schicht eine Faser darüber. Attention/FFN transportieren Krümmung zwischen Fasern. Die Attraktoren, die du suchst, sind stabile Strukturen im Totalraum, die per Filtration/Barcode über die Schichten hinweg persistieren.</p>
+
+    <div id="plot-bundle" class="plot plot-3d plot-bundle-large"></div>
+    <div class="legend">Illustration: Basis (Token-Sequenz) unten, darüber gestapelte Aktivierungsräume pro Layer. Farbige Trajektorien = Bewegung eines Tokens durch die Layer, in stabile Attraktorbereiche eingefärbt.</div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+
+function euclid(a, b) {
+    let s = 0;
+    for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2;
+    return Math.sqrt(s);
+}
+
+function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POINT CLOUD GENERATORS
+// ═══════════════════════════════════════════════════════════════
+
+function generateShape(kind, n, noise) {
+    const pts = [];
+    const nz = () => randn() * noise;
+    switch (kind) {
+        case 'circle':
+            for (let i = 0; i < n; i++) {
+                const t = 2 * Math.PI * i / n + Math.random() * 0.1;
+                pts.push([Math.cos(t) + nz(), Math.sin(t) + nz(), nz()]);
+            }
+            break;
+        case 'torus':
+            for (let i = 0; i < n; i++) {
+                const u = 2 * Math.PI * Math.random();
+                const v = 2 * Math.PI * Math.random();
+                const R = 1.0, r = 0.4;
+                pts.push([
+                    (R + r * Math.cos(v)) * Math.cos(u) + nz(),
+                    (R + r * Math.cos(v)) * Math.sin(u) + nz(),
+                    r * Math.sin(v) + nz()
+                ]);
+            }
+            break;
+        case 'two-circles':
+            for (let i = 0; i < n; i++) {
+                const t = 2 * Math.PI * Math.random();
+                if (i < n / 2) pts.push([Math.cos(t) - 1.8 + nz(), Math.sin(t) + nz(), nz()]);
+                else pts.push([Math.cos(t) + 1.8 + nz(), Math.sin(t) + nz(), nz()]);
+            }
+            break;
+        case 'sphere':
+            for (let i = 0; i < n; i++) {
+                let x, y, z, s;
+                do {
+                    x = 2 * Math.random() - 1;
+                    y = 2 * Math.random() - 1;
+                    z = 2 * Math.random() - 1;
+                    s = x*x + y*y + z*z;
+                } while (s > 1 || s < 0.01);
+                const norm = Math.sqrt(s);
+                pts.push([x/norm + nz(), y/norm + nz(), z/norm + nz()]);
+            }
+            break;
+        case 'figure8':
+            for (let i = 0; i < n; i++) {
+                const t = 2 * Math.PI * Math.random();
+                pts.push([Math.sin(2*t) + nz(), Math.sin(t) + nz(), nz()]);
+            }
+            break;
+        case 'cluster':
+            const centers = [[-1.5, -1, 0], [1.5, -1, 0], [0, 1.5, 0]];
+            for (let i = 0; i < n; i++) {
+                const c = centers[i % 3];
+                pts.push([c[0] + randn() * 0.15, c[1] + randn() * 0.15, c[2] + randn() * 0.15]);
+            }
+            break;
+        case 'random':
+            for (let i = 0; i < n; i++) {
+                pts.push([
+                    (Math.random() - 0.5) * 3,
+                    (Math.random() - 0.5) * 3,
+                    (Math.random() - 0.5) * 3
+                ]);
+            }
+            break;
+    }
+    return pts;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIETORIS-RIPS COMPLEX
+// ═══════════════════════════════════════════════════════════════
+
+function computeDistMatrix(pts) {
+    const n = pts.length;
+    const D = Array.from({length: n}, () => new Float32Array(n));
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            const d = euclid(pts[i], pts[j]);
+            D[i][j] = d;
+            D[j][i] = d;
+        }
+    }
+    return D;
+}
+
+function buildVRComplex(D, eps, maxDim) {
+    const n = D.length;
+    const edges = [];
+    const triangles = [];
+
+    // 1-simplices (edges)
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            if (D[i][j] <= eps) edges.push([i, j]);
+        }
+    }
+
+    // 2-simplices (triangles) — all pairwise distances ≤ eps
+    if (maxDim >= 2) {
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                if (D[i][j] > eps) continue;
+                for (let k = j + 1; k < n; k++) {
+                    if (D[i][k] <= eps && D[j][k] <= eps) {
+                        triangles.push([i, j, k]);
+                    }
+                }
+            }
+        }
+    }
+
+    return { edges, triangles };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PERSISTENT HOMOLOGY (simplified: β0 via union-find, β1 via Euler)
+// For proper H1 we'd need boundary matrix reduction — this uses
+// the Euler characteristic + β0 to get β1 for the current filtration
+// which is exact for VR complexes when maxDim=2.
+// ═══════════════════════════════════════════════════════════════
+
+class UnionFind {
+    constructor(n) {
+        this.parent = Array.from({length: n}, (_, i) => i);
+        this.rank = new Array(n).fill(0);
+        this.count = n;
+    }
+    find(x) {
+        while (this.parent[x] !== x) {
+            this.parent[x] = this.parent[this.parent[x]];
+            x = this.parent[x];
+        }
+        return x;
+    }
+    union(x, y) {
+        const rx = this.find(x), ry = this.find(y);
+        if (rx === ry) return false;
+        if (this.rank[rx] < this.rank[ry]) this.parent[rx] = ry;
+        else if (this.rank[rx] > this.rank[ry]) this.parent[ry] = rx;
+        else { this.parent[ry] = rx; this.rank[rx]++; }
+        this.count--;
+        return true;
+    }
+}
+
+function computeBetti(n, edges, triangles) {
+    // β0 via union-find on 1-skeleton
+    const uf = new UnionFind(n);
+    for (const [i, j] of edges) uf.union(i, j);
+    const b0 = uf.count;
+
+    // For a 2-complex: χ = V - E + F = β0 - β1 + β2
+    // β2 is 0 for VR complexes below their embedding dim in typical cases,
+    // but we compute it approximately as: β2 = number of "closed" tetrahedra
+    // For a demo, we set β2 heuristically by looking for closed 2-cycles.
+    const V = n, E = edges.length, F = triangles.length;
+    const chi = V - E + F;
+
+    // Rough β2 estimate: for sphere/torus-like structures, use small
+    // heuristic. In real TDA you'd reduce the boundary matrix ∂₂.
+    // Here: if we have lots of triangles and few edges relative to
+    // vertices, we might have a closed surface.
+    let b2 = 0;
+    // Very rough: if the complex "closes up" (triangle-to-edge ratio high)
+    if (F > 0 && n > 10) {
+        const closedness = F / Math.max(E, 1);
+        if (closedness > 0.7) b2 = 1;
+    }
+
+    // β1 from Euler: β1 = β0 - β2 - χ
+    const b1 = Math.max(0, b0 - b2 - chi);
+
+    return { b0, b1, b2, chi, V, E, F };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PERSISTENCE COMPUTATION (β0 exact, β1/β2 via Euler over filtration)
+// ═══════════════════════════════════════════════════════════════
+
+function computePersistence(pts, epsMax, nSteps = 50) {
+    const D = computeDistMatrix(pts);
+    const n = pts.length;
+    const steps = [];
+    const bars = { b0: [], b1: [], b2: [] };
+
+    // For β0 persistence: track when each component dies (merges)
+    // We build the filtration by sorted edge lengths.
+    const allEdges = [];
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            allEdges.push({ i, j, d: D[i][j] });
+        }
+    }
+    allEdges.sort((a, b) => a.d - b.d);
+
+    // β0 barcode: each vertex born at 0, dies when merged
+    const uf = new UnionFind(n);
+    const deathTimes = new Array(n).fill(null);
+    for (const { i, j, d } of allEdges) {
+        const ri = uf.find(i), rj = uf.find(j);
+        if (ri !== rj) {
+            // The "younger" component dies (higher index by convention)
+            const dying = Math.max(ri, rj);
+            deathTimes[dying] = d;
+            uf.union(i, j);
+        }
+    }
+    // Assign birth=0, death=deathTime for each vertex except the "immortal" root
+    for (let v = 0; v < n; v++) {
+        bars.b0.push({ dim: 0, birth: 0, death: deathTimes[v] === null ? epsMax * 1.2 : deathTimes[v] });
+    }
+
+    // Sample β1, β2 across the filtration
+    for (let s = 0; s < nSteps; s++) {
+        const eps = (s / (nSteps - 1)) * epsMax;
+        const { edges, triangles } = buildVRComplex(D, eps, 2);
+        const betti = computeBetti(n, edges, triangles);
+        steps.push({ eps, ...betti });
+    }
+
+    // Extract β1 bars by tracking when β1 goes up (birth) and down (death)
+    let prevB1 = 0;
+    const openB1 = [];
+    for (let s = 0; s < steps.length; s++) {
+        const b1 = steps[s].b1;
+        const eps = steps[s].eps;
+        while (openB1.length < b1) openB1.push({ dim: 1, birth: eps, death: null });
+        while (openB1.length > b1) {
+            const closed = openB1.pop();
+            closed.death = eps;
+            bars.b1.push(closed);
+        }
+    }
+    // Close remaining open bars at epsMax
+    for (const bar of openB1) {
+        bar.death = epsMax * 1.2;
+        bars.b1.push(bar);
+    }
+
+    // Same for β2
+    let prevB2 = 0;
+    const openB2 = [];
+    for (let s = 0; s < steps.length; s++) {
+        const b2 = steps[s].b2;
+        const eps = steps[s].eps;
+        while (openB2.length < b2) openB2.push({ dim: 2, birth: eps, death: null });
+        while (openB2.length > b2) {
+            const closed = openB2.pop();
+            closed.death = eps;
+            bars.b2.push(closed);
+        }
+    }
+    for (const bar of openB2) {
+        bar.death = epsMax * 1.2;
+        bars.b2.push(bar);
+    }
+
+    return { steps, bars, D };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLASSIFICATION: match Betti signature to known topologies
+// ═══════════════════════════════════════════════════════════════
+
+const KNOWN_TOPOLOGIES = [
+    { name: 'Punkt / Cluster', betti: [1, 0, 0] },
+    { name: 'Kreis S¹', betti: [1, 1, 0] },
+    { name: 'Torus T²', betti: [1, 2, 1] },
+    { name: 'Sphäre S²', betti: [1, 0, 1] },
+    { name: 'Figur 8 / Wedge S¹∨S¹', betti: [1, 2, 0] },
+    { name: 'Zwei disjunkte Kreise', betti: [2, 2, 0] },
+    { name: 'Drei Cluster', betti: [3, 0, 0] },
+    { name: 'Zwei Cluster', betti: [2, 0, 0] },
+];
+
+function classify(signature) {
+    let best = null;
+    let bestDist = Infinity;
+    for (const topo of KNOWN_TOPOLOGIES) {
+        const d = Math.abs(signature[0] - topo.betti[0]) +
+                  Math.abs(signature[1] - topo.betti[1]) +
+                  Math.abs(signature[2] - topo.betti[2]);
+        if (d < bestDist) {
+            bestDist = d;
+            best = topo;
+        }
+    }
+    return { match: best, distance: bestDist };
+}
+
+// Persistent signature: count bars whose length > threshold
+function getPersistentSignature(bars, threshold) {
+    return [
+        bars.b0.filter(b => b.death - b.birth > threshold).length,
+        bars.b1.filter(b => b.death - b.birth > threshold).length,
+        bars.b2.filter(b => b.death - b.birth > threshold).length,
+    ];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE & CACHING
+// ═══════════════════════════════════════════════════════════════
+
+const state = {
+    points: [],
+    D: null,
+    persistence: null,
+    shape: 'circle',
+    n: 80,
+    noise: 0.05,
+    epsilon: 0.5,
+    maxDim: 2,
+    animating: false,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: POINT CLOUD
+// ═══════════════════════════════════════════════════════════════
+
+function renderCloud() {
+    const pts = state.points;
+    const trace = {
+        type: 'scatter3d',
+        mode: 'markers',
+        x: pts.map(p => p[0]),
+        y: pts.map(p => p[1]),
+        z: pts.map(p => p[2]),
+        marker: {
+            size: 4,
+            color: pts.map((_, i) => i),
+            colorscale: 'Viridis',
+            opacity: 0.9,
+            line: { width: 0 }
+        }
+    };
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        paper_bgcolor: '#0b1220',
+        scene: {
+            xaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220', color: '#94a3b8' },
+            yaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220', color: '#94a3b8' },
+            zaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220', color: '#94a3b8' },
+            bgcolor: '#0b1220',
+            camera: { eye: { x: 1.6, y: 1.6, z: 1.2 } }
+        },
+        showlegend: false
+    };
+    Plotly.react('plot-cloud', [trace], layout, { displayModeBar: false, responsive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: VR COMPLEX
+// ═══════════════════════════════════════════════════════════════
+
+function renderVR() {
+    const pts = state.points;
+    const eps = state.epsilon;
+    const maxDim = state.maxDim;
+    const { edges, triangles } = buildVRComplex(state.D, eps, maxDim);
+
+    const traces = [];
+
+    // Points
+    traces.push({
+        type: 'scatter3d',
+        mode: 'markers',
+        x: pts.map(p => p[0]),
+        y: pts.map(p => p[1]),
+        z: pts.map(p => p[2]),
+        marker: { size: 3.5, color: '#a78bfa', opacity: 0.95, line: { width: 0 } },
+        hoverinfo: 'skip'
+    });
+
+    // Edges — batch into one trace with None separators
+    if (edges.length > 0) {
+        const ex = [], ey = [], ez = [];
+        for (const [i, j] of edges) {
+            ex.push(pts[i][0], pts[j][0], null);
+            ey.push(pts[i][1], pts[j][1], null);
+            ez.push(pts[i][2], pts[j][2], null);
+        }
+        traces.push({
+            type: 'scatter3d',
+            mode: 'lines',
+            x: ex, y: ey, z: ez,
+            line: { color: '#60a5fa', width: 2 },
+            opacity: 0.5,
+            hoverinfo: 'skip'
+        });
+    }
+
+    // Triangles — as a mesh3d
+    if (triangles.length > 0 && maxDim >= 2) {
+        traces.push({
+            type: 'mesh3d',
+            x: pts.map(p => p[0]),
+            y: pts.map(p => p[1]),
+            z: pts.map(p => p[2]),
+            i: triangles.map(t => t[0]),
+            j: triangles.map(t => t[1]),
+            k: triangles.map(t => t[2]),
+            opacity: 0.25,
+            color: '#f472b6',
+            flatshading: true,
+            hoverinfo: 'skip'
+        });
+    }
+
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        paper_bgcolor: '#0b1220',
+        scene: {
+            xaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220' },
+            yaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220' },
+            zaxis: { showgrid: false, showticklabels: false, title: '', backgroundcolor: '#0b1220' },
+            bgcolor: '#0b1220',
+            camera: { eye: { x: 1.6, y: 1.6, z: 1.2 } }
+        },
+        showlegend: false
+    };
+    Plotly.react('plot-vr', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: BARCODE
+// ═══════════════════════════════════════════════════════════════
+
+function renderBarcode() {
+    if (!state.persistence) return;
+    const { bars } = state.persistence;
+    const traces = [];
+
+    // β0 bars
+    const b0Sorted = [...bars.b0].sort((a, b) => (b.death - b.birth) - (a.death - a.birth)).slice(0, 25);
+    b0Sorted.forEach((bar, i) => {
+        traces.push({
+            type: 'scatter',
+            x: [bar.birth, bar.death],
+            y: [i, i],
+            mode: 'lines',
+            line: { color: '#3b82f6', width: 4 },
+            showlegend: i === 0,
+            name: 'β₀',
+            hoverinfo: 'skip'
+        });
+    });
+
+    // β1 bars
+    const yOffset = b0Sorted.length + 2;
+    const b1Sorted = [...bars.b1].sort((a, b) => (b.death - b.birth) - (a.death - a.birth)).slice(0, 15);
+    b1Sorted.forEach((bar, i) => {
+        traces.push({
+            type: 'scatter',
+            x: [bar.birth, bar.death],
+            y: [yOffset + i, yOffset + i],
+            mode: 'lines',
+            line: { color: '#10b981', width: 4 },
+            showlegend: i === 0,
+            name: 'β₁',
+            hoverinfo: 'skip'
+        });
+    });
+
+    // β2 bars
+    const yOffset2 = yOffset + b1Sorted.length + 2;
+    const b2Sorted = [...bars.b2].sort((a, b) => (b.death - b.birth) - (a.death - a.birth)).slice(0, 8);
+    b2Sorted.forEach((bar, i) => {
+        traces.push({
+            type: 'scatter',
+            x: [bar.birth, bar.death],
+            y: [yOffset2 + i, yOffset2 + i],
+            mode: 'lines',
+            line: { color: '#f59e0b', width: 4 },
+            showlegend: i === 0,
+            name: 'β₂',
+            hoverinfo: 'skip'
+        });
+    });
+
+    // Current ε marker
+    const totalY = yOffset2 + b2Sorted.length + 2;
+    traces.push({
+        type: 'scatter',
+        x: [state.epsilon, state.epsilon],
+        y: [-1, totalY],
+        mode: 'lines',
+        line: { color: '#f472b6', width: 2, dash: 'dash' },
+        showlegend: false,
+        hoverinfo: 'skip'
+    });
+
+    const layout = {
+        margin: { l: 40, r: 10, b: 40, t: 10 },
+        paper_bgcolor: '#0b1220',
+        plot_bgcolor: '#0b1220',
+        xaxis: {
+            title: { text: 'ε', font: { color: '#94a3b8' } },
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.1)',
+            zerolinecolor: 'rgba(148,163,184,0.2)'
+        },
+        yaxis: {
+            showticklabels: false,
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.1)',
+            zerolinecolor: 'rgba(148,163,184,0.2)'
+        },
+        legend: {
+            font: { color: '#e2e8f0' },
+            bgcolor: 'rgba(15,23,42,0.7)',
+            x: 0.02, y: 0.98
+        }
+    };
+    Plotly.react('plot-barcode', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: PERSISTENCE DIAGRAM
+// ═══════════════════════════════════════════════════════════════
+
+function renderPersistenceDiagram() {
+    if (!state.persistence) return;
+    const { bars } = state.persistence;
+    const traces = [];
+
+    const maxVal = 3;
+
+    // Diagonal
+    traces.push({
+        type: 'scatter',
+        x: [0, maxVal], y: [0, maxVal],
+        mode: 'lines',
+        line: { color: 'rgba(148,163,184,0.4)', width: 1, dash: 'dot' },
+        showlegend: false,
+        hoverinfo: 'skip'
+    });
+
+    const dims = [
+        { key: 'b0', color: '#3b82f6', name: 'H₀' },
+        { key: 'b1', color: '#10b981', name: 'H₁' },
+        { key: 'b2', color: '#f59e0b', name: 'H₂' },
+    ];
+
+    dims.forEach(({ key, color, name }) => {
+        const bs = bars[key];
+        traces.push({
+            type: 'scatter',
+            x: bs.map(b => b.birth),
+            y: bs.map(b => Math.min(b.death, maxVal)),
+            mode: 'markers',
+            marker: { size: 8, color, opacity: 0.75, line: { color: '#0b1220', width: 1 } },
+            name,
+            hovertemplate: `${name}: birth=%{x:.2f}, death=%{y:.2f}<extra></extra>`
+        });
+    });
+
+    const layout = {
+        margin: { l: 45, r: 10, b: 45, t: 10 },
+        paper_bgcolor: '#0b1220',
+        plot_bgcolor: '#0b1220',
+        xaxis: {
+            title: { text: 'Birth (ε)', font: { color: '#94a3b8' } },
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.1)',
+            range: [0, maxVal]
+        },
+        yaxis: {
+            title: { text: 'Death (ε)', font: { color: '#94a3b8' } },
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.1)',
+            range: [0, maxVal]
+        },
+        legend: {
+            font: { color: '#e2e8f0' },
+            bgcolor: 'rgba(15,23,42,0.7)',
+            x: 0.75, y: 0.15
+        }
+    };
+    Plotly.react('plot-persistence', traces, layout, { displayModeBar: false, responsive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: SIGNATURE BAR CHART
+// ═══════════════════════════════════════════════════════════════
+
+function renderSignature() {
+    if (!state.persistence) return;
+    const threshold = 0.25;
+    const sig = getPersistentSignature(state.persistence.bars, threshold);
+
+    const trace = {
+        type: 'bar',
+        x: ['β₀', 'β₁', 'β₂'],
+        y: sig,
+        marker: {
+            color: ['#3b82f6', '#10b981', '#f59e0b'],
+            line: { color: '#0b1220', width: 1 }
+        },
+        text: sig.map(v => v.toString()),
+        textposition: 'outside',
+        textfont: { color: '#e2e8f0', size: 14 },
+        hovertemplate: '%{x}: %{y}<extra></extra>'
+    };
+
+    const layout = {
+        margin: { l: 40, r: 10, b: 40, t: 30 },
+        paper_bgcolor: '#0b1220',
+        plot_bgcolor: '#0b1220',
+        title: {
+            text: `Persistente Betti-Zahlen (Threshold=${threshold})`,
+            font: { color: '#e2e8f0', size: 13 }
+        },
+        xaxis: {
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.05)'
+        },
+        yaxis: {
+            color: '#94a3b8',
+            gridcolor: 'rgba(148,163,184,0.1)',
+            dtick: 1
+        },
+        showlegend: false
+    };
+    Plotly.react('plot-signature', [trace], layout, { displayModeBar: false, responsive: true });
+
+    // Classification
+    const { match, distance } = classify(sig);
+    const resultEl = document.getElementById('classify-result');
+    const confidence = distance === 0 ? 'exakter Match' :
+                       distance === 1 ? 'sehr nah' :
+                       distance <= 2 ? 'ähnlich' : 'weit weg';
+    resultEl.innerHTML = `
+        <div>Persistente Signatur: <b>β = (${sig[0]}, ${sig[1]}, ${sig[2]})</b></div>
+        <div style="margin-top:8px;">Bester Match: <span class="match">${match.name}</span>
+             <span style="color:#94a3b8; font-size:0.9em;"> (β = (${match.betti.join(', ')}), ${confidence})</span></div>
+    `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: TAKENS EMBEDDING
+// ═══════════════════════════════════════════════════════════════
+
+function generateTimeSeries(kind, n = 800) {
+    const ts = [];
+    switch (kind) {
+        case 'sin':
+            for (let i = 0; i < n; i++) ts.push(Math.sin(i * 0.08) + randn() * 0.02);
+            break;
+        case 'doublesin':
+            for (let i = 0; i < n; i++) {
+                ts.push(Math.sin(i * 0.08) + 0.6 * Math.sin(i * 0.31) + randn() * 0.02);
+            }
+            break;
+        case 'lorenz': {
+            let x = 1, y = 1, z = 1;
+            const dt = 0.01;
+            for (let i = 0; i < n * 5; i++) {
+                const dx = 10 * (y - x);
+                const dy = x * (28 - z) - y;
+                const dz = x * y - (8 / 3) * z;
+                x += dx * dt; y += dy * dt; z += dz * dt;
+                if (i % 5 === 0) ts.push(x * 0.05);
+            }
+            break;
+        }
+        case 'noise':
+            for (let i = 0; i < n; i++) ts.push(randn() * 0.5);
+            break;
+    }
+    return ts;
+}
+
+function renderTimeSeries(ts) {
+    const trace = {
+        type: 'scatter',
+        mode: 'lines',
+        x: ts.map((_, i) => i),
+        y: ts,
+        line: { color: '#60a5fa', width: 1.2 },
+        hoverinfo: 'skip'
+    };
+    const layout = {
+        margin: { l: 40, r: 10, b: 40, t: 10 },
+        paper_bgcolor: '#0b1220',
+        plot_bgcolor: '#0b1220',
+        xaxis: {
+            title: { text: 't', font: { color: '#94a3b8' } },
+            color: '#94a3b8', gridcolor: 'rgba(148,163,184,0.1)'
+        },
+        yaxis: {
+            title: { text: 'x(t)', font: { color: '#94a3b8' } },
+            color: '#94a3b8', gridcolor: 'rgba(148,163,184,0.1)'
+        }
+    };
+    Plotly.react('plot-timeseries', [trace], layout, { displayModeBar: false, responsive: true });
+}
+
+function renderTakens(ts, tau) {
+    const m = 3;
+    const pts = [];
+    for (let i = 0; i < ts.length - (m - 1) * tau; i++) {
+        pts.push([ts[i], ts[i + tau], ts[i + 2 * tau]]);
+    }
+    const trace = {
+        type: 'scatter3d',
+        mode: 'lines+markers',
+        x: pts.map(p => p[0]),
+        y: pts.map(p => p[1]),
+        z: pts.map(p => p[2]),
+        line: { color: pts.map((_, i) => i), colorscale: 'Viridis', width: 2 },
+        marker: { size: 1.5, color: pts.map((_, i) => i), colorscale: 'Viridis', opacity: 0.7 },
+        hoverinfo: 'skip'
+    };
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        paper_bgcolor: '#0b1220',
+        scene: {
+            xaxis: { title: 'x(t)', showgrid: false, backgroundcolor: '#0b1220', color: '#94a3b8' },
+            yaxis: { title: `x(t+${tau})`, showgrid: false, backgroundcolor: '#0b1220', color: '#94a3b8' },
+            zaxis: { title: `x(t+${2 * tau})`, showgrid: false, backgroundcolor: '#0b1220', color: '#94a3b8' },
+            bgcolor: '#0b1220',
+            camera: { eye: { x: 1.6, y: 1.6, z: 1.2 } }
+        }
+    };
+    Plotly.react('plot-takens', [trace], layout, { displayModeBar: false, responsive: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: FIBER BUNDLE ILLUSTRATION
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER: FIBER BUNDLE — Verzerrte 3D-Räume pro (Token, Layer)
+// mit Attraktorstrukturen darin (Torus / Lorenz / Spirale / Figur-8)
+// Sanft driftende Kamera macht den 3D-Charakter sichtbar.
+// ═══════════════════════════════════════════════════════════════
+
+function renderBundle() {
+    // ─────────── DYNAMISCHE CONTROLS (einmalig anlegen) ───────────
+    const plotEl = document.getElementById('plot-bundle');
+    let ctrlBar = document.getElementById('bundle-controls');
+    if (!ctrlBar) {
+        ctrlBar = document.createElement('div');
+        ctrlBar.id = 'bundle-controls';
+        ctrlBar.className = 'controls';
+        ctrlBar.style.marginBottom = '10px';
+        ctrlBar.innerHTML = `
+            <label><input type="checkbox" id="bc-ffn"> FFN-Wellen (radiale Krümmung)</label>
+            <label><input type="checkbox" id="bc-attn"> Attn-Wellen (cross-token Kopplung)</label>
+            <label><input type="checkbox" id="bc-yshift"> Getrennte y-Positionen pro Token</label>
+            <label><input type="checkbox" id="bc-inactive" checked> Ausgegraute Fasern zeigen</label>
+            <label><input type="checkbox" id="bc-situs"> Situs-Keime an Faser-Positionen andeuten</label>
+            <label>Wellen-Stärke:
+                <input type="range" id="bc-wave-amp" min="0" max="1" step="0.05" value="0.35">
+                <span class="val" id="bc-wave-amp-val">0.35</span>
+            </label>
+        `;
+        plotEl.parentNode.insertBefore(ctrlBar, plotEl);
+        // Rerender bei Änderung
+        ctrlBar.querySelectorAll('input').forEach(inp => {
+            inp.addEventListener('change', () => renderBundle());
+            if (inp.type === 'range') inp.addEventListener('input', (e) => {
+                document.getElementById('bc-wave-amp-val').textContent = parseFloat(e.target.value).toFixed(2);
+                renderBundle();
+            });
+        });
+    }
+    const opt = {
+        ffn:      document.getElementById('bc-ffn').checked,
+        attn:     document.getElementById('bc-attn').checked,
+        yshift:   document.getElementById('bc-yshift').checked,
+        inactive: document.getElementById('bc-inactive').checked,
+        situs:    document.getElementById('bc-situs').checked,
+        waveAmp:  parseFloat(document.getElementById('bc-wave-amp').value)
+    };
+
+    // ─────────── TOKENS: aktive + inaktive ("paris" ist abseits) ───────────
+    const tokens = ['die', 'hauptstadt', 'von', 'frankreich', 'ist', 'paris'];
+    const numLayers = 6;
+    const numTokens = tokens.length;
+    // Nur 4 aktive: "hauptstadt","frankreich","ist" sind die "Keime" die man beobachtet.
+    // "die","von" sind inaktiv (existieren im Situs, aber wir sehen nur ausgegraut).
+    // "paris" ist der eigentlich interessante Punkt der räumlich WOANDERS liegt.
+    const activeIdx    = new Set([1, 3, 4]);
+    const inactiveIdx  = new Set([0, 2]);
+    const parisIdx     = 5; // ausgegraut UND räumlich versetzt
+
+    // Seeded RNG
+    let _seed = 42;
+    function rand() { _seed = (_seed * 9301 + 49297) % 233280; return _seed / 233280; }
+    function randRange(a, b) { return a + rand() * (b - a); }
+    function randChoice(arr) { return arr[Math.floor(rand() * arr.length)]; }
+
+    const tokenColors = ['#f472b6', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#f87171'];
+    const attractorPalette = ['#22d3ee', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#c084fc'];
+    const repellerColor = '#ef4444';
+    const inactiveColor = 'rgba(120,120,140,0.35)';
+    const parisColor    = 'rgba(160,160,180,0.55)';
+
+    const tokenSpacing = 4.5;
+    const layerSpacing = 4.2;
+    const cubeSize = 1.5;
+
+    // ─────────── Basis-Position eines Tokens (mit optionalem y-Shift und paris-Offset) ───────────
+    // Das ist der Kern: Fasern liegen NICHT auf einer geraden Linie.
+    // "paris" liegt weit versetzt (z + Extra-x), signalisiert räumliche Abgesetztheit.
+    // Bei yshift bekommt jedes Token noch eine kleine eigene y-Höhe → Positionen als
+    // Teilmenge eines größeren Situs erkennbar.
+    function tokenBase(tokenIdx) {
+        let cx = (tokenIdx - (numTokens - 1) / 2) * tokenSpacing;
+        let cy0 = 0;
+        let cz0 = 0;
+        // Getrennte y-Positionen: deterministisch (nicht random), damit klar wird
+        // dass jede Faser "ihren eigenen Keim" hat.
+        if (opt.yshift) {
+            cy0 = 0.9 * Math.sin(tokenIdx * 1.3) + 0.4 * Math.cos(tokenIdx * 2.7);
+        }
+        // paris: räumlich abseits → nach hinten und rechts
+        if (tokenIdx === parisIdx) {
+            cx += 2.2;
+            cz0 += 3.5;
+            cy0 += 1.6;
+        }
+        return { cx, cy0, cz0 };
+    }
+
+    // ─────────── SITUS: globales Wellenfeld über dem Totalraum ───────────
+    // Das ist die "tiefere innere Struktur". Deterministisch, aber durch
+    // Überlagerung inkommensurabler Frequenzen an unterschiedlichen Positionen
+    // scheinbar random. Jede Faser sieht nur ihren Keim davon.
+    // Wichtig: Positionen liegen nicht auf Gittern → gleiche Formel, aber
+    // total unterschiedliche lokale Auswertung. → wirkt random obwohl es einer
+    // globalen Wellenstruktur folgt.
+    function situsPsi(X, Y, Z, tokenIdx, layerIdx) {
+        // FFN-Anteil: radial-isotrope Krümmung, hochfrequent
+        let ffn = 0;
+        if (opt.ffn) {
+            ffn += Math.sin(1.7 * X + 0.9 * layerIdx) * Math.cos(1.3 * Y);
+            ffn += 0.6 * Math.sin(2.3 * Z - 0.7 * layerIdx);
+            ffn += 0.4 * Math.sin(2.9 * X + 1.7 * Y + 1.1 * Z);
+        }
+        // Attn-Anteil: cross-token, anisotrop (koppelt entlang Basis)
+        let attn = 0;
+        if (opt.attn) {
+            attn += Math.sin(0.8 * X + 0.5 * tokenIdx * 1.7 + 0.3 * layerIdx);
+            attn += 0.7 * Math.cos(1.1 * Z + tokenIdx * 0.9);
+            // "phi-artige" inkommensurable Frequenz → nie periodisch → wirkt random
+            attn += 0.5 * Math.sin(1.618 * (X + Z) + 0.4 * tokenIdx);
+        }
+        return opt.waveAmp * (ffn * 0.35 + attn * 0.35);
+    }
+
+    // ─────────── Verzerrungsfeld pro Faser (bestehendes Feld + Situs-Beitrag) ───────────
+    function distortLocal(lx, ly, lz, tokenIdx, layerIdx) {
+        const strength = 0.04 + layerIdx * 0.12;
+        const phase = tokenIdx * 1.7 + layerIdx * 0.9;
+        const w1 = Math.sin(lx * 2.1 + phase) * Math.cos(ly * 1.9 + phase * 0.7);
+        const w2 = Math.sin(ly * 2.3 + phase * 1.3) * Math.cos(lz * 1.7 + phase);
+        const w3 = Math.sin(lz * 2.0 + phase * 0.5) * Math.cos(lx * 2.2 + phase * 1.1);
+        // Weltposition zum Auswerten des SITUS
+        const base = tokenBase(tokenIdx);
+        const Xw = base.cx + lx * cubeSize;
+        const Yw = layerIdx * layerSpacing + base.cy0 + ly * cubeSize;
+        const Zw = base.cz0 + lz * cubeSize;
+        const psi = situsPsi(Xw, Yw, Zw, tokenIdx, layerIdx);
+        return {
+            x: lx + strength * w2 * 0.6 + psi * 0.15,
+            y: ly + strength * w3 * 0.6 + psi * 0.12,
+            z: lz + strength * w1 * 0.6 + psi * 0.15
+        };
+    }
+
+    function worldPos(lx, ly, lz, tokenIdx, layerIdx) {
+        const d = distortLocal(lx, ly, lz, tokenIdx, layerIdx);
+        const base = tokenBase(tokenIdx);
+        return {
+            x: base.cx + d.x * cubeSize,
+            y: layerIdx * layerSpacing + base.cy0 + d.y * cubeSize,
+            z: base.cz0 + d.z * cubeSize
+        };
+    }
+
+    // ─────────── Attraktor-Setup (unverändert) ───────────
+    const attractorTypes = ['torus', 'lorenz', 'spiral', 'fig8', 'point', 'limit_cycle'];
+    const attractorDescriptions = {
+        torus: 'Torus-Attraktor — Trajektorien wickeln sich auf einem Donut auf, quasi-periodisch',
+        lorenz: 'Lorenz-artiger seltsamer Attraktor — chaotisch, zwei Schleifen',
+        spiral: 'Spiral-Attraktor — Partikel spiralen in ein Zentrum',
+        fig8: 'Figur-8 / Wedge S¹∨S¹ — zwei verbundene Zyklen',
+        point: 'Punkt-Attraktor — fixer Punkt',
+        limit_cycle: 'Limit-Zyklus — stabiler geschlossener Orbit'
+    };
+
+    function generateCellAttractors(tokenIdx, layerIdx) {
+        const numAttr = 1 + Math.floor(rand() * 2.5);
+        const list = [];
+        for (let k = 0; k < numAttr; k++) {
+            const type = randChoice(attractorTypes);
+            const localCenter = [randRange(-0.55, 0.55), randRange(-0.55, 0.55), randRange(-0.55, 0.55)];
+            const isRepeller = rand() < 0.25;
+            const scale = randRange(0.28, 0.5);
+            const strength = randRange(0.6, 1.4);
+            const rotation = randRange(0, Math.PI * 2);
+            const axis = [randRange(-1, 1), randRange(-1, 1), randRange(-1, 1)];
+            const alen = Math.sqrt(axis[0]**2 + axis[1]**2 + axis[2]**2) + 1e-6;
+            axis[0] /= alen; axis[1] /= alen; axis[2] /= alen;
+            list.push({ type, localCenter, scale, isRepeller, strength, rotation, axis,
+                color: isRepeller ? repellerColor : randChoice(attractorPalette) });
+        }
+        return list;
+    }
+
+    const cellAttractors = [];
+    for (let t = 0; t < numTokens; t++) {
+        cellAttractors[t] = [];
+        for (let l = 0; l < numLayers; l++) {
+            cellAttractors[t][l] = generateCellAttractors(t, l);
+        }
+    }
+
+    // ─────────── Attraktor-Trajektorien (unverändert) ───────────
+    function generateAttractorTrajectory(attr) {
+        const pts = []; const N = 90; const s = attr.scale;
+        const rot = attr.rotation; const cosR = Math.cos(rot), sinR = Math.sin(rot);
+        switch (attr.type) {
+            case 'torus': {
+                const R = 0.6 * s, r = 0.25 * s;
+                for (let i = 0; i < N; i++) {
+                    const u = (i / N) * Math.PI * 2 * 3; const v = u * 0.31;
+                    let x = (R + r * Math.cos(v)) * Math.cos(u);
+                    let y = (R + r * Math.cos(v)) * Math.sin(u);
+                    let z = r * Math.sin(v);
+                    pts.push([cosR * x - sinR * y, sinR * x + cosR * y, z]);
+                } break;
+            }
+            case 'lorenz': {
+                let x = 0.1, y = 0.0, z = 0.1; const dt = 0.008;
+                for (let i = 0; i < N; i++) {
+                    for (let k = 0; k < 4; k++) {
+                        const dx = 10 * (y - x), dy = x * (28 - z) - y, dz = x * y - (8/3) * z;
+                        x += dx * dt; y += dy * dt; z += dz * dt;
+                    }
+                    pts.push([x * 0.035 * s, y * 0.035 * s, (z - 25) * 0.035 * s]);
+                } break;
+            }
+            case 'spiral': {
+                for (let i = 0; i < N; i++) {
+                    const t = i / N; const r = 0.7 * s * (attr.isRepeller ? t : (1 - t));
+                    const a = t * Math.PI * 6;
+                    pts.push([Math.cos(a) * r, Math.sin(a) * r, (t - 0.5) * 0.4 * s]);
+                } break;
+            }
+            case 'fig8': {
+                for (let i = 0; i < N; i++) {
+                    const t = (i / N) * Math.PI * 2;
+                    pts.push([Math.sin(2 * t) * 0.6 * s, Math.sin(t) * 0.6 * s, Math.cos(t) * 0.25 * s]);
+                } break;
+            }
+            case 'point': {
+                for (let i = 0; i < N; i++) {
+                    const t = i / N; const r = 0.5 * s * (attr.isRepeller ? t : Math.pow(1 - t, 1.5));
+                    const a = t * Math.PI * 10;
+                    pts.push([Math.cos(a) * r, Math.sin(a) * r, Math.cos(a * 0.5) * r * 0.3]);
+                } break;
+            }
+            case 'limit_cycle': {
+                for (let i = 0; i < N; i++) {
+                    const t = (i / N) * Math.PI * 2; const r = 0.55 * s;
+                    pts.push([Math.cos(t) * r, Math.sin(t) * r, Math.sin(t * 2) * 0.15 * s]);
+                } break;
+            }
+        }
+        return pts.map(p => [p[0] + attr.localCenter[0], p[1] + attr.localCenter[1], p[2] + attr.localCenter[2]]);
+    }
+
+    // ─────────── Feld (unverändert bis auf Situs-Zusatz) ───────────
+    function fieldAt(lx, ly, lz, cellAttrs, tokenIdx, layerIdx) {
+        let fx = 0, fy = 0, fz = 0;
+        for (const attr of cellAttrs) {
+            const dx = attr.localCenter[0] - lx;
+            const dy = attr.localCenter[1] - ly;
+            const dz = attr.localCenter[2] - lz;
+            const r2 = dx * dx + dy * dy + dz * dz + 0.04;
+            const r = Math.sqrt(r2);
+            const sign = attr.isRepeller ? -1 : 1;
+            const radialMag = (sign * attr.strength) / r2;
+            let rfx = (dx / r) * radialMag, rfy = (dy / r) * radialMag, rfz = (dz / r) * radialMag;
+            let tfx = 0, tfy = 0, tfz = 0;
+            if (!attr.isRepeller) {
+                if (attr.type === 'torus' || attr.type === 'limit_cycle') {
+                    const swirlMag = attr.strength * 1.8 / (r2 + 0.1);
+                    const px = -dx, py = -dy, pz = -dz;
+                    tfx = (py * attr.axis[2] - pz * attr.axis[1]) * swirlMag;
+                    tfy = (pz * attr.axis[0] - px * attr.axis[2]) * swirlMag;
+                    tfz = (px * attr.axis[1] - py * attr.axis[0]) * swirlMag;
+                    if (attr.type === 'torus') {
+                        rfx *= 0.3; rfy *= 0.3; rfz *= 0.3;
+                        const ringR = 0.6 * attr.scale;
+                        const pull = (r - ringR) * 2.5;
+                        rfx += (dx / r) * pull * attr.strength * 0.4;
+                        rfy += (dy / r) * pull * attr.strength * 0.4;
+                        rfz += (dz / r) * pull * attr.strength * 0.4;
+                    }
+                } else if (attr.type === 'lorenz') {
+                    const scale = 0.04;
+                    const nx = -dx / scale, ny = -dy / scale, nz = -dz / scale + 25;
+                    const lFx = 10 * (ny - nx), lFy = nx * (28 - nz) - ny, lFz = nx * ny - (8/3) * nz;
+                    tfx = lFx * scale * attr.strength * 0.4;
+                    tfy = lFy * scale * attr.strength * 0.4;
+                    tfz = lFz * scale * attr.strength * 0.4;
+                    rfx *= 0.4; rfy *= 0.4; rfz *= 0.4;
+                } else if (attr.type === 'fig8') {
+                    const swirlMag = attr.strength * 1.0 / (r2 + 0.1);
+                    const px = -dx, py = -dy, pz = -dz;
+                    tfx = (py * attr.axis[2] - pz * attr.axis[1]) * swirlMag;
+                    tfy = (pz * attr.axis[0] - px * attr.axis[2]) * swirlMag;
+                    tfz = (px * attr.axis[1] - py * attr.axis[0]) * swirlMag;
+                }
+            }
+            fx += rfx + tfx; fy += rfy + tfy; fz += rfz + tfz;
+        }
+        // Situs-Beitrag zum Vektorfeld (numerischer Gradient von Ψ)
+        if ((opt.ffn || opt.attn) && tokenIdx !== undefined) {
+            const base = tokenBase(tokenIdx);
+            const X0 = base.cx + lx * cubeSize;
+            const Y0 = layerIdx * layerSpacing + base.cy0 + ly * cubeSize;
+            const Z0 = base.cz0 + lz * cubeSize;
+            const h = 0.15;
+            const p0  = situsPsi(X0, Y0, Z0, tokenIdx, layerIdx);
+            const gx = (situsPsi(X0+h, Y0, Z0, tokenIdx, layerIdx) - p0) / h;
+            const gy = (situsPsi(X0, Y0+h, Z0, tokenIdx, layerIdx) - p0) / h;
+            const gz = (situsPsi(X0, Y0, Z0+h, tokenIdx, layerIdx) - p0) / h;
+            fx += gx * 0.8; fy += gy * 0.8; fz += gz * 0.8;
+        }
+        return [fx, fy, fz];
+    }
+
+    // ─────────── Token-Trajektorie (RK4, unverändert außer fieldAt-Signatur) ───────────
+    function simulateTokenPath(tokenIdx, seedOffset) {
+        const startSeed = tokenIdx * 137 + seedOffset;
+        const sr = (n) => { const x = Math.sin(startSeed + n * 47) * 10000; return (x - Math.floor(x)) * 2 - 1; };
+        const path = [];
+        const stepsPerLayer = 140, dt = 0.022, friction = 0.985;
+        let lx = sr(1) * 0.5, ly = sr(2) * 0.5, lz = sr(3) * 0.5;
+        let vx = sr(4) * 0.6, vy = sr(5) * 0.6, vz = sr(6) * 0.6;
+
+        function dominantAttractor(lx, ly, lz, cellAttrs) {
+            let best = null, bestForce = 0;
+            for (const attr of cellAttrs) {
+                const dx = attr.localCenter[0] - lx, dy = attr.localCenter[1] - ly, dz = attr.localCenter[2] - lz;
+                const r2 = dx*dx + dy*dy + dz*dz + 0.05;
+                const f = attr.strength / r2;
+                if (f > bestForce) { bestForce = f; best = attr; }
+            }
+            return best;
+        }
+        function rk4Step(lx, ly, lz, vx, vy, vz, cellAttrs, layerIdx, dt) {
+            const damping = (1 - friction) / dt;
+            const deriv = (x, y, z, vx, vy, vz) => {
+                const [fx, fy, fz] = fieldAt(x, y, z, cellAttrs, tokenIdx, layerIdx);
+                return {
+                    dx: vx, dy: vy, dz: vz,
+                    dvx: fx - damping * vx,
+                    dvy: fy - damping * vy,
+                    dvz: fz - damping * vz
+                };
+            };
+            const k1 = deriv(lx, ly, lz, vx, vy, vz);
+            const k2 = deriv(
+                lx + 0.5 * dt * k1.dx, ly + 0.5 * dt * k1.dy, lz + 0.5 * dt * k1.dz,
+                vx + 0.5 * dt * k1.dvx, vy + 0.5 * dt * k1.dvy, vz + 0.5 * dt * k1.dvz
+            );
+            const k3 = deriv(
+                lx + 0.5 * dt * k2.dx, ly + 0.5 * dt * k2.dy, lz + 0.5 * dt * k2.dz,
+                vx + 0.5 * dt * k2.dvx, vy + 0.5 * dt * k2.dvy, vz + 0.5 * dt * k2.dvz
+            );
+            const k4 = deriv(
+                lx + dt * k3.dx, ly + dt * k3.dy, lz + dt * k3.dz,
+                vx + dt * k3.dvx, vy + dt * k3.dvy, vz + dt * k3.dvz
+            );
+            return {
+                lx: lx + (dt / 6) * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx),
+                ly: ly + (dt / 6) * (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy),
+                lz: lz + (dt / 6) * (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz),
+                vx: vx + (dt / 6) * (k1.dvx + 2 * k2.dvx + 2 * k3.dvx + k4.dvx),
+                vy: vy + (dt / 6) * (k1.dvy + 2 * k2.dvy + 2 * k3.dvy + k4.dvy),
+                vz: vz + (dt / 6) * (k1.dvz + 2 * k2.dvz + 2 * k3.dvz + k4.dvz)
+            };
+        }
+
+        function wallForce(pos) {
+            const wall = 0.9;
+            const k = 4.0;
+            if (pos > wall)  return -k * (pos - wall) ** 2;
+            if (pos < -wall) return  k * (-wall - pos) ** 2;
+            return 0;
+        }
+
+        for (let l = 0; l < numLayers; l++) {
+            const cellAttrs = cellAttractors[tokenIdx][l];
+            for (let s = 0; s < stepsPerLayer; s++) {
+                const next = rk4Step(lx, ly, lz, vx, vy, vz, cellAttrs, l, dt);
+                lx = next.lx; ly = next.ly; lz = next.lz;
+                vx = next.vx; vy = next.vy; vz = next.vz;
+
+                vx += wallForce(lx) * dt;
+                vy += wallForce(ly) * dt;
+                vz += wallForce(lz) * dt;
+
+                const vmag = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                const vmax = 3.5;
+                if (vmag > vmax) {
+                    const soft = vmax / vmag;
+                    vx *= soft; vy *= soft; vz *= soft;
+                }
+                if (Math.abs(lx) > 0.98) { lx = Math.sign(lx) * 0.98; vx *= -0.5; }
+                if (Math.abs(ly) > 0.98) { ly = Math.sign(ly) * 0.98; vy *= -0.5; }
+                if (Math.abs(lz) > 0.98) { lz = Math.sign(lz) * 0.98; vz *= -0.5; }
+
+                const w = worldPos(lx, ly, lz, tokenIdx, l);
+                const dom = dominantAttractor(lx, ly, lz, cellAttrs);
+                const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+                path.push({ layer: l, world: w, dominantAttr: dom, speed });
+            }
+            vx *= 0.95; vy *= 0.95; vz *= 0.95;
+        }
+        return path;
+    }
+
+    // ─────────── Catmull-Rom Spline (unverändert) ───────────
+    function smoothPath(pathPoints, subdivisions = 6) {
+        if (pathPoints.length < 2) return pathPoints;
+        function catmullRom(p0, p1, p2, p3, t) {
+            const t2 = t * t, t3 = t2 * t;
+            return {
+                x: 0.5 * ((2*p1.x) + (-p0.x+p2.x)*t + (2*p0.x-5*p1.x+4*p2.x-p3.x)*t2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+                y: 0.5 * ((2*p1.y) + (-p0.y+p2.y)*t + (2*p0.y-5*p1.y+4*p2.y-p3.y)*t2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*t3),
+                z: 0.5 * ((2*p1.z) + (-p0.z+p2.z)*t + (2*p0.z-5*p1.z+4*p2.z-p3.z)*t2 + (-p0.z+3*p1.z-3*p2.z+p3.z)*t3)
+            };
+        }
+        const smoothed = [];
+        const n = pathPoints.length;
+        for (let i = 0; i < n - 1; i++) {
+            const p0 = pathPoints[Math.max(0, i - 1)].world;
+            const p1 = pathPoints[i].world;
+            const p2 = pathPoints[i + 1].world;
+            const p3 = pathPoints[Math.min(n - 1, i + 2)].world;
+            for (let j = 0; j < subdivisions; j++) {
+                const t = j / subdivisions;
+                const interp = catmullRom(p0, p1, p2, p3, t);
+                const src = t < 0.5 ? pathPoints[i] : pathPoints[i + 1];
+                smoothed.push({ world: interp, layer: src.layer, dominantAttr: src.dominantAttr, speed: src.speed });
+            }
+        }
+        smoothed.push(pathPoints[n - 1]);
+        return smoothed;
+    }
+
+    // ─────────── Basin-Feldlinien (jetzt mit Situs-Beitrag über fieldAt) ───────────
+    function generateBasinLines(tokenIdx, layerIdx) {
+        const cellAttrs = cellAttractors[tokenIdx][layerIdx];
+        if (cellAttrs.length === 0) return [];
+        const lines = [];
+        const numLines = 10, stepsPerLine = 35, dt = 0.025;
+        for (let k = 0; k < numLines; k++) {
+            let lx = randRange(-0.88, 0.88);
+            let ly = randRange(-0.88, 0.88);
+            let lz = randRange(-0.88, 0.88);
+            const pts = [];
+            for (let s = 0; s < stepsPerLine; s++) {
+                const [fx, fy, fz] = fieldAt(lx, ly, lz, cellAttrs, tokenIdx, layerIdx);
+                const mag = Math.sqrt(fx*fx + fy*fy + fz*fz) + 0.01;
+                lx += (fx / mag) * dt * 3;
+                ly += (fy / mag) * dt * 3;
+                lz += (fz / mag) * dt * 3;
+                if (Math.abs(lx) > 0.95 || Math.abs(ly) > 0.95 || Math.abs(lz) > 0.95) break;
+                pts.push(worldPos(lx, ly, lz, tokenIdx, layerIdx));
+            }
+            if (pts.length > 2) lines.push(pts);
+        }
+        return lines;
+    }
+
+    // ─────────── Wireframe (unverändert, nutzt aber worldPos das jetzt tokenBase kennt) ───────────
+    function buildDistortedCubeLines(tokenIdx, layerIdx) {
+        const gridN = 4;
+        const xs = [], ys = [], zs = [];
+        const pushLine = (linePts) => {
+            for (const p of linePts) { xs.push(p.x); ys.push(p.y); zs.push(p.z); }
+            xs.push(null); ys.push(null); zs.push(null);
+        };
+        for (const zSign of [-1, 1]) {
+            for (let i = 0; i <= gridN; i++) {
+                const t = -1 + (2 * i) / gridN;
+                const line1 = [], line2 = [];
+                for (let j = 0; j <= gridN; j++) {
+                    const s = -1 + (2 * j) / gridN;
+                    line1.push(worldPos(s, t, zSign, tokenIdx, layerIdx));
+                    line2.push(worldPos(t, s, zSign, tokenIdx, layerIdx));
+                }
+                pushLine(line1); pushLine(line2);
+            }
+        }
+        for (const ySign of [-1, 1]) {
+            for (let i = 0; i <= gridN; i++) {
+                const t = -1 + (2 * i) / gridN;
+                const line = [];
+                for (let j = 0; j <= gridN; j++) {
+                    const s = -1 + (2 * j) / gridN;
+                    line.push(worldPos(t, ySign, s, tokenIdx, layerIdx));
+                }
+                pushLine(line);
+            }
+        }
+        for (const xSign of [-1, 1]) {
+            for (let i = 0; i <= gridN; i++) {
+                const t = -1 + (2 * i) / gridN;
+                const line = [];
+                for (let j = 0; j <= gridN; j++) {
+                    const s = -1 + (2 * j) / gridN;
+                    line.push(worldPos(xSign, t, s, tokenIdx, layerIdx));
+                }
+                pushLine(line);
+            }
+        }
+        return { xs, ys, zs };
+    }
+
+    // ─────────── NEU: Situs-Keim-Visualisierung pro Faser ───────────
+    // Zeichnet innerhalb jedes Faserwürfels ein paar Iso-Punkte des lokalen
+    // Ψ-Felds, damit man SIEHT dass jede Faser einen Keim eines größeren
+    // globalen Wellenfelds trägt. Farbe ~ Vorzeichen von Ψ.
+    function buildSitusGerm(tokenIdx, layerIdx, isInactive) {
+        const xs = [], ys = [], zs = [], cs = [];
+        const N = 6;
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+                for (let k = 0; k < N; k++) {
+                    const lx = -0.85 + 1.7 * (i / (N-1));
+                    const ly = -0.85 + 1.7 * (j / (N-1));
+                    const lz = -0.85 + 1.7 * (k / (N-1));
+                    const base = tokenBase(tokenIdx);
+                    const Xw = base.cx + lx * cubeSize;
+                    const Yw = layerIdx * layerSpacing + base.cy0 + ly * cubeSize;
+                    const Zw = base.cz0 + lz * cubeSize;
+                    const psi = situsPsi(Xw, Yw, Zw, tokenIdx, layerIdx);
+                    // Nur "Kämme" der Welle zeigen (|psi| über Schwelle)
+                    if (Math.abs(psi) < 0.08) continue;
+                    const w = worldPos(lx, ly, lz, tokenIdx, layerIdx);
+                    xs.push(w.x); ys.push(w.y); zs.push(w.z);
+                    cs.push(psi);
+                }
+            }
+        }
+        return { xs, ys, zs, cs };
+    }
+
+    // ─────────── ZUSAMMENBAU ───────────
+    const traces = [];
+
+    // Alle Fasern (aktive + inaktive + paris) rendern
+    for (let t = 0; t < numTokens; t++) {
+        const isActive   = activeIdx.has(t);
+        const isInactive = inactiveIdx.has(t);
+        const isParis    = (t === parisIdx);
+        // Falls Anzeige inaktiver Fasern aus → skip
+        if (!isActive && !opt.inactive) continue;
+
+        for (let l = 0; l < numLayers; l++) {
+            const wire = buildDistortedCubeLines(t, l);
+            const wireColor = isActive
+                ? 'rgba(148,163,184,0.32)'
+                : (isParis ? 'rgba(180,180,200,0.22)' : 'rgba(120,120,140,0.18)');
+            const wireOpacity = isActive ? (0.5 + l * 0.05) : 0.35;
+
+            traces.push({
+                type: 'scatter3d', mode: 'lines',
+                x: wire.xs, y: wire.ys, z: wire.zs,
+                line: { color: wireColor, width: 1 },
+                opacity: wireOpacity,
+                hoverinfo: 'text',
+                hovertext: `${isActive ? 'AKTIVE' : (isParis ? 'PARIS (räumlich abgesetzt)' : 'INAKTIVE')} Faser<br>Token "${tokens[t]}", Layer ${l}<br>${isActive ? cellAttractors[t][l].length + ' Attraktor(en)' : 'nur Keim des Situs sichtbar'}`,
+                showlegend: false
+            });
+
+            // Situs-Keim (optional): zeigt die globale Wellenstruktur an DIESER Position
+            if (opt.situs && (opt.ffn || opt.attn)) {
+                const germ = buildSitusGerm(t, l, !isActive);
+                if (germ.xs.length > 0) {
+                    traces.push({
+                        type: 'scatter3d', mode: 'markers',
+                        x: germ.xs, y: germ.ys, z: germ.zs,
+                        marker: {
+                            size: isActive ? 2.4 : 1.6,
+                            color: germ.cs,
+                            colorscale: [[0,'#22d3ee'],[0.5,'#0b1220'],[1,'#f472b6']],
+                            cmin: -1, cmax: 1,
+                            opacity: isActive ? 0.85 : 0.35,
+                            line: { width: 0 }
+                        },
+                        hoverinfo: 'text',
+                        hovertext: `Situs-Keim Ψ an Token "${tokens[t]}", Layer ${l}<br>${opt.ffn && opt.attn ? 'FFN + Attn' : opt.ffn ? 'nur FFN' : 'nur Attn'}<br>Diese Kämme sind lokal random-artig, gehören aber zu einem globalen Feld`,
+                        showlegend: false
+                    });
+                }
+            }
+
+            // Aktive Fasern: volle Attraktor-Darstellung
+            if (isActive) {
+                const basins = generateBasinLines(t, l);
+                const bxs = [], bys = [], bzs = [];
+                for (const line of basins) {
+                    for (const p of line) { bxs.push(p.x); bys.push(p.y); bzs.push(p.z); }
+                    bxs.push(null); bys.push(null); bzs.push(null);
+                }
+                if (bxs.length > 0) {
+                    traces.push({
+                        type: 'scatter3d', mode: 'lines',
+                        x: bxs, y: bys, z: bzs,
+                        line: { color: 'rgba(100,200,255,0.22)', width: 1 },
+                        hoverinfo: 'text',
+                        hovertext: `Bassin-Feldlinien · "${tokens[t]}" · Layer ${l}<br>Vektorfeld inkl. Situs-Beitrag (FFN/Attn)`,
+                        showlegend: false
+                    });
+                }
+                const attrs = cellAttractors[t][l];
+                for (const attr of attrs) {
+                    const pts = generateAttractorTrajectory(attr);
+                    const wxs = [], wys = [], wzs = [];
+                    for (const p of pts) {
+                        const w = worldPos(p[0], p[1], p[2], t, l);
+                        wxs.push(w.x); wys.push(w.y); wzs.push(w.z);
+                    }
+                    const attrLabel = attr.isRepeller ? 'REPELLER' : 'ATTRAKTOR';
+                    traces.push({
+                        type: 'scatter3d', mode: 'lines',
+                        x: wxs, y: wys, z: wzs,
+                        line: { color: attr.color, width: 2.8 },
+                        opacity: 0.92,
+                        hoverinfo: 'text',
+                        hovertext: `${attrLabel}: ${attr.type}<br>${attractorDescriptions[attr.type]}<br>"${tokens[t]}" · Layer ${l}`,
+                        showlegend: false
+                    });
+                    const centerW = worldPos(attr.localCenter[0], attr.localCenter[1], attr.localCenter[2], t, l);
+                    traces.push({
+                        type: 'scatter3d', mode: 'markers',
+                        x: [centerW.x], y: [centerW.y], z: [centerW.z],
+                        marker: {
+                            size: attr.isRepeller ? 8 : 6,
+                            color: attr.color,
+                            symbol: attr.isRepeller ? 'diamond' : 'circle',
+                            line: { color: '#0b1220', width: 1 }
+                        },
+                        hovertext: `Zentrum: ${attrLabel} (${attr.type})<br>"${tokens[t]}" · Layer ${l}`,
+                        hoverinfo: 'text',
+                        showlegend: false
+                    });
+                }
+            }
+        }
+    }
+
+    // ─────────── TOKEN-TRAJEKTORIEN nur für aktive ───────────
+    const allPaths = {};
+    for (const t of activeIdx) allPaths[t] = simulateTokenPath(t, t * 13);
+
+    // Nicht-Fokus aktive Trajektorien
+    const focusTokenIdx = 1; // "hauptstadt" als Fokus der AKTIVEN (paris ist der ausgegraute Endpunkt woanders)
+    for (const t of activeIdx) {
+        if (t === focusTokenIdx) continue;
+        const path = smoothPath(allPaths[t], 5);
+        const color = tokenColors[t];
+        const xs = path.map(p => p.world.x);
+        const ys = path.map(p => p.world.y);
+        const zs = path.map(p => p.world.z);
+        traces.push({
+            type: 'scatter3d', mode: 'lines',
+            x: xs, y: ys, z: zs,
+            line: { color, width: 3, shape: 'spline' },
+            opacity: 0.6,
+            hoverinfo: 'text',
+            hovertext: path.map(p => `"${tokens[t]}" · Layer ${p.layer}<br>Speed ${p.speed.toFixed(2)}`),
+            showlegend: false
+        });
+        traces.push({
+            type: 'scatter3d', mode: 'markers',
+            x: [xs[0], xs[xs.length-1]], y: [ys[0], ys[ys.length-1]], z: [zs[0], zs[zs.length-1]],
+            marker: { size: [6,7], color: [color,color], symbol: ['circle','diamond-open'], opacity: 0.75, line: { color:'#fff', width:1 } },
+            hoverinfo: 'text',
+            hovertext: [`Start "${tokens[t]}" L0`, `Ende "${tokens[t]}" L${numLayers-1}`],
+            showlegend: false
+        });
+    }
+
+    // Fokus-Trajektorie (aktiv)
+    const focusPath = smoothPath(allPaths[focusTokenIdx], 6);
+    const fxs = focusPath.map(p => p.world.x);
+    const fys = focusPath.map(p => p.world.y);
+    const fzs = focusPath.map(p => p.world.z);
+    traces.push({
+        type: 'scatter3d', mode: 'lines',
+        x: fxs, y: fys, z: fzs,
+        line: {
+            color: focusPath.map((_, i) => i),
+            colorscale: [[0,'#fbbf24'],[0.35,'#f472b6'],[0.7,'#a78bfa'],[1,'#22d3ee']],
+            width: 7, shape: 'spline'
+        },
+        opacity: 1.0,
+        hoverinfo: 'text',
+        hovertext: focusPath.map(p => `<b>"${tokens[focusTokenIdx]}"</b> · Layer ${p.layer}<br>Speed ${p.speed.toFixed(2)}`),
+        showlegend: false
+    });
+
+    // ─────────── DER PFEIL: von letztem Fokus-Punkt zum PARIS-Endpunkt (räumlich abseits) ───────────
+    // Statt eines "ENDE"-Markers auf der Fokus-Trajektorie zeigt jetzt ein
+    // deutlicher Pfeil vom letzten Punkt der aktiven Fokus-Trajektorie zum
+    // ausgegrauten paris-Endpunkt (der räumlich woanders liegt).
+    const parisEnd = worldPos(0, 0, 0, parisIdx, numLayers - 1);
+    const fEndX = fxs[fxs.length-1], fEndY = fys[fys.length-1], fEndZ = fzs[fzs.length-1];
+
+    // Pfeil-Schaft
+    traces.push({
+        type: 'scatter3d', mode: 'lines',
+        x: [fEndX, parisEnd.x],
+        y: [fEndY, parisEnd.y],
+        z: [fEndZ, parisEnd.z],
+        line: { color: '#22d3ee', width: 6, dash: 'solid' },
+        opacity: 0.9,
+        hoverinfo: 'text',
+        hovertext: 'Pfeil: die Prädiktion zeigt auf "paris" — einen Punkt der räumlich WOANDERS auf dem Bündel liegt (ausgegraut, weil nicht in der aktiven Kontextmenge)',
+        showlegend: false
+    });
+    // Pfeilspitze als großer Marker
+    traces.push({
+        type: 'scatter3d', mode: 'markers+text',
+        x: [parisEnd.x], y: [parisEnd.y], z: [parisEnd.z],
+        marker: { size: 14, color: '#22d3ee', symbol: 'diamond', line: { color:'#fff', width:2 } },
+        text: [`→ "${tokens[parisIdx]}"`],
+        textposition: 'top center',
+        textfont: { color: '#22d3ee', size: 13 },
+        hoverinfo: 'text',
+        hovertext: `Ziel-Token "${tokens[parisIdx]}"<br>Liegt räumlich abseits (ausgegraute Faser)<br>Der Pfeil ist die eigentliche "Antwort" des Modells`,
+        showlegend: false
+    });
+
+    // Start-Marker Fokus
+    traces.push({
+        type: 'scatter3d', mode: 'markers+text',
+        x: [fxs[0]],
+        y: [fys[0]],
+        z: [fzs[0]],
+        marker: {
+            size: 12,
+            color: '#fbbf24',
+            symbol: 'circle',
+            line: { color: '#ffffff', width: 2 }
+        },
+        text: [`START "${tokens[focusTokenIdx]}"`],
+        textposition: 'top center',
+        textfont: { color: '#fbbf24', size: 11 },
+        hoverinfo: 'text',
+        hovertext: `Fokus-Token "${tokens[focusTokenIdx]}" startet auf Layer 0<br>Aktive Faser (räumlich in Reihe mit den anderen aktiven)`,
+        showlegend: false
+    });
+
+    // End-Marker der Fokus-Trajektorie (bleibt, aber ohne "ENDE"-Label, weil das Ende
+    // jetzt räumlich woanders liegt — nämlich beim ausgegrauten paris-Punkt).
+    traces.push({
+        type: 'scatter3d',
+        mode: 'markers',
+        x: [fxs[fxs.length - 1]],
+        y: [fys[fys.length - 1]],
+        z: [fzs[fzs.length - 1]],
+        marker: {
+            size: 10,
+            color: '#22d3ee',
+            symbol: 'circle-open',
+            line: { color: '#22d3ee', width: 2 }
+        },
+        hoverinfo: 'text',
+        hovertext: `Letzter aktiver Zustand "${tokens[focusTokenIdx]}" · Layer ${numLayers - 1}<br>Von hier zeigt der Pfeil auf "${tokens[parisIdx]}" (räumlich abgesetzt)`,
+        showlegend: false
+    });
+
+    // ─────────── BASIS-MANNIGFALTIGKEIT: Token-Marker unten ───────────
+    // paris wird bewusst versetzt platziert und ausgegraut, damit man
+    // sofort sieht dass es räumlich woanders auf der Basis liegt.
+    const baseY = -2.5;
+    for (let t = 0; t < numTokens; t++) {
+        const isActive   = activeIdx.has(t);
+        const isInactive = inactiveIdx.has(t);
+        const isParis    = (t === parisIdx);
+        if (!isActive && !opt.inactive) continue;
+
+        const base = tokenBase(t);
+        // Token-Marker sitzen auf der Basis (baseY), aber x/z folgen der Faser-Position.
+        const cx = base.cx;
+        const cz = base.cz0;
+        const markerColor = isActive
+            ? tokenColors[t % tokenColors.length]
+            : (isParis ? parisColor : inactiveColor);
+        const labelColor = isActive
+            ? tokenColors[t % tokenColors.length]
+            : (isParis ? '#c7c7d1' : '#8a8aa0');
+
+        traces.push({
+            type: 'scatter3d',
+            mode: 'markers+text',
+            x: [cx], y: [baseY], z: [cz],
+            marker: {
+                size: t === focusTokenIdx ? 13 : (isActive ? 10 : (isParis ? 11 : 8)),
+                color: markerColor,
+                symbol: isParis ? 'diamond-open' : 'circle',
+                line: {
+                    color: isActive ? (t === focusTokenIdx ? '#ffffff' : '#0b1220') : '#3a3a4a',
+                    width: t === focusTokenIdx ? 2 : 1
+                },
+                opacity: isActive ? 1 : (isParis ? 0.85 : 0.55)
+            },
+            text: [isActive ? tokens[t] : (isParis ? `⟨${tokens[t]}⟩` : `(${tokens[t]})`)],
+            textposition: 'bottom center',
+            textfont: {
+                color: labelColor,
+                size: t === focusTokenIdx ? 14 : (isParis ? 13 : 11)
+            },
+            hoverinfo: 'text',
+            hovertext: isActive
+                ? `AKTIVE Faser: Token "${tokens[t]}"<br>Position auf Basis: (${cx.toFixed(2)}, ${cz.toFixed(2)})<br>${numLayers} Faserräume darüber gestapelt${t === focusTokenIdx ? '<br>★ FOKUS' : ''}`
+                : (isParis
+                    ? `⟨PARIS⟩ liegt räumlich abseits auf der Basis<br>Position: (${cx.toFixed(2)}, ${cz.toFixed(2)}) — deutlich versetzt<br>Faser ist ausgegraut: kein aktiver Kontext, aber Ziel des Prädiktionspfeils`
+                    : `INAKTIVE Faser: Token "${tokens[t]}"<br>Existiert im Situs, aber nicht in der aktiven Kontextmenge<br>Zeigt nur den Keim des globalen Wellenfelds`),
+            showlegend: false
+        });
+    }
+
+    // ─────────── Basis-Grid (welliger, damit man den Situs auch auf der Basis sieht) ───────────
+    // Die Welligkeit auf der Basis ist eine 2D-Projektion des Situs → macht klar
+    // dass Fasern-Positionen (auch die ausgegrauten) Punkte in einem größeren
+    // strukturierten Raum sind.
+    const baseGridN = 24;
+    const spanX = ((numTokens - 1) * tokenSpacing) / 2 + 4.5;
+    const spanZ = 5.0;
+    const bmxs = [], bmys = [], bmzs = [];
+    function baseWave(xc, zc) {
+        // 2D-Reduktion des Situs (nur Basisrichtung), damit sichtbar wo Fasern "auf einer Welle" sitzen
+        let w = 0.28 * Math.sin(xc * 0.5) * Math.cos(zc * 0.8);
+        if (opt.ffn || opt.attn) {
+            w += opt.waveAmp * 0.35 * (
+                Math.sin(xc * 0.9 + zc * 0.3) +
+                0.5 * Math.cos(1.618 * (xc + zc))
+            );
+        }
+        return w;
+    }
+    for (let i = 0; i <= baseGridN; i++) {
+        const zc = -spanZ + (2 * spanZ * i) / baseGridN;
+        for (let j = 0; j <= baseGridN * 2; j++) {
+            const xc = -spanX + (2 * spanX * j) / (baseGridN * 2);
+            bmxs.push(xc); bmys.push(baseY + baseWave(xc, zc) - 0.35); bmzs.push(zc);
+        }
+        bmxs.push(null); bmys.push(null); bmzs.push(null);
+    }
+    for (let j = 0; j <= baseGridN * 2; j++) {
+        const xc = -spanX + (2 * spanX * j) / (baseGridN * 2);
+        for (let i = 0; i <= baseGridN; i++) {
+            const zc = -spanZ + (2 * spanZ * i) / baseGridN;
+            bmxs.push(xc); bmys.push(baseY + baseWave(xc, zc) - 0.35); bmzs.push(zc);
+        }
+        bmxs.push(null); bmys.push(null); bmzs.push(null);
+    }
+    traces.push({
+        type: 'scatter3d',
+        mode: 'lines',
+        x: bmxs, y: bmys, z: bmzs,
+        line: { color: 'rgba(99,102,241,0.22)', width: 1 },
+        hoverinfo: 'text',
+        hovertext: 'Basis-Mannigfaltigkeit (Situs). Die Welligkeit ist eine 2D-Projektion des globalen FFN/Attn-Feldes — Fasern sitzen als Keime an einzelnen Stellen dieses Feldes.',
+        showlegend: false
+    });
+
+    // ─────────── Vertikale Faser-Verbindungen (auch für inaktive & paris) ───────────
+    for (let t = 0; t < numTokens; t++) {
+        const isActive   = activeIdx.has(t);
+        const isInactive = inactiveIdx.has(t);
+        const isParis    = (t === parisIdx);
+        if (!isActive && !opt.inactive) continue;
+
+        const base = tokenBase(t);
+        const isFocus = t === focusTokenIdx;
+        const lineColor = isActive
+            ? (isFocus ? 'rgba(251,191,36,0.55)' : 'rgba(99,102,241,0.28)')
+            : (isParis ? 'rgba(200,200,220,0.35)' : 'rgba(120,120,140,0.18)');
+        traces.push({
+            type: 'scatter3d',
+            mode: 'lines',
+            x: [base.cx, base.cx],
+            y: [baseY, (numLayers - 1) * layerSpacing + base.cy0 + cubeSize + 0.5],
+            z: [base.cz0, base.cz0],
+            line: {
+                color: lineColor,
+                width: isFocus ? 2 : 1,
+                dash: 'dot'
+            },
+            hoverinfo: 'text',
+            hovertext: `Faser über Token "${tokens[t]}"<br>${isActive ? 'AKTIV' : (isParis ? 'PARIS — räumlich abseits, ausgegraut' : 'INAKTIV — ausgegraut')}<br>${numLayers} übereinander gestapelte 3D-Aktivierungsräume`,
+            showlegend: false
+        });
+    }
+
+    // ─────────── Layer-Labels ───────────
+    for (let l = 0; l < numLayers; l++) {
+        const labelX = -((numTokens - 1) / 2) * tokenSpacing - 3.6;
+        const labelY = l * layerSpacing;
+        traces.push({
+            type: 'scatter3d',
+            mode: 'text',
+            x: [labelX], y: [labelY], z: [0],
+            text: [`Layer ${l}`],
+            textfont: { color: '#94a3b8', size: 12 },
+            hoverinfo: 'text',
+            hovertext: `Layer ${l} — Verzerrungsstärke ${(0.04 + l * 0.12).toFixed(2)}${(opt.ffn || opt.attn) ? '<br>Situs-Wellenfeld: ' + (opt.ffn && opt.attn ? 'FFN + Attn' : opt.ffn ? 'nur FFN' : 'nur Attn') : ''}`,
+            showlegend: false
+        });
+    }
+
+    // ─────────── LAYOUT ───────────
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        paper_bgcolor: '#0b1220',
+        scene: {
+            xaxis: {
+                title: { text: 'Token-Position (Basis)', font: { color: '#94a3b8' } },
+                backgroundcolor: '#0b1220', color: '#94a3b8',
+                gridcolor: 'rgba(148,163,184,0.06)', showspikes: false
+            },
+            yaxis: {
+                title: { text: 'Layer-Tiefe ↑', font: { color: '#94a3b8' } },
+                backgroundcolor: '#0b1220', color: '#94a3b8',
+                gridcolor: 'rgba(148,163,184,0.06)', showspikes: false
+            },
+            zaxis: {
+                title: '',
+                backgroundcolor: '#0b1220', color: '#94a3b8',
+                gridcolor: 'rgba(148,163,184,0.06)',
+                showspikes: false, showticklabels: false
+            },
+            bgcolor: '#0b1220',
+            camera: {
+                eye: { x: 1.8, y: 0.7, z: 2.5 },
+                center: { x: 0.3, y: 0.4, z: 0.4 },
+                up: { x: 0, y: 1, z: 0 }
+            },
+            aspectmode: 'data'
+        },
+        showlegend: false
+    };
+
+    Plotly.react('plot-bundle', traces, layout, {
+        displayModeBar: true,
+        responsive: true,
+        modeBarButtonsToRemove: ['resetCameraLastSave3d']
+    });
+
+    // Alten Autorotate-Timer stoppen falls vorhanden
+    if (window._bundleCamTimer) {
+        clearInterval(window._bundleCamTimer);
+        window._bundleCamTimer = null;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN PIPELINE: regenerate + recompute
+// ═══════════════════════════════════════════════════════════════
+
+function regeneratePointCloud() {
+    state.points = generateShape(state.shape, state.n, state.noise);
+    state.D = computeDistMatrix(state.points);
+    state.persistence = computePersistence(state.points, 3.0, 60);
+    renderCloud();
+    renderVR();
+    renderBarcode();
+    renderPersistenceDiagram();
+    renderSignature();
+}
+
+function refreshTakens() {
+    const kind = document.getElementById('ts-select').value;
+    const tau = parseInt(document.getElementById('tau').value);
+    const ts = generateTimeSeries(kind, 700);
+    renderTimeSeries(ts);
+    renderTakens(ts, tau);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════════════════════════
+
+document.getElementById('shape-select').addEventListener('change', (e) => {
+    state.shape = e.target.value;
+    regeneratePointCloud();
+});
+document.getElementById('n-points').addEventListener('input', (e) => {
+    state.n = parseInt(e.target.value);
+    document.getElementById('n-points-val').textContent = state.n;
+});
+document.getElementById('n-points').addEventListener('change', () => regeneratePointCloud());
+document.getElementById('noise').addEventListener('input', (e) => {
+    state.noise = parseFloat(e.target.value);
+    document.getElementById('noise-val').textContent = state.noise.toFixed(2);
+});
+document.getElementById('noise').addEventListener('change', () => regeneratePointCloud());
+document.getElementById('regenerate').addEventListener('click', () => regeneratePointCloud());
+
+document.getElementById('epsilon').addEventListener('input', (e) => {
+    state.epsilon = parseFloat(e.target.value);
+    document.getElementById('epsilon-val').textContent = state.epsilon.toFixed(2);
+    renderVR();
+    renderBarcode();
+});
+document.getElementById('max-dim').addEventListener('change', (e) => {
+    state.maxDim = parseInt(e.target.value);
+    renderVR();
+});
+
+document.getElementById('animate-eps').addEventListener('click', () => {
+    if (state.animating) return;
+    state.animating = true;
+    const slider = document.getElementById('epsilon');
+    const max = parseFloat(slider.max);
+    const step = 0.03;
+    let cur = 0;
+    const iv = setInterval(() => {
+        cur += step;
+        if (cur > max) {
+            clearInterval(iv);
+            state.animating = false;
+            return;
+        }
+        slider.value = cur;
+        state.epsilon = cur;
+        document.getElementById('epsilon-val').textContent = cur.toFixed(2);
+        renderVR();
+        renderBarcode();
+    }, 60);
+});
+
+document.getElementById('ts-select').addEventListener('change', refreshTakens);
+document.getElementById('tau').addEventListener('input', (e) => {
+    document.getElementById('tau-val').textContent = e.target.value;
+});
+document.getElementById('tau').addEventListener('change', refreshTakens);
+
+// ═══════════════════════════════════════════════════════════════
+// INITIAL RENDER
+// ═══════════════════════════════════════════════════════════════
+
+regeneratePointCloud();
+refreshTakens();
+renderBundle();
+
+</script>
+</body>
+</html>

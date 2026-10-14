@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Körper-System Visualisierung</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            background: linear-gradient(90deg, #58a6ff, #79c0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8b949e;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+
+        /* Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Left Panel - Inputs */
+        .input-panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .input-panel h2 {
+            font-size: 1.1em;
+            color: #58a6ff;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+
+        .input-group label .value-display {
+            color: #58a6ff;
+            font-weight: bold;
+        }
+
+        .input-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #30363d;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .input-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #58a6ff;
+            cursor: pointer;
+        }
+
+        .input-section-title {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6e7681;
+            margin: 18px 0 10px;
+            padding-top: 10px;
+            border-top: 1px solid #21262d;
+        }
+
+        /* Right Panel - Visualizations */
+        .viz-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .viz-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .viz-card h3 {
+            font-size: 1em;
+            color: #79c0ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* System Overview Canvas */
+        #system-canvas {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            display: block;
+        }
+
+        /* Meters */
+        .meters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .meter {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .meter-label {
+            font-size: 0.8em;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        .meter-bar {
+            height: 10px;
+            background: #21262d;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .meter-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        .meter-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        /* Flow Diagram */
+        #flow-canvas {
+            width: 100%;
+            height: 350px;
+            display: block;
+        }
+
+        /* Blutzucker Timeline */
+        #sugar-timeline {
+            width: 100%;
+            height: 200px;
+            display: block;
+        }
+
+        /* Energy Balance */
+        .energy-balance {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 15px;
+            flex-wrap: wrap;
+        }
+
+        .energy-box {
+            text-align: center;
+            padding: 15px 25px;
+            border-radius: 10px;
+            min-width: 120px;
+        }
+
+        .energy-box.intake {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .energy-box.burn {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .energy-box.balance {
+            background: rgba(88, 166, 255, 0.15);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+        }
+
+        .energy-box .number {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .energy-box .unit {
+            font-size: 0.75em;
+            color: #8b949e;
+        }
+
+        .energy-arrow {
+            font-size: 1.5em;
+            color: #6e7681;
+        }
+
+        /* Macro Pie */
+        #macro-canvas {
+            width: 100%;
+            height: 220px;
+            display: block;
+        }
+
+        /* Impact Cards */
+        .impact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .impact-card {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #30363d;
+            transition: all 0.3s;
+        }
+
+        .impact-card .icon {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .impact-card .impact-label {
+            font-size: 0.75em;
+            color: #8b949e;
+            margin-bottom: 5px;
+        }
+
+        .impact-card .impact-value {
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        /* Explanation Boxes */
+        .explain-box {
+            background: rgba(88, 166, 255, 0.05);
+            border-left: 3px solid #58a6ff;
+            padding: 12px 15px;
+            border-radius: 0 8px 8px 0;
+            margin: 10px 0;
+            font-size: 0.88em;
+            color: #c9d1d9;
+            line-height: 1.6;
+        }
+
+        /* Weight Projection */
+        #weight-canvas {
+            width: 100%;
+            height: 200px;
+            display: block;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            font-size: 0.8em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Tabs within cards */
+        .card-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .card-tab {
+            padding: 6px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+
+        .card-tab.active {
+            background: rgba(88, 166, 255, 0.15);
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>🔬 Dein Körper als System</h1>
+        <p class="subtitle">Bewege die Regler links – sieh rechts, was in deinem Körper passiert.</p>
+
+        <div class="main-grid">
+            <!-- INPUT PANEL -->
+            <div class="input-panel">
+                <h2>⚙️ Deine Daten</h2>
+                
+                <div class="input-group">
+                    <label>Gewicht <span class="value-display" id="val-weight">85 kg</span></label>
+                    <input type="range" id="weight" min="50" max="150" value="85" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Größe <span class="value-display" id="val-height">175 cm</span></label>
+                    <input type="range" id="height" min="150" max="200" value="175" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Bewegung/Tag <span class="value-display" id="val-activity">30 min</span></label>
+                    <input type="range" id="activity" min="0" max="120" value="30" oninput="update()">
+                </div>
+
+                <div class="input-section-title">🍽️ Typischer Tag – Essen</div>
+
+                <div class="input-group">
+                    <label>Pommes (Portionen) <span class="value-display" id="val-fries">1</span></label>
+                    <input type="range" id="fries" min="0" max="3" value="1" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Pizza (Stücke) <span class="value-display" id="val-pizza">2</span></label>
+                    <input type="range" id="pizza" min="0" max="8" value="2" step="1" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Nudeln (Portionen) <span class="value-display" id="val-pasta">1</span></label>
+                    <input type="range" id="pasta" min="0" max="3" value="1" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Bratkartoffeln (Portionen) <span class="value-display" id="val-potatoes">0.5</span></label>
+                    <input type="range" id="potatoes" min="0" max="2" value="0.5" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Käse (Scheiben/Stücke) <span class="value-display" id="val-cheese">2</span></label>
+                    <input type="range" id="cheese" min="0" max="6" value="2" step="1" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Mayo (EL) <span class="value-display" id="val-mayo">1</span></label>
+                    <input type="range" id="mayo" min="0" max="4" value="1" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Burger (vegetarisch) <span class="value-display" id="val-burger">0</span></label>
+                    <input type="range" id="burger" min="0" max="2" value="0" step="1" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Salat (Portionen) <span class="value-display" id="val-salad">0</span></label>
+                    <input type="range" id="salad" min="0" max="3" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Hülsenfrüchte (Portionen) <span class="value-display" id="val-legumes">0</span></label>
+                    <input type="range" id="legumes" min="0" max="3" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Nüsse (Handvoll) <span class="value-display" id="val-nuts">0</span></label>
+                    <input type="range" id="nuts" min="0" max="3" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Gemüse (Portionen) <span class="value-display" id="val-veggies">1</span></label>
+                    <input type="range" id="veggies" min="0" max="5" value="1" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Obst/Erdbeeren <span class="value-display" id="val-fruit">0.5</span></label>
+                    <input type="range" id="fruit" min="0" max="4" value="0.5" step="0.5" oninput="update()">
+                </div>
+
+                <div class="input-section-title">🥤 Getränke</div>
+
+                <div class="input-group">
+                    <label>Cola (Gläser) <span class="value-display" id="val-cola">0</span></label>
+                    <input type="range" id="cola" min="0" max="4" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Radler (Flaschen 0.5L) <span class="value-display" id="val-radler">0</span></label>
+                    <input type="range" id="radler" min="0" max="4" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Bier (Flaschen 0.5L) <span class="value-display" id="val-beer">0</span></label>
+                    <input type="range" id="beer" min="0" max="4" value="0" step="0.5" oninput="update()">
+                </div>
+                <div class="input-group">
+                    <label>Saft (Gläser) <span class="value-display" id="val-juice">0</span></label>
+                    <input type="range" id="juice" min="0" max="3" value="0" step="0.5" oninput="update()">
+                </div>
+            </div>
+
+            <!-- VISUALIZATION PANEL -->
+            <div class="viz-panel">
+
+                <!-- System Overview -->
+                <div class="viz-card">
+                    <h3>🔄 Das Gesamtsystem: Was passiert mit dem, was du isst?</h3>
+                    <div class="explain-box">
+                        Alles was du isst besteht aus 3 Bausteinen: <strong>Kohlenhydrate</strong> (→ Zucker → Energie oder Fett), 
+                        <strong>Fette</strong> (→ Energie oder Speicher oder Zellbau), <strong>Protein</strong> (→ Muskeln, Reparatur).
+                        Isst du mehr Energie als du verbrauchst → Körper speichert den Rest als Fett. So einfach ist das Grundprinzip.
+                    </div>
+                    <canvas id="system-canvas"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Kohlenhydrate</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> Fette</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div> Protein</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Überschuss → Fettspeicher</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Verbrauch</div>
+                    </div>
+                </div>
+
+                <!-- Energy Balance -->
+                <div class="viz-card">
+                    <h3>⚖️ Energiebilanz – Nimmst du zu oder ab?</h3>
+                    <div class="explain-box">
+                        Dein Körper verbrennt jeden Tag eine bestimmte Menge Kalorien (Grundumsatz + Bewegung). 
+                        Isst du mehr → nimmst du zu. Isst du weniger → nimmst du ab. ~7700 kcal Überschuss = 1 kg Fett.
+                    </div>
+                    <div class="energy-balance">
+                        <div class="energy-box intake">
+                            <div class="number" id="total-intake">2400</div>
+                            <div class="unit">kcal Aufnahme</div>
+                        </div>
+                        <div class="energy-arrow">−</div>
+                        <div class="energy-box burn">
+                            <div class="number" id="total-burn">2100</div>
+                            <div class="unit">kcal Verbrauch</div>
+                        </div>
+                        <div class="energy-arrow">=</div>
+                        <div class="energy-box balance">
+                            <div class="number" id="total-balance">+300</div>
+                            <div class="unit">kcal/Tag</div>
+                        </div>
+                    </div>
+                    <div id="weight-projection-text" style="text-align:center; margin-top:10px; font-size:0.85em; color:#8b949e;"></div>
+                    <canvas id="weight-canvas"></canvas>
+                </div>
+
+                <!-- Macro Split -->
+                <div class="viz-card">
+                    <h3>🥧 Deine Makronährstoff-Verteilung</h3>
+                    <div class="explain-box">
+                        Ideal für Abnehmen + stabilen Blutzucker: ~40% Kohlenhydrate, ~30% Fett, ~30% Protein.
+                        Zu viele Kohlenhydrate (besonders schnelle) = Blutzucker-Spikes = Schwitzen + Heißhunger + Fetteinlagerung.
+                    </div>
+                    <canvas id="macro-canvas"></canvas>
+                    <div id="macro-feedback" style="margin-top:10px; font-size:0.85em; padding:10px; border-radius:8px;"></div>
+                </div>
+
+                <!-- Blood Sugar -->
+                <div class="viz-card">
+                    <h3>📈 Blutzucker-Verlauf über den Tag</h3>
+                    <div class="explain-box">
+                        Jeder Spike (schneller Anstieg) löst viel Insulin aus → danach fällt der Zucker schnell → 
+                        <strong>Schwitzen, Müdigkeit, Heißhunger</strong>. Ziel: flache Kurve, keine hohen Spikes.
+                    </div>
+                    <canvas id="sugar-timeline"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Normalbereich</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Erhöht (Schwitzen möglich)</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Zu hoch (Schwitzen wahrscheinlich)</div>
+                    </div>
+                </div>
+
+                <!-- Health Impacts -->
+                <div class="viz-card">
+                    <h3>💓 Auswirkungen auf deinen Körper</h3>
+                    <div class="explain-box">
+                        Alles hängt zusammen: Zu viel gesättigtes Fett → Cholesterin → Arterien verstopfen → Herz.
+                        Zu viel Zucker → Insulin-Resistenz → Diabetes-Risiko. Zu viel Kalorien → Übergewicht → belastet alles.
+                    </div>
+                    <div class="impact-grid" id="impact-grid">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Fett-Erklärung -->
+                <div class="viz-card">
+                    <h3>🧈 Fette verstehen – nicht alle sind schlecht</h3>
+                    <div class="explain-box">
+                        Fett ≠ Fett. Es gibt <strong>gesättigte</strong> (fest bei Raumtemp., z.B. Butter, Käse) → erhöhen Cholesterin → schlecht fürs Herz.
+                        Und <strong>ungesättigte</strong> (flüssig, z.B. Olivenöl, Nüsse, Avocado) → senken Cholesterin → gut fürs Herz.
+                        Dein Körper braucht Fett für Vitamine (A, D, E, K), Hormone und Zellwände – aber die richtigen!
+                    </div>
+                    <canvas id="fat-canvas"></canvas>
+                    <div style="margin-top:10px; font-size:0.85em; color:#8b949e;">
+                        <strong>Deine Quellen:</strong> Käse + Mayo = viel gesättigtes Fett. Besser: Olivenöl, Nüsse, Avocado.
+                        Empfohlen: ⅔ ungesättigte, ⅓ gesättigte Fettsäuren.
+                    </div>
+                </div>
+
+                <!-- Practical Summary -->
+                <div class="viz-card" style="border-color: #58a6ff;">
+                    <h3>🎯 Was das für DICH konkret bedeutet</h3>
+                    <div id="personal-summary">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============ DATA MODEL ============
+    // Nutritional data per unit (approximate)
+    // { kcal, carbs_g, fat_g, protein_g, gi (glycemic index), satFat_ratio }
+    const foodData = {
+        fries:    { kcal: 350, carbs: 45, fat: 17, protein: 4, gi: 75, satFat: 0.4, name: "Pommes" },
+        pizza:    { kcal: 240, carbs: 30, fat: 10, protein: 9, gi: 80, satFat: 0.5, name: "Pizza (Stück)" },
+        pasta:    { kcal: 400, carbs: 75, fat: 5, protein: 12, gi: 70, satFat: 0.2, name: "Nudeln" },
+        potatoes: { kcal: 300, carbs: 40, fat: 12, protein: 4, gi: 70, satFat: 0.3, name: "Bratkartoffeln" },
+        cheese:   { kcal: 110, carbs: 0, fat: 9, protein: 7, gi: 0, satFat: 0.65, name: "Käse" },
+        mayo:     { kcal: 100, carbs: 0.5, fat: 11, protein: 0.2, gi: 0, satFat: 0.3, name: "Mayo" },
+        burger:   { kcal: 450, carbs: 40, fat: 22, protein: 18, gi: 65, satFat: 0.35, name: "Veggie-Burger" },
+        salad:    { kcal: 80, carbs: 8, fat: 4, protein: 3, gi: 15, satFat: 0.1, name: "Salat" },
+        legumes:  { kcal: 180, carbs: 25, fat: 2, protein: 14, gi: 25, satFat: 0.1, name: "Hülsenfrüchte" },
+        nuts:     { kcal: 180, carbs: 5, fat: 16, protein: 5, gi: 15, satFat: 0.1, name: "Nüsse" },
+        veggies:  { kcal: 50, carbs: 8, fat: 1, protein: 3, gi: 15, satFat: 0.1, name: "Gemüse" },
+        fruit:    { kcal: 60, carbs: 14, fat: 0.5, protein: 1, gi: 35, satFat: 0.05, name: "Obst" },
+        cola:     { kcal: 140, carbs: 35, fat: 0, protein: 0, gi: 95, satFat: 0, name: "Cola" },
+        radler:   { kcal: 200, carbs: 20, fat: 0, protein: 1, gi: 65, satFat: 0, name: "Radler" },
+        beer:     { kcal: 215, carbs: 13, fat: 0, protein: 2, gi: 50, satFat: 0, name: "Bier" },
+        juice:    { kcal: 110, carbs: 26, fat: 0, protein: 0.5, gi: 70, satFat: 0, name: "Saft" },
+    };
+
+    let state = {};
+
+    function readInputs() {
+        const ids = ['weight','height','activity','fries','pizza','pasta','potatoes','cheese','mayo','burger','salad','legumes','nuts','veggies','fruit','cola','radler','beer','juice'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            state[id] = parseFloat(el.value);
+            const valEl = document.getElementById('val-' + id);
+            if (valEl) {
+                let suffix = '';
+                if (id === 'weight') suffix = ' kg';
+                else if (id === 'height') suffix = ' cm';
+                else if (id === 'activity') suffix = ' min';
+                valEl.textContent = el.value + suffix;
+            }
+        });
+    }
+
+    function calculateNutrition() {
+        let totals = { kcal: 0, carbs: 0, fat: 0, protein: 0, satFat: 0, giLoad: 0, giCount: 0 };
+        
+        const foodIds = ['fries','pizza','pasta','potatoes','cheese','mayo','burger','salad','legumes','nuts','veggies','fruit','cola','radler','beer','juice'];
+        
+        foodIds.forEach(id => {
+            const amount = state[id];
+            const data = foodData[id];
+            totals.kcal += data.kcal * amount;
+            totals.carbs += data.carbs * amount;
+            totals.fat += data.fat * amount;
+            totals.protein += data.protein * amount;
+            totals.satFat += data.fat * amount * data.satFat;
+            if (data.carbs > 0 && amount > 0) {
+                totals.giLoad += data.gi * data.carbs * amount;
+                totals.giCount += data.carbs * amount;
+            }
+        });
+
+        totals.avgGI = totals.giCount > 0 ? totals.giLoad / totals.giCount : 0;
+        totals.unsatFat = totals.fat - totals.satFat;
+        
+        return totals;
+    }
+
+    function calculateBMR() {
+        // Mifflin-St Jeor (male approximation, adjust if needed)
+        return 10 * state.weight + 6.25 * state.height - 5 * 30 + 5; // assuming age ~30
+    }
+
+    function calculateTDEE() {
+        const bmr = calculateBMR();
+        const activityMultiplier = 1.2 + (state.activity / 60) * 0.2;
+        return Math.round(bmr * activityMultiplier);
+    }
+
+    // ============ RENDERING ============
+    function update() {
+        readInputs();
+        const nutrition = calculateNutrition();
+        const tdee = calculateTDEE();
+        const balance = Math.round(nutrition.kcal - tdee);
+
+        // Update Energy Balance Display
+        document.getElementById('total-intake').textContent = Math.round(nutrition.kcal);
+        document.getElementById('total-burn').textContent = tdee;
+        const balanceEl = document.getElementById('total-balance');
+        balanceEl.textContent = (balance >= 0 ? '+' : '') + balance;
+        balanceEl.style.color = balance > 100 ? '#ef4444' : balance < -100 ? '#22c55e' : '#58a6ff';
+
+        // Weight projection text
+        const weeklyChange = (balance * 7 / 7700).toFixed(2);
+        const monthlyChange = (balance * 30 / 7700).toFixed(1);
+        const projEl = document.getElementById('weight-projection-text');
+        if (balance > 50) {
+            projEl.innerHTML = `⚠️ Bei diesem Überschuss nimmst du ca. <strong style="color:#ef4444">${monthlyChange} kg/Monat</strong> zu.`;
+        } else if (balance < -50) {
+            projEl.innerHTML = `✅ Bei diesem Defizit nimmst du ca. <strong style="color:#22c55e">${Math.abs(monthlyChange)} kg/Monat</strong> ab.`;
+        } else {
+            projEl.innerHTML = `↔️ Du hältst ungefähr dein Gewicht.`;
+        }
+
+        // Render all visualizations
+        renderSystemCanvas(nutrition, tdee, balance);
+        renderWeightCanvas(balance);
+        renderMacroCanvas(nutrition);
+        renderSugarTimeline(nutrition);
+        renderFatCanvas(nutrition);
+        renderImpactGrid(nutrition, balance);
+        renderPersonalSummary(nutrition, tdee, balance);
+    }
+
+    // ============ SYSTEM OVERVIEW CANVAS ============
+    function renderSystemCanvas(nutrition, tdee, balance) {
+        const canvas = document.getElementById('system-canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const W = canvas.offsetWidth;
+        const H = canvas.offsetHeight;
+        
+        ctx.clearRect(0, 0, W, H);
+
+        // Layout: Food → Stomach → Blood → Cells/Fat
+        const totalMacroG = nutrition.carbs + nutrition.fat + nutrition.protein;
+        const carbRatio = totalMacroG > 0 ? nutrition.carbs / totalMacroG : 0.33;
+        const fatRatio = totalMacroG > 0 ? nutrition.fat / totalMacroG : 0.33;
+        const proteinRatio = totalMacroG > 0 ? nutrition.protein / totalMacroG : 0.33;
+
+        // Columns
+        const col1 = W * 0.08;  // Food input
+        const col2 = W * 0.28;  // Stomach/Digestion
+        const col3 = W * 0.50;  // Blood
+        const col4 = W * 0.75;  // Usage/Storage
+
+        const centerY = H * 0.45;
+
+        // --- FOOD INPUT (left) ---
+        ctx.fillStyle = '#8b949e';
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('ESSEN', col1, 30);
+        ctx.font = '11px Segoe UI';
+        ctx.fillText(`${Math.round(nutrition.kcal)} kcal`, col1, 48);
+
+        // Macro bars entering
+        const barW = 25;
+        const maxBarH = H * 0.55;
+        const carbH = maxBarH * Math.min(carbRatio * 1.5, 1);
+        const fatH = maxBarH * Math.min(fatRatio * 1.5, 1);
+        const protH = maxBarH * Math.min(proteinRatio * 1.5, 1);
+
+        const barStartY = 65;
+
+        // Carbs bar
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        roundRect(ctx, col1 - barW/2 - 30, barStartY, barW, carbH, 5);
+        ctx.fill();
+        ctx.fillStyle = '#f9731688';
+        ctx.font = '9px Segoe UI';
+        ctx.fillText(`KH ${Math.round(nutrition.carbs)}g`, col1 - 30, barStartY + carbH + 14);
+
+        // Fat bar
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        roundRect(ctx, col1 - barW/2, barStartY, barW, fatH, 5);
+        ctx.fill();
+        ctx.fillStyle = '#eab30888';
+        ctx.font = '9px Segoe UI';
+        ctx.fillText(`Fett ${Math.round(nutrition.fat)}g`, col1, barStartY + fatH + 14);
+
+        // Protein bar
+        ctx.fillStyle = '#a78bfa';
+        ctx.beginPath();
+        roundRect(ctx, col1 - barW/2 + 30, barStartY, barW, protH, 5);
+        ctx.fill();
+        ctx.fillStyle = '#a78bfa88';
+        ctx.font = '9px Segoe UI';
+        ctx.fillText(`Prot ${Math.round(nutrition.protein)}g`, col1 + 30, barStartY + protH + 14);
+
+        // --- ARROWS: Food → Stomach ---
+        drawArrow(ctx, col1 + 50, centerY, col2 - 40, centerY, '#6e7681');
+
+        // --- STOMACH (Digestion) ---
+        ctx.fillStyle = '#6e7681';
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('VERDAUUNG', col2, 30);
+        ctx.font = '10px Segoe UI';
+        ctx.fillText('Aufspaltung in', col2, 48);
+        ctx.fillText('Grundbausteine', col2, 62);
+
+        // Stomach shape
+        ctx.beginPath();
+        ctx.ellipse(col2, centerY, 35, 50, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = '#30363d';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#161b22';
+        ctx.fill();
+
+        // Inside stomach: small particles
+        const particleColors = ['#f97316', '#eab308', '#a78bfa'];
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const r = 15 + Math.sin(i * 3) * 10;
+            ctx.beginPath();
+            ctx.arc(col2 + Math.cos(angle) * r, centerY + Math.sin(angle) * r, 3, 0, Math.PI * 2);
+            ctx.fillStyle = particleColors[i % 3];
+            ctx.fill();
+        }
+
+        // --- ARROWS: Stomach → Blood ---
+        drawArrow(ctx, col2 + 40, centerY, col3 - 50, centerY, '#6e7681');
+
+        // --- BLOOD (Distribution) ---
+        ctx.fillStyle = '#6e7681';
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.fillText('BLUT', col3, 30);
+
+        // Blood sugar level indicator
+        const sugarLevel = Math.min(nutrition.avgGI * 0.8 + nutrition.carbs * 0.15, 100);
+        const sugarColor = sugarLevel > 70 ? '#ef4444' : sugarLevel > 45 ? '#f97316' : '#22c55e';
+        
+        ctx.font = '10px Segoe UI';
+        ctx.fillStyle = sugarColor;
+        ctx.fillText(`Blutzucker: ${sugarLevel > 70 ? 'HOCH' : sugarLevel > 45 ? 'mittel' : 'stabil'}`, col3, 48);
+
+        // Blood vessel
+        ctx.beginPath();
+        ctx.ellipse(col3, centerY, 40, 60, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ef444444';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = '#1a0505';
+        ctx.fill();
+
+        // Glucose particles in blood
+        const glucoseCount = Math.round(sugarLevel / 10);
+        for (let i = 0; i < glucoseCount; i++) {
+            const angle = (i / glucoseCount) * Math.PI * 2 + Date.now() * 0.001;
+            const r = 20 + (i % 3) * 8;
+            ctx.beginPath();
+            ctx.arc(col3 + Math.cos(angle) * r, centerY + Math.sin(angle) * r, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#f97316';
+            ctx.fill();
+        }
+
+        // Insulin label if high
+        if (sugarLevel > 50) {
+            ctx.fillStyle = '#58a6ff';
+            ctx.font = '9px Segoe UI';
+            ctx.fillText(`Insulin: ${sugarLevel > 70 ? '⬆️ VIEL' : '↗️ mittel'}`, col3, centerY + 75);
+        }
+
+        // --- ARROWS: Blood → Usage/Storage ---
+        // Arrow up: to cells (energy used)
+        const usedRatio = Math.min(tdee / Math.max(nutrition.kcal, 1), 1);
+        const storedRatio = Math.max(0, 1 - usedRatio);
+
+        // Energy used arrow (green, going up-right)
+        drawArrow(ctx, col3 + 45, centerY - 20, col4, centerY - 80, '#22c55e');
+        // Fat storage arrow (red, going down-right)
+        if (storedRatio > 0.05) {
+            drawArrow(ctx, col3 + 45, centerY + 20, col4, centerY + 80, '#ef4444');
+        }
+
+        // --- CELLS (Energy Used) ---
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 11px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('VERBRAUCHT', col4, centerY - 110);
+        ctx.font = '10px Segoe UI';
+        ctx.fillText(`${tdee} kcal`, col4, centerY - 95);
+
+        // Cell icons
+        ctx.font = '22px Segoe UI';
+        ctx.fillText('🏃‍♂️🧠💓', col4, centerY - 65);
+        ctx.font = '9px Segoe UI';
+        ctx.fillStyle = '#22c55e88';
+        ctx.fillText('Gehirn, Muskeln, Organe', col4, centerY - 45);
+
+        // --- FAT STORAGE ---
+        if (storedRatio > 0.05) {
+            const excess = Math.max(0, nutrition.kcal - tdee);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 11px Segoe UI';
+            ctx.fillText('FETTSPEICHER', col4, centerY + 60);
+            ctx.font = '10px Segoe UI';
+            ctx.fillText(`+${Math.round(excess)} kcal/Tag`, col4, centerY + 78);
+
+            // Fat blob (bigger = more excess)
+            const blobSize = Math.min(15 + excess * 0.02, 45);
+            ctx.beginPath();
+            ctx.ellipse(col4, centerY + 110, blobSize, blobSize * 0.7, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef444433';
+            ctx.fill();
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '9px Segoe UI';
+            ctx.fillText(`≈ ${(excess * 30 / 7700).toFixed(1)} kg/Monat`, col4, centerY + 140);
+        } else {
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 11px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText('FETTABBAU ✓', col4, centerY + 60);
+            const deficit = Math.max(0, tdee - nutrition.kcal);
+            ctx.font = '10px Segoe UI';
+            ctx.fillText(`-${Math.round(deficit)} kcal/Tag`, col4, centerY + 78);
+        }
+
+        // --- SWEAT indicator ---
+        if (sugarLevel > 60) {
+            ctx.fillStyle = '#f9731688';
+            ctx.font = '11px Segoe UI';
+            ctx.textAlign = 'left';
+            ctx.fillText('💧 Schwitzen wahrscheinlich!', col3 + 50, H - 30);
+            ctx.font = '9px Segoe UI';
+            ctx.fillStyle = '#8b949e';
+            ctx.fillText('(Insulin-Spike → Zucker-Crash)', col3 + 50, H - 15);
+        }
+
+        // Bottom explanation
+        ctx.fillStyle = '#6e768188';
+        ctx.font = '9px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('KH = Kohlenhydrate → werden zu Glukose (Blutzucker) | Fett → Fettsäuren | Protein → Aminosäuren', W/2, H - 5);
+    }
+
+    // ============ WEIGHT PROJECTION CANVAS ============
+    function renderWeightCanvas(balance) {
+        const canvas = document.getElementById('weight-canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const W = canvas.offsetWidth;
+        const H = canvas.offsetHeight;
+        ctx.clearRect(0, 0, W, H);
+
+        const months = 12;
+        const startWeight = state.weight;
+        const monthlyChange = balance * 30 / 7700;
+
+        // Draw grid
+        ctx.strokeStyle = '#21262d';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = 20 + (H - 50) * (i / 4);
+            ctx.beginPath();
+            ctx.moveTo(40, y);
+            ctx.lineTo(W - 10, y);
+            ctx.stroke();
+        }
+
+        // Calculate weight points
+        const weights = [];
+        for (let m = 0; m <= months; m++) {
+            weights.push(startWeight + monthlyChange * m);
+        }
+
+        const minW = Math.min(...weights) - 2;
+        const maxW = Math.max(...weights) + 2;
+        const range = maxW - minW || 10;
+
+        // Y-axis labels
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '9px Segoe UI';
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= 4; i++) {
+            const val = maxW - (range * i / 4);
+            const y = 20 + (H - 50) * (i / 4);
+            ctx.fillText(val.toFixed(0) + ' kg', 35, y + 3);
+        }
+
+        // X-axis labels
+        ctx.textAlign = 'center';
+        for (let m = 0; m <= months; m += 2) {
+            const x = 45 + (W - 60) * (m / months);
+            ctx.fillText(`M${m}`, x, H - 5);
+        }
+
+        // Draw weight line
+        ctx.beginPath();
+        for (let m = 0; m <= months; m++) {
+            const x = 45 + (W - 60) * (m / months);
+            const y = 20 + (H - 50) * (1 - (weights[m] - minW) / range);
+            if (m === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = balance > 50 ? '#ef4444' : balance < -50 ? '#22c55e' : '#58a6ff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Start dot
+        const startX = 45;
+        const startY = 20 + (H - 50) * (1 - (startWeight - minW) / range);
+        ctx.beginPath();
+        ctx.arc(startX, startY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#58a6ff';
+        ctx.fill();
+
+        // End dot
+        const endWeight = weights[months];
+        const endX = 45 + (W - 60);
+        const endY = 20 + (H - 50) * (1 - (endWeight - minW) / range);
+        ctx.beginPath();
+        ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = balance > 50 ? '#ef4444' : balance < -50 ? '#22c55e' : '#58a6ff';
+        ctx.fill();
+
+        // End label
+        ctx.fillStyle = '#e0e0e0';
+        ctx.font = 'bold 11px Segoe UI';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${endWeight.toFixed(1)} kg`, endX - 30, endY - 12);
+
+        // Title
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '10px Segoe UI';
+        ctx.textAlign = 'left';
+        ctx.fillText('Gewichtsprognose (12 Monate bei gleichem Verhalten)', 45, 12);
+    }
+
+    // ============ MACRO CANVAS ============
+    function renderMacroCanvas(nutrition) {
+        const canvas = document.getElementById('macro-canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const W = canvas.offsetWidth;
+        const H = canvas.offsetHeight;
+        ctx.clearRect(0, 0, W, H);
+
+        // Calculate kcal from each macro
+        const carbKcal = nutrition.carbs * 4;
+        const fatKcal = nutrition.fat * 9;
+        const protKcal = nutrition.protein * 4;
+        const totalKcal = carbKcal + fatKcal + protKcal || 1;
+
+        const carbPct = carbKcal / totalKcal;
+        const fatPct = fatKcal / totalKcal;
+        const protPct = protKcal / totalKcal;
+
+        // Draw pie chart
+        const cx = W * 0.25;
+        const cy = H * 0.55;
+        const radius = Math.min(W * 0.2, H * 0.4);
+
+        let startAngle = -Math.PI / 2;
+
+        // Carbs
+        const carbAngle = carbPct * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, startAngle + carbAngle);
+        ctx.closePath();
+        ctx.fillStyle = '#f97316';
+        ctx.fill();
+        startAngle += carbAngle;
+
+        // Fat
+        const fatAngle = fatPct * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, startAngle + fatAngle);
+        ctx.closePath();
+        ctx.fillStyle = '#eab308';
+        ctx.fill();
+        startAngle += fatAngle;
+
+        // Protein
+        const protAngle = protPct * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, startAngle + protAngle);
+        ctx.closePath();
+        ctx.fillStyle = '#a78bfa';
+        ctx.fill();
+
+        // Labels
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.textAlign = 'left';
+        const labelX = W * 0.5;
+        
+        ctx.fillStyle = '#f97316';
+        ctx.fillText(`● Kohlenhydrate: ${(carbPct * 100).toFixed(0)}%`, labelX, 40);
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '10px Segoe UI';
+        ctx.fillText(`   ${Math.round(nutrition.carbs)}g = ${Math.round(carbKcal)} kcal`, labelX, 57);
+        ctx.fillText(`   Empfohlen: 40-50%`, labelX, 72);
+
+        ctx.fillStyle = '#eab308';
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.fillText(`● Fett: ${(fatPct * 100).toFixed(0)}%`, labelX, 100);
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '10px Segoe UI';
+        ctx.fillText(`   ${Math.round(nutrition.fat)}g = ${Math.round(fatKcal)} kcal`, labelX, 117);
+        ctx.fillText(`   Empfohlen: 25-35%`, labelX, 132);
+
+        ctx.fillStyle = '#a78bfa';
+        ctx.font = 'bold 12px Segoe UI';
+        ctx.fillText(`● Protein: ${(protPct * 100).toFixed(0)}%`, labelX, 160);
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '10px Segoe UI';
+        ctx.fillText(`   ${Math.round(nutrition.protein)}g = ${Math.round(protKcal)} kcal`, labelX, 177);
+        ctx.fillText(`   Empfohlen: 25-30%`, labelX, 192);
+
+        // Feedback
+        const feedbackEl = document.getElementById('macro-feedback');
+        let feedback = '';
+        if (carbPct > 0.6) {
+            feedback = `<span style="color:#f97316;">⚠️ Zu viele Kohlenhydrate (${(carbPct*100).toFixed(0)}%)! Das treibt deinen Blutzucker hoch und macht Schwitzen wahrscheinlicher. Ersetze etwas durch Protein (Hülsenfrüchte, Tofu) oder gesundes Fett (Nüsse).</span>`;
+        } else if (protPct < 0.15) {
+            feedback = `<span style="color:#a78bfa;">⚠️ Zu wenig Protein (${(protPct*100).toFixed(0)}%)! Als Vegetarier: mehr Linsen, Kichererbsen, Tofu, Nüsse. Protein hält satt und stabilisiert den Blutzucker.</span>`;
+        } else if (fatPct > 0.45) {
+            feedback = `<span style="color:#eab308;">⚠️ Sehr viel Fett (${(fatPct*100).toFixed(0)}%). Achte darauf, dass es ungesättigtes Fett ist (Nüsse, Olivenöl) statt gesättigtes (Käse, Mayo).</span>`;
+        } else {
+            feedback = `<span style="color:#22c55e;">✅ Gute Verteilung! Dein Makro-Mix sieht ausgewogen aus.</span>`;
+        }
+        feedbackEl.innerHTML = feedback;
+    }
+
+    // ============ BLOOD SUGAR TIMELINE ============
+    function renderSugarTimeline(nutrition) {
+        const canvas = document.getElementById('sugar-timeline');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+        
+        const W = canvas.offsetWidth;
+        const H = canvas.offsetHeight;
+        ctx.clearRect(0, 0, W, H);
+
+        // Zones
+        const normalMax = H * 0.6;
+        const highStart = H * 0.35;
+
+        // Green zone (normal)
+        ctx.fillStyle = '#22c55e11';
+        ctx.fillRect(30, normalMax, W - 40, H - normalMax - 20);
+
+        // Orange zone
+        ctx.fillStyle = '#f9731611';
+        ctx.fillRect(30, highStart, W - 40, normalMax - highStart);
+
+        // Red zone
+        ctx.fillStyle = '#ef444411';
+        ctx.fillRect(30, 15, W - 40, highStart - 15);
+
+        // Zone labels
+        ctx.fillStyle = '#22c55e66';
+        ctx.font = '9px Segoe UI';
+        ctx.textAlign = 'left';
+        ctx.fillText('Normal', 35, H - 25);
+        ctx.fillStyle = '#f9731666';
+        ctx.fillText('Erhöht', 35, normalMax - 5);
+        ctx.fillStyle = '#ef444466';
+        ctx.fillText('Zu hoch', 35, highStart - 5);
+
+        // Calculate spike heights based on food GI and carb content
+        // Simulate 3 meals
+        const meals = [];
+        
+        // Breakfast-ish (some of the food)
+        const breakfastGI = state.pasta > 0 ? 70 : state.fries > 0 ? 75 : 40;
+        const breakfastCarbs = nutrition.carbs * 0.3;
+        meals.push({ time: 0.15, gi: breakfastGI, carbs: breakfastCarbs });
+
+        // Lunch
+        const lunchGI = nutrition.avgGI;
+        const lunchCarbs = nutrition.carbs * 0.4;
+        meals.push({ time: 0.45, gi: lunchGI, carbs: lunchCarbs });
+
+        // Dinner
+        const dinnerGI = state.pizza > 0 ? 80 : state.fries > 0 ? 75 : nutrition.avgGI;
+        const dinnerCarbs = nutrition.carbs * 0.3;
+        meals.push({ time: 0.75, gi: dinnerGI, carbs: dinnerCarbs });
+
+        // Drinks throughout
+        if (state.cola > 0 || state.juice > 0) {
+            meals.push({ time: 0.35, gi: 90, carbs: (state.cola * 35 + state.juice * 26) });
+        }
+
+        // Generate curve
+        const points = 200;
+        ctx.beginPath();
+        
+        for (let i = 0; i <= points; i++) {
+            const t = i / points; // 0 to 1 (day)
+            let sugar = 0.3; // baseline (normalized 0-1)
+
+            meals.forEach(meal => {
+                const dist = t - meal.time;
+                if (dist > -0.02 && dist < 0.15) {
+                    // Spike shape: fast rise, slower fall
+                    const spikeHeight = (meal.gi / 100) * Math.min(meal.carbs / 80, 1) * 0.6;
+                    if (dist < 0.03) {
+                        // Rising
+                        sugar += spikeHeight * (dist + 0.02) / 0.05;
+                    } else {
+                        // Falling
+                        const fallProgress = (dist - 0.03) / 0.12;
+                        sugar += spikeHeight * (1 - fallProgress);
+                        // Crash below baseline for high GI
+                        if (meal.gi > 65 && fallProgress > 0.7) {
+                            sugar -= 0.08 * (fallProgress - 0.7) / 0.3;
+                        }
+                    }
+                }
+            });
+
+            sugar = Math.max(0.1, Math.min(sugar, 1));
+            const x = 30 + (W - 40) * t;
+            const y = H - 20 - (H - 40) * sugar;
+
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+
+        // Color based on max spike
+        const maxSpike = nutrition.avgGI * Math.min(nutrition.carbs / 150, 1);
+        ctx.strokeStyle = maxSpike > 55 ? '#ef4444' : maxSpike > 35 ? '#f97316' : '#22c55e';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Time labels
+        ctx.fillStyle = '#6e7681';
+        ctx.font = '9px Segoe UI';
+        ctx.textAlign = 'center';
+        const times = ['6:00', '9:00', '12:00', '15:00', '18:00', '21:00'];
+        times.forEach((t, i) => {
+            const x = 30 + (W - 40) * (i / (times.length - 1));
+            ctx.fillText(t, x, H - 5);
+        });
+
+        // Sweat indicators
+        if (maxSpike > 45) {
+            ctx.fillStyle = '#f97316';
+            ctx.font = '11px Segoe UI';
+            ctx.textAlign = 'right';
+            ctx.fillText('💧 Schwitz-Risiko!', W - 15, 30);
+        }
+    }
+
+    // ============ FAT TYPE CANVAS ============
+    function renderFatCanvas(nutrition) {
+        const canvas = document.getElementById('fat-canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = 150 * dpr;
+        canvas.style.height = '150px';
+        ctx.scale(dpr, dpr);
+        
+        const W = canvas.offsetWidth;
+        const H = 150;
+        ctx.clearRect(0, 0, W, H);
+
+        const totalFat = nutrition.fat || 1;
+        const satPct = nutrition.satFat / totalFat;
+        const unsatPct = 1 - satPct;
+
+        // Bar chart comparison
+        const barY = 40;
+        const barH = 30;
+        const barMaxW = W -  120;
+
+        // Saturated fat bar
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '10px Segoe UI';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Gesättigt (Käse, Mayo, Frittiertes): ${Math.round(nutrition.satFat)}g`, 10, barY - 8);
+        ctx.beginPath();
+        roundRect(ctx, 10, barY, barMaxW * satPct, barH, 5);
+        ctx.fill();
+
+        // Unsaturated fat bar
+        ctx.fillStyle = '#22c55e';
+        ctx.fillText(`Ungesättigt (Nüsse, Olivenöl, Avocado): ${Math.round(nutrition.unsatFat)}g`, 10, barY + barH + 25);
+        ctx.beginPath();
+        roundRect(ctx, 10, barY + barH + 30, barMaxW * unsatPct, barH, 5);
+        ctx.fill();
+
+        // Ideal ratio line
+        ctx.strokeStyle = '#58a6ff44';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        const idealX = 10 + barMaxW * 0.33;
+        ctx.beginPath();
+        ctx.moveTo(idealX, barY - 3);
+        ctx.lineTo(idealX, barY + barH + 65);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#58a6ff88';
+        ctx.font = '8px Segoe UI';
+        ctx.fillText('← max. ⅓ gesättigt empfohlen', idealX + 5, barY + barH + 62);
+
+        // Verdict
+        ctx.font = '10px Segoe UI';
+        ctx.textAlign = 'right';
+        if (satPct > 0.5) {
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText('⚠️ Zu viel gesättigtes Fett → Herz-Risiko', W - 10, H - 10);
+        } else if (satPct < 0.35) {
+            ctx.fillStyle = '#22c55e';
+            ctx.fillText('✅ Gutes Fettverhältnis', W - 10, H - 10);
+        } else {
+            ctx.fillStyle = '#f97316';
+            ctx.fillText('⚠️ Etwas zu viel gesättigtes Fett', W - 10, H - 10);
+        }
+    }
+
+    // ============ IMPACT GRID ============
+    function renderImpactGrid(nutrition, balance) {
+        const grid = document.getElementById('impact-grid');
+        
+        const sugarLevel = Math.min(nutrition.avgGI * 0.8 + nutrition.carbs * 0.15, 100);
+        const satFatRatio = nutrition.fat > 0 ? nutrition.satFat / nutrition.fat : 0;
+        const bmi = state.weight / ((state.height / 100) ** 2);
+        
+        // Sport bonus calculations
+        const sportMinutes = state.activity + (state.treadmill || 0);
+        const sportBonus = Math.min(sportMinutes / 60, 1); // 0-1 scale
+        const backRisk = state.weight > 90 && state.activity < 30 ? 'hoch' : 
+                         state.activity > 45 ? 'niedrig (Sport hilft!)' : 'mittel';
+
+        const impacts = [
+            {
+                icon: '💧',
+                label: 'Schwitzen',
+                value: sugarLevel > 65 ? 'Wahrscheinlich' : sugarLevel > 45 ? 'Möglich' : 'Unwahrscheinlich',
+                color: sugarLevel > 65 ? '#ef4444' : sugarLevel > 45 ? '#f97316' : '#22c55e'
+            },
+            {
+                icon: '⚖️',
+                label: 'Gewichtstrend',
+                value: balance > 200 ? 'Zunahme!' : balance > 50 ? 'Leichte Zunahme' : balance < -200 ? 'Abnahme ✓' : 'Stabil',
+                color: balance > 200 ? '#ef4444' : balance > 50 ? '#f97316' : balance < -200 ? '#22c55e' : '#58a6ff'
+            },
+            {
+                icon: '💓',
+                label: 'Herz-Kreislauf',
+                value: satFatRatio > 0.55 ? 'Belastet' : satFatRatio > 0.4 ? 'Mäßig' : 'Gut',
+                color: satFatRatio > 0.55 ? '#ef4444' : satFatRatio > 0.4 ? '#f97316' : '#22c55e'
+            },
+            {
+                icon: '🩸',
+                label: 'Blutzucker',
+                value: sugarLevel > 65 ? 'Instabil/Hoch' : sugarLevel > 40 ? 'Mäßig' : 'Stabil ✓',
+                color: sugarLevel > 65 ? '#ef4444' : sugarLevel > 40 ? '#f97316' : '#22c55e'
+            },
+            {
+                icon: '⚡',
+                label: 'Energie-Level',
+                value: sugarLevel > 60 ? 'Achterbahn' : nutrition.protein < 40 ? 'Niedrig' : 'Stabil ✓',
+                color: sugarLevel > 60 ? '#f97316' : nutrition.protein < 40 ? '#f97316' : '#22c55e'
+            },
+            {
+                icon: '🏃',
+                label: 'Sport-Effekt',
+                value: sportBonus > 0.7 ? 'Sehr gut!' : sportBonus > 0.3 ? 'Hilft' : 'Zu wenig',
+                color: sportBonus > 0.7 ? '#22c55e' : sportBonus > 0.3 ? '#58a6ff' : '#f97316'
+            },
+            {
+                icon: '🦴',
+                label: 'Rücken',
+                value: backRisk,
+                color: backRisk.includes('niedrig') ? '#22c55e' : backRisk === 'mittel' ? '#f97316' : '#ef4444'
+            },
+            {
+                icon: '😴',
+                label: 'Schlafqualität',
+                value: (state.beer + state.radler) > 1 ? 'Gestört' : sugarLevel > 60 ? 'Mäßig' : 'Gut',
+                color: (state.beer + state.radler) > 1 ? '#ef4444' : sugarLevel > 60 ? '#f97316' : '#22c55e'
+            },
+            {
+                icon: '🧠',
+                label: 'Konzentration',
+                value: sugarLevel > 60 ? 'Schwankend' : nutrition.protein > 50 ? 'Gut ✓' : 'Okay',
+                color: sugarLevel > 60 ? '#f97316' : nutrition.protein > 50 ? '#22c55e' : '#58a6ff'
+            }
+        ];
+
+        grid.innerHTML = impacts.map(imp => `
+            <div class="impact-card" style="border-color: ${imp.color}22;">
+                <div class="icon">${imp.icon}</div>
+                <div class="impact-label">${imp.label}</div>
+                <div class="impact-value" style="color:${imp.color}">${imp.value}</div>
+            </div>
+        `).join('');
+    }
+
+    // ============ PERSONAL SUMMARY ============
+    function renderPersonalSummary(nutrition, tdee, balance) {
+        const el = document.getElementById('personal-summary');
+        const sugarLevel = Math.min(nutrition.avgGI * 0.8 + nutrition.carbs * 0.15, 100);
+        const satFatRatio = nutrition.fat > 0 ? nutrition.satFat / nutrition.fat : 0;
+        const bmi = state.weight / ((state.height / 100) ** 2);
+        const sportMinutes = state.activity + (state.treadmill || 0);
+
+        let tips = [];
+
+        // Weight
+        if (balance > 100) {
+            tips.push(`<div style="color:#ef4444;">⚠️ <strong>Kalorienüberschuss von ${balance} kcal/Tag.</strong> Du nimmst zu. Reduziere Portionen oder ersetze kalorienreiche Sachen (Pommes, Pizza) durch leichtere Alternativen.</div>`);
+        }
+
+        // Blood sugar
+        if (sugarLevel > 55) {
+            tips.push(`<div style="color:#f97316;">💧 <strong>Dein Blutzucker wird stark schwanken.</strong> Hauptursache: ${state.pasta > 0.5 ? 'Nudeln' : ''} ${state.fries > 0.5 ? 'Pommes' : ''} ${state.pizza > 1 ? 'Pizza' : ''} ${state.cola > 0 ? 'Cola' : ''} ${state.juice > 0 ? 'Saft' : ''}. Das erklärt das Schwitzen! Weniger davon oder immer Protein dazu.</div>`);
+        }
+
+        // Protein
+        if (nutrition.protein < 50) {
+            tips.push(`<div style="color:#a78bfa;">🫘 <strong>Zu wenig Protein (${Math.round(nutrition.protein)}g).</strong> Als Vegetarier: Hülsenfrüchte, Tofu, Nüsse, Käse. Ziel: mindestens ${Math.round(state.weight * 0.8)}g/Tag. Protein hält satt und stabilisiert den Blutzucker.</div>`);
+        }
+
+        // Saturated fat
+        if (satFatRatio > 0.5 && nutrition.fat > 40) {
+            tips.push(`<div style="color:#eab308;">🧈 <strong>Zu viel gesättigtes Fett.</strong> Käse + Mayo + Frittiertes. Langfristig schlecht fürs Herz. Tausche Mayo gegen Hummus, weniger Käse, Nüsse statt Pommes als Snack.</div>`);
+        }
+
+        // Sport & Back
+        if (sportMinutes > 0) {
+            tips.push(`<div style="color:#22c55e;">🏃 <strong>Sport (${sportMinutes} min/Tag) ist super!</strong> Das verbrennt extra ~${Math.round(sportMinutes * 6)} kcal und verbessert Insulinempfindlichkeit (= weniger Blutzucker-Spikes). ${sportMinutes >= 30 ? 'Für den Rücken: Achte auf Rumpfstabilität (Planks, leichtes Krafttraining). Laufband ist gut, aber einseitig.' : 'Mehr wäre besser für Rücken und Gewicht.'}</div>`);
+        }
+
+        // Back specific
+        if (state.weight > 85 || state.activity < 20) {
+            tips.push(`<div style="color:#f97316;">🦴 <strong>Rückenprobleme:</strong> ${state.weight > 85 ? 'Übergewicht belastet die Bandscheiben. Jedes Kilo weniger hilft.' : ''} ${state.activity < 20 ? 'Zu wenig Bewegung schwächt die Rumpfmuskulatur.' : ''} Tipp: Kurze Dehnpausen, Rumpftraining (Planks), und beim Laufband nicht zu schnell steigern.</div>`);
+        }
+
+        // Veggies
+        if (state.veggies < 2 && state.salad < 1) {
+            tips.push(`<div style="color:#22c55e;">🥦 <strong>Mehr Gemüse!</strong> Du isst kaum welches. Gemüse füllt den Magen, hat fast keine Kalorien, und verlangsamt die Zuckeraufnahme. Auch wenn du keinen Salat machen willst: Tiefkühl-Gemüse in die Pfanne = 5 Minuten.</div>`);
+        }
+
+        // Alcohol
+        if (state.beer + state.radler > 1) {
+            tips.push(`<div style="color:#eab308;">🍺 <strong>Alkohol:</strong> Bier/Radler = leere Kalorien + stört Fettverbrennung + schlechter Schlaf + Blutzucker-Chaos. Jede Flasche weniger hilft.</div>`);
+        }
+
+        // Positive reinforcement
+        if (state.legumes > 0) {
+            tips.push(`<div style="color:#22c55e;">✅ <strong>Hülsenfrüchte sind perfekt!</strong> Niedriger GI, viel Protein, sättigend. Mehr davon!</div>`);
+        }
+        if (state.nuts > 0) {
+            tips.push(`<div style="color:#22c55e;">✅ <strong>Nüsse = super Snack.</strong> Gesundes Fett, Protein, stabilisiert Blutzucker. Aber Achtung: kalorienreich, also max. 1-2 Handvoll.</div>`);
+        }
+
+        if (tips.length === 0) {
+            tips.push(`<div style="color:#22c55e;">🎉 Sieht gut aus! Deine Ernährung ist ausgewogen.</div>`);
+        }
+
+        el.innerHTML = tips.map(t => `<div style="margin:10px 0; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.9em; line-height:1.5;">${t}</div>`).join('');
+    }
+
+    // ============ UTILITY FUNCTIONS ============
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color) {
+        const headLen = 8;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+        ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+
+    // ============ SPORT/TREADMILL EXTENSION ============
+    // Add treadmill input to the panel
+    function addSportInputs() {
+        const panel = document.querySelector('.input-panel');
+        
+        // Find the activity input group and add after it
+        const activitySection = document.querySelector('.input-section-title');
+        
+        const sportSection = document.createElement('div');
+        sportSection.innerHTML = `
+            <div class="input-section-title">🏃 Sport & Laufband</div>
+            <div class="input-group">
+                <label>Laufband (Minuten/Tag) <span class="value-display" id="val-treadmill">0</span></label>
+                <input type="range" id="treadmill" min="0" max="90" value="0" oninput="update()">
+            </div>
+            <div class="input-group">
+                <label>Laufband-Geschwindigkeit <span class="value-display" id="val-treadspeed">6 km/h</span></label>
+                <input type="range" id="treadspeed" min="4" max="12" value="6" step="0.5" oninput="update()">
+            </div>
+            <div class="input-group">
+                <label>Krafttraining (Min/Woche) <span class="value-display" id="val-strength">0</span></label>
+                <input type="range" id="strength" min="0" max="180" value="0" step="15" oninput="update()">
+            </div>
+            <div class="input-group">
+                <label>Rückenprobleme <span class="value-display" id="val-backpain">manchmal</span></label>
+                <input type="range" id="backpain" min="0" max="3" value="1" step="1" oninput="update()">
+            </div>
+        `;
+        
+        activitySection.parentNode.insertBefore(sportSection, activitySection.nextSibling);
+    }
+
+    // Override readInputs to include sport
+    const originalReadInputs = readInputs;
+    readInputs = function() {
+        const ids = ['weight','height','activity','fries','pizza','pasta','potatoes','cheese','mayo','burger','salad','legumes','nuts','veggies','fruit','cola','radler','beer','juice','treadmill','treadspeed','strength','backpain'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            state[id] = parseFloat(el.value);
+            const valEl = document.getElementById('val-' + id);
+            if (valEl) {
+                let suffix = '';
+                if (id === 'weight') suffix = ' kg';
+                else if (id === 'height') suffix = ' cm';
+                else if (id === 'activity') suffix = ' min';
+                else if (id === 'treadmill') suffix = ' min';
+                else if (id === 'treadspeed') suffix = ' km/h';
+                else if (id === 'strength') suffix = ' min';
+                else if (id === 'backpain') {
+                    const labels = ['nie', 'manchmal', 'oft', 'ständig'];
+                    suffix = '';
+                    valEl.textContent = labels[Math.round(state[id])];
+                    return;
+                }
+                valEl.textContent = el.value + suffix;
+            }
+        });
+        // Defaults for missing
+        state.treadmill = state.treadmill || 0;
+        state.treadspeed = state.treadspeed || 6;
+        state.strength = state.strength || 0;
+        state.backpain = state.backpain || 1;
+    };
+
+    // Override TDEE to include sport
+    const originalTDEE = calculateTDEE;
+    calculateTDEE = function() {
+        const bmr = calculateBMR();
+        const activityMultiplier = 1.2 + (state.activity / 60) * 0.2;
+        let tdee = bmr * activityMultiplier;
+        
+        // Treadmill calories (rough: speed * weight * 0.0175 * minutes)
+        const treadmillCal = state.treadmill * state.treadspeed * state.weight * 0.0175;
+        tdee += treadmillCal;
+        
+        // Strength training (average ~5 kcal/min, spread over week)
+        const strengthDaily = (state.strength * 5) / 7;
+        tdee += strengthDaily;
+        
+        return Math.round(tdee);
+    };
+
+    // Enhanced personal summary with sport/back info
+    const originalSummary = renderPersonalSummary;
+    renderPersonalSummary = function(nutrition, tdee, balance) {
+        const el = document.getElementById('personal-summary');
+        const sugarLevel = Math.min(nutrition.avgGI * 0.8 + nutrition.carbs * 0.15, 100);
+        const satFatRatio = nutrition.fat > 0 ? nutrition.satFat / nutrition.fat : 0;
+        const sportMinutes = state.activity + state.treadmill;
+        const backpainLevel = state.backpain || 1;
+
+        let tips = [];
+
+        // Weight
+        if (balance > 100) {
+            tips.push(`<div style="color:#ef4444;">⚠️ <strong>Kalorienüberschuss: +${balance} kcal/Tag.</strong> Du nimmst ca. ${(balance*30/7700).toFixed(1)} kg/Monat zu. ${state.treadmill > 0 ? 'Dein Laufband hilft (' + Math.round(state.treadmill * state.treadspeed * state.weight * 0.0175) + ' kcal extra verbrannt), aber es reicht nicht ganz.' : 'Sport würde helfen!'}</div>`);
+        } else if (balance < -100) {
+            tips.push(`<div style="color:#22c55e;">✅ <strong>Kaloriendefizit: ${balance} kcal/Tag.</strong> Du nimmst ca. ${Math.abs((balance*30/7700)).toFixed(1)} kg/Monat ab. ${state.treadmill > 0 ? 'Dein Laufband trägt dazu bei!' : ''} Gut so!</div>`);
+        }
+
+        // Blood sugar & sweating
+        if (sugarLevel > 55) {
+            const culprits = [];
+            if (state.pasta > 0.5) culprits.push('Nudeln');
+            if (state.fries > 0.5) culprits.push('Pommes');
+            if (state.pizza > 1) culprits.push('Pizza');
+            if (state.cola > 0) culprits.push('Cola');
+            if (state.juice > 0) culprits.push('Saft');
+            if (state.potatoes > 0.5) culprits.push('Bratkartoffeln');
+            tips.push(`<div style="color:#f97316;">💧 <strong>Schwitz-Risiko hoch!</strong> Hauptverursacher: ${culprits.join(', ')}. Diese treiben deinen Blutzucker schnell hoch → viel Insulin → Crash → Schwitzen. ${sportMinutes > 20 ? 'Sport nach dem Essen hilft den Spike abzufangen!' : 'Tipp: 10 Min. Spaziergang nach dem Essen.'}</div>`);
+        }
+
+        // Sport & Treadmill
+        if (state.treadmill > 0) {
+            const treadCal = Math.round(state.treadmill * state.treadspeed * state.weight * 0.0175);
+            tips.push(`<div style="color:#22c55e;">🏃 <strong>Laufband: ${state.treadmill} Min. bei ${state.treadspeed} km/h</strong> = ca. ${treadCal} kcal verbrannt. ${state.treadspeed > 8 ? 'Gutes Tempo!' : 'Auch langsames Gehen/Joggen ist effektiv für Blutzucker und Fettverbrennung.'} ${backpainLevel >= 2 ? '⚠️ Bei Rückenproblemen: Steigung statt Geschwindigkeit erhöhen, das schont die Wirbelsäule.' : ''}</div>`);
+        }
+
+        // Back pain
+        if (backpainLevel >= 1) {
+            let backTips = [];
+            if (state.weight > 85) backTips.push('Gewicht reduzieren entlastet die Bandscheiben');
+            if (state.strength < 30) backTips.push('Rumpftraining (Planks, Bird-Dogs) 2-3x/Woche stabilisiert');
+            if (state.treadmill > 45 && state.treadspeed > 8) backTips.push('Laufband-Intensität etwas reduzieren');
+            backTips.push('Dehnen nach dem Sport (besonders Hüftbeuger + hintere Oberschenkel)');
+            
+            const severity = ['', 'manchmal', 'oft', 'ständig'][backpainLevel];
+            tips.push(`<div style="color:${backpainLevel >= 2 ? '#ef4444' : '#f97316'};">🦴 <strong>Rücken (${severity} Probleme):</strong><ul style="margin:5px 0 0 15px; font-size:0.9em;">${backTips.map(t => '<li>' + t + '</li>').join('')}</ul>${backpainLevel >= 2 ? '<br><em style="font-size:0.85em;">Hexenschuss/Krämpfe deuten auf schwache Tiefenmuskulatur + evtl. verkürzte Muskeln hin. Krafttraining hilft langfristig mehr als Schmerzmittel.</em>' : ''}</div>`);
+        }
+
+        // Protein
+        if (nutrition.protein < state.weight * 0.8) {
+            tips.push(`<div style="color:#a78bfa;">🫘 <strong>Protein zu niedrig (${Math.round(nutrition.protein)}g, Ziel: ~${Math.round(state.weight * 0.8)}g).</strong> Wichtig für Muskelerhalt ${state.treadmill > 0 || state.strength > 0 ? '(besonders weil du Sport machst!)' : ''}und Sättigung. Hülsenfrüchte, Tofu, Nüsse, Käse.</div>`);
+        }
+
+        // Saturated fat
+        if (satFatRatio > 0.5 && nutrition.fat > 40) {
+            tips.push(`<div style="color:#eab308;">🧈 <strong>Zu viel gesättigtes Fett (${Math.round(satFatRatio*100)}%).</strong> Langfristig: Arterienverkalkung → Herzprobleme. Tausche: Mayo → Hummus, weniger Käse, Nüsse statt Pommes.</div>`);
+        }
+
+        // Veggies
+        if (state.veggies < 2 && state.salad < 1) {
+            tips.push(`<div style="color:#22c55e;">🥦 <strong>Kaum Gemüse!</strong> Ich weiß, Salat machen ist nervig. Alternativen: Tiefkühl-Gemüse (Mikrowelle, 3 Min.), Gurke/Tomate roh nebenher, fertige Gemüsesuppe. Alles besser als nichts.</div>`);
+        }
+
+        // Alcohol
+        if (state.beer + state.radler > 1) {
+            tips.push(`<div style="color:#eab308;">🍺 <strong>Alkohol (${Math.round((state.beer + state.radler) * 215)} kcal):</strong> Leere Kalorien + blockiert Fettverbrennung + stört Regeneration nach Sport + verschlechtert Schlaf. Radler hat zusätzlich viel Zucker.</div>`);
+        }
+
+        // Strength training recommendation
+        if (state.strength < 30 && (backpainLevel >= 1 || balance > 0)) {
+            tips.push(`<div style="color:#58a6ff;">💪 <strong>Krafttraining fehlt.</strong> Selbst 2x 15 Min./Woche: stärkt Rücken, erhöht Grundumsatz (mehr Muskeln = mehr Kalorienverbrauch in Ruhe), verbessert Insulinempfindlichkeit. Bodyweight reicht: Planks, Kniebeugen, Liegestütze.</div>`);
+        }
+
+        // Positive
+        if (state.legumes > 0) tips.push(`<div style="color:#22c55e;">✅ Hülsenfrüchte = perfekt für dich. Mehr davon!</div>`);
+        if (state.nuts > 0) tips.push(`<div style="color:#22c55e;">✅ Nüsse = guter Snack (aber max. 2 Handvoll, kalorienreich).</div>`);
+        if (sportMinutes > 40) tips.push(`<div style="color:#22c55e;">✅ ${sportMinutes} Min. Bewegung/Tag ist richtig gut! Dein Körper dankt es dir.</div>`);
+
+        if (tips.length === 0) {
+            tips.push(`<div style="color:#22c55e;">🎉 Sieht gut aus! Ausgewogene Ernährung + Sport.</div>`);
+        }
+
+        el.innerHTML = tips.map(t => `<div style="margin:10px 0; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.9em; line-height:1.6;">${t}</div>`).join('');
+    };
+
+    // ============ INIT ============
+    function init() {
+        addSportInputs();
+        
+        // Handle canvas resize
+        window.addEventListener('resize', () => update());
+        
+        // Initial render
+        update();
+    }
+
+    init();
+    </script>
+</body>
+</html>

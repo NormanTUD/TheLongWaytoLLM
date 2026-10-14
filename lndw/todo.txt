@@ -1,0 +1,13 @@
+"muster exist in wirklichkeit" ist ne annahme, muss nicht sein, können auch nur in uns esin
+"daten sind fehlerhaft" -> wie groß ist der kontext? was heißt "in der nähe"?
+seltene daten interpolation, fehlende daten extrapolation
+-> "sprachlich plausibler text der in hinsicht auf fakten zufällig plausibel sein kann"
+
+"versteht die ki was sie sagt" -> kein greifbarer realitätsbezug
+
+datenumfang ist ne kritische größe, mehr thematisieren (inter extrapolation, datensatz größe ist ne relevante größe, mehr der richtigend daten helfen)
+
+todo: 
+- history of ai eigene präsentation
+
+https://arxiv.org/html/1602.05314v1

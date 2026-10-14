@@ -1,0 +1,194 @@
+DIGEST e0fc855b7df021faf9f197737cad0f9a
+FAdmissibleTransitions
+R3088:3094 Library <> <> lib
+R3112:3117 Traces <> <> lib
+R3144:3153 Coq.Lists.List <> <> lib
+R3163:3175 Coq.Lists.List ListNotations <> mod
+def 4223:4244 <> admissible_observation
+R4262:4265 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4248:4261 Library <> AccessFunction rec
+R4274:4293 Library <> observation_licensed def
+def 4307:4328 <> admissible_translation
+R4347:4350 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4332:4346 Library <> ViewTranslation rec
+R4359:4378 Library <> translation_licensed def
+def 4392:4412 <> admissible_refinement
+R4434:4437 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4417:4433 Library <> ContextRefinement rec
+R4446:4464 Library <> refinement_licensed def
+ind 4561:4563 <> InT
+constr 4600:4606 <> InT_obs
+constr 4679:4684 <> InT_tr
+constr 4761:4767 <> InT_ref
+R4570:4583 Library <> TransitionKind ind
+binder 4566:4566 <> k:1
+binder 4617:4617 <> O:4
+R4639:4642 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4621:4623 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4620:4620 AdmissibleTransitions <> k:1 var
+R4624:4636 Library <> TKObservation constr
+R4638:4638 AdmissibleTransitions <> O:4 var
+R4665:4668 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4643:4662 Library <> observation_licensed def
+R4664:4664 AdmissibleTransitions <> O:4 var
+R4669:4671 AdmissibleTransitions <> InT:2 ind
+R4673:4673 AdmissibleTransitions <> k:1 var
+binder 4696:4697 <> T_:5
+R4720:4723 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4701:4703 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4700:4700 AdmissibleTransitions <> k:1 var
+R4704:4716 Library <> TKTranslation constr
+R4718:4719 AdmissibleTransitions <> T_:5 var
+R4747:4750 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4724:4743 Library <> translation_licensed def
+R4745:4746 AdmissibleTransitions <> T_:5 var
+R4751:4753 AdmissibleTransitions <> InT:2 ind
+R4755:4755 AdmissibleTransitions <> k:1 var
+binder 4778:4778 <> f:6
+R4799:4802 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4782:4784 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R4781:4781 AdmissibleTransitions <> k:1 var
+R4785:4796 Library <> TKRefinement constr
+R4798:4798 AdmissibleTransitions <> f:6 var
+R4824:4827 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R4803:4821 Library <> refinement_licensed def
+R4823:4823 AdmissibleTransitions <> f:6 var
+R4828:4830 AdmissibleTransitions <> InT:2 ind
+R4832:4832 AdmissibleTransitions <> k:1 var
+scheme 4561:4563 <> InT_ind
+scheme 4561:4563 <> InT_sind
+rec 5337:5357 <> SubcategoryConstraint
+proj 5366:5377 <> SC_permitted
+proj 5447:5453 <> SC_in_T
+R5381:5384 Coq.Init.Datatypes <> list ind
+R5386:5399 Library <> TransitionKind ind
+binder 5464:5464 <> k:9
+R5484:5487 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5467:5468 Coq.Lists.List <> In def
+R5472:5483 AdmissibleTransitions <> SC_permitted:8 meth
+R5470:5470 AdmissibleTransitions <> k:9 var
+R5488:5490 AdmissibleTransitions <> InT ind
+R5492:5492 AdmissibleTransitions <> k:9 var
+rec 5588:5600 <> BayesianPrior
+proj 5609:5621 <> BP_hypotheses
+proj 5689:5695 <> BP_in_T
+R5625:5628 Coq.Init.Datatypes <> list ind
+R5630:5643 Library <> TransitionKind ind
+binder 5706:5706 <> k:13
+R5727:5730 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5709:5710 Coq.Lists.List <> In def
+R5714:5726 AdmissibleTransitions <> BP_hypotheses:12 meth
+R5712:5712 AdmissibleTransitions <> k:13 var
+R5731:5733 AdmissibleTransitions <> InT ind
+R5735:5735 AdmissibleTransitions <> k:13 var
+rec 5831:5842 <> OccamPenalty
+proj 5851:5863 <> OP_complexity
+proj 5931:5940 <> OP_overfit
+R5881:5884 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R5867:5880 Library <> TransitionKind ind
+R5885:5887 Coq.Init.Datatypes <> nat ind
+R5956:5969 Library <> TransitionKind ind
+binder 5952:5952 <> k:17
+R5979:5981 Coq.Init.Datatypes <> nat ind
+binder 5973:5973 <> n:18
+binder 5975:5975 <> m:19
+R6009:6012 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6004:6007 Coq.Init.Peano <> ::nat_scope:x_'>='_x not
+R5989:6001 AdmissibleTransitions <> OP_complexity:16 meth
+R6003:6003 AdmissibleTransitions <> k:17 var
+R6008:6008 AdmissibleTransitions <> n:18 var
+R6033:6036 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R6028:6031 Coq.Init.Peano <> ::nat_scope:x_'>='_x not
+R6013:6025 AdmissibleTransitions <> OP_complexity:16 meth
+R6027:6027 AdmissibleTransitions <> k:17 var
+R6032:6032 AdmissibleTransitions <> m:19 var
+R6043:6046 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R6038:6041 Coq.Init.Peano <> ::nat_scope:x_'>='_x not
+R6037:6037 AdmissibleTransitions <> n:18 var
+R6042:6042 AdmissibleTransitions <> m:19 var
+R6048:6051 Coq.Init.Peano <> ::nat_scope:x_'>='_x not
+R6047:6047 AdmissibleTransitions <> m:19 var
+R6052:6052 AdmissibleTransitions <> n:18 var
+ax 6386:6404 <> three_roles_one_set
+R6423:6443 AdmissibleTransitions <> SubcategoryConstraint rec
+binder 6418:6419 <> sc:21
+R6452:6464 AdmissibleTransitions <> BayesianPrior rec
+binder 6447:6448 <> bp:22
+binder 6480:6480 <> k:23
+R6488:6492 Coq.Init.Logic <> ::type_scope:x_'<->'_x not
+R6483:6485 AdmissibleTransitions <> InT ind
+R6487:6487 AdmissibleTransitions <> k:23 var
+R6515:6518 Coq.Init.Logic <> ::type_scope:x_'\/'_x not
+R6493:6494 Coq.Lists.List <> In def
+R6499:6510 AdmissibleTransitions <> SC_permitted proj
+R6512:6513 AdmissibleTransitions <> sc:21 var
+R6496:6496 AdmissibleTransitions <> k:23 var
+R6519:6520 Coq.Lists.List <> In def
+R6525:6537 AdmissibleTransitions <> BP_hypotheses proj
+R6539:6540 AdmissibleTransitions <> bp:22 var
+R6522:6522 AdmissibleTransitions <> k:23 var
+ind 7125:7138 <> AdmissibleKind
+constr 7154:7174 <> AK_sensor_calibration
+constr 7201:7220 <> AK_coordinate_change
+constr 7248:7262 <> AK_physical_law
+constr 7295:7314 <> AK_proof_translation
+constr 7342:7361 <> AK_validated_decoder
+constr 7389:7412 <> AK_archival_transmission
+R7182:7195 AdmissibleTransitions <> AdmissibleKind:26 ind
+R7229:7242 AdmissibleTransitions <> AdmissibleKind:26 ind
+R7276:7289 AdmissibleTransitions <> AdmissibleKind:26 ind
+R7323:7336 AdmissibleTransitions <> AdmissibleKind:26 ind
+R7370:7383 AdmissibleTransitions <> AdmissibleKind:26 ind
+R7417:7430 AdmissibleTransitions <> AdmissibleKind:26 ind
+scheme 7125:7138 <> AdmissibleKind_rect
+scheme 7125:7138 <> AdmissibleKind_ind
+scheme 7125:7138 <> AdmissibleKind_rec
+scheme 7125:7138 <> AdmissibleKind_sind
+def 7603:7611 <> justified
+R7619:7632 AdmissibleTransitions <> AdmissibleKind ind
+binder 7614:7615 <> ak:28
+R7645:7648 Coq.Init.Logic <> True ind
+ax 8147:8172 <> more_freedom_more_evidence
+binder 8186:8187 <> T1:29
+binder 8189:8190 <> T2:30
+R8215:8217 Coq.Init.Datatypes <> nat ind
+binder 8201:8205 <> size1:31
+binder 8207:8211 <> size2:32
+R8236:8237 AdmissibleTransitions <> T1:29 var
+binder 8230:8232 <> ev1:33
+R8247:8248 AdmissibleTransitions <> T2:30 var
+binder 8241:8243 <> ev2:34
+R8269:8272 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R8261:8263 Coq.Init.Peano <> ::nat_scope:x_'>'_x not
+R8256:8260 AdmissibleTransitions <> size2:32 var
+R8264:8268 AdmissibleTransitions <> size1:31 var
+R8273:8276 Coq.Init.Logic <> True ind
+rec 10119:10131 <> SellarsianWeb
+proj 10140:10144 <> SW_R1
+proj 10160:10164 <> SW_R2
+proj 10180:10184 <> SW_R3
+proj 10200:10204 <> SW_R4
+proj 10220:10225 <> SW_T12
+proj 10299:10304 <> SW_T23
+proj 10379:10384 <> SW_T13
+proj 10458:10463 <> SW_T31
+proj 10538:10543 <> SW_T24
+proj 10617:10622 <> SW_T42
+proj 10697:10702 <> SW_T34
+proj 10776:10781 <> SW_T43
+R10148:10155 Library <> Codomain rec
+R10168:10175 Library <> Codomain rec
+R10188:10195 Library <> Codomain rec
+R10208:10215 Library <> Codomain rec
+R10229:10243 Library <> ViewTranslation rec
+R10308:10322 Library <> ViewTranslation rec
+R10388:10402 Library <> ViewTranslation rec
+R10467:10481 Library <> ViewTranslation rec
+R10547:10561 Library <> ViewTranslation rec
+R10626:10640 Library <> ViewTranslation rec
+R10706:10720 Library <> ViewTranslation rec
+R10785:10799 Library <> ViewTranslation rec
+def 10950:10964 <> web_is_licensed
+R10972:10984 AdmissibleTransitions <> SellarsianWeb rec
+binder 10967:10968 <> sw:50
+R10997:11000 Coq.Init.Logic <> True ind

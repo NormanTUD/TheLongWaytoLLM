@@ -1,0 +1,405 @@
+function erfApprox(x) {
+	// Abramowitz & Stegun 7.1.26 approximation of the error function
+	const sign = x < 0 ? -1 : 1;
+	x = Math.abs(x);
+	const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+	      a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+	const t = 1 / (1 + p * x);
+	const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+	return sign * y;
+}
+
+function initPureActivationLab() {
+	if (document.getElementById('softmax-controls')) initSoftmaxLab();
+
+	const typeSelect = document.getElementById('pure-act-type');
+	const mathBox = document.getElementById('pure-math-box');
+	const titleDisp = document.getElementById('act-title');
+	const descDisp = document.getElementById('act-description');
+
+	const acts = {
+		relu: {
+			name: "ReLU (Rectified Linear Unit)",
+			fn: (x) => Math.max(0, x),
+			tex: "f(x) = \\max(0, x)",
+			use: "The **industry standard** for hidden layers in Deep Learning. It is computationally efficient and helps networks train faster.",
+			pro: "Solves the vanishing gradient problem for positive values and is extremely fast to compute.",
+			con: "**Dying ReLU problem:** If a neuron gets stuck in the negative range, it outputs 0 and its gradient becomes 0, effectively 'dying' forever."
+		},
+		gelu: {
+			name: "GELU (Gaussian Error Linear Unit)",
+			fn: (x) => 0.5 * x * (1 + erfApprox(x / Math.sqrt(2))),
+			tex: "f(x) = 0.5\\,x\\left(1 + \\text{erf}\\left(\\frac{x}{\\sqrt{2}}\\right)\\right)",
+			use: "The **standard activation of Transformers**, used in the FFN of GPT-style models. A smooth ReLU: everywhere differentiable, with a small gradient for negative inputs.",
+			pro: "Smooth and differentiable everywhere; no 'dying' neurons; the activation of choice in nanoGPT's Feed-Forward Network.",
+			con: "Slightly more expensive to compute than ReLU due to the error function."
+		},
+		silu: {
+			name: "SiLU / Swish (Sigmoid Linear Unit)",
+			fn: (x) => x / (1 + Math.exp(-x)),
+			tex: "f(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}",
+			use: "The **standard activation of the diffusion U-Net** (Stable Diffusion, DDPM), and of most modern vision CNNs. A self-gated, smoothed ReLU.",
+			pro: "Cheap to compute (one sigmoid, no erf); smooth and differentiable everywhere; non-zero gradient on the negative side; used in every ResBlock of Stable Diffusion alongside GroupNorm.",
+			con: "Output is unbounded below (~ -0.28 minimum), so activations can drift to small negatives and slow training slightly if not paired with normalization."
+		},
+		sigmoid: {
+			name: "Sigmoid / Logistic",
+			fn: (x) => 1 / (1 + Math.exp(-x)),
+			tex: "f(x) = \\frac{1}{1 + e^{-x}}",
+			use: "Primarily used in the **output layer for binary classification**. It maps any input to a probability between 0 and 1.",
+			pro: "Smooth gradient and clear probabilistic interpretation.",
+			con: "**Vanishing Gradients:** For very high or low inputs, the function becomes flat. The derivative becomes near-zero, stopping the network from learning."
+		},
+		tanh: {
+			name: "Hyperbolic Tangent (Tanh)",
+			fn: (x) => Math.tanh(x),
+			tex: "f(x) = \\tanh(x)",
+			use: "Often preferred over Sigmoid for hidden layers because the data becomes **zero-centered** (range -1 to 1).",
+			pro: "Stronger gradients than Sigmoid; centered output helps the next layer's learning process.",
+			con: "Still suffers from the vanishing gradient problem when values are far from zero."
+		},
+		leaky_relu: {
+			name: "Leaky ReLU",
+			fn: (x) => x >= 0 ? x : 0.1 * x,
+			tex: "f(x) = \\max(0.1x, x)",
+			use: "An attempt to fix the 'Dying ReLU' problem by allowing a small, non-zero gradient when the input is negative.",
+			pro: "Prevents neurons from 'dying' by ensuring they always contribute at least a small amount to the gradient.",
+			con: "The leak hyperparameter (0.1) may need tuning for specific tasks."
+		},
+		identity: {
+			name: "Identity / Linear",
+			fn: (x) => x,
+			tex: "f(x) = x",
+			use: "Used in the **output layer for regression tasks** where the output can be any real number.",
+			pro: "Does not bound the output; preserves the full range of calculated values.",
+			con: "A network with only linear activations is just a linear model, no matter how deep it is."
+		}
+	};
+
+	function update() {
+		const type = typeSelect.value;
+		const selected = acts[type];
+
+		const xValues = [], yValues = [];
+		for (let x = -5; x <= 5; x += 0.05) {
+			xValues.push(x);
+			yValues.push(selected.fn(x));
+		}
+
+		const data = [{
+			x: xValues, y: yValues,
+			line: { color: '#10b981', width: 3, shape: type === 'step' ? 'hv' : 'linear' }
+		}];
+
+		Plotly.newPlot('plot-pure-activation', data, {
+			margin: { t: 10, b: 30, l: 30, r: 10 },
+			xaxis: { title: 'Input (z)', range: [-5, 5] },
+			yaxis: { title: 'Output f(z)', range: [-1.2, 1.2] },
+			paper_bgcolor: themeColor('#fff'),
+			plot_bgcolor: themeColor('#fff'),
+			hoverlabel: {
+				bgcolor: themeColor('#1e293b'),
+				bordercolor: 'transparent',
+				font: { color: themeColor('#f8fafc'), size: 12 }
+			}
+		});
+
+		// Update LaTeX
+		mathBox.innerHTML = `$ ${selected.tex} $`;
+		render_temml();
+
+		titleDisp.innerText = selected.name;
+
+		// Injecting raw Markdown
+		descDisp.innerHTML = `
+		${selected.use}
+
+* ✅ **Advantage:** ${selected.pro}
+* ❌ **Disadvantage:** ${selected.con}
+	`;
+
+		// If your system uses a specific function to parse Markdown after injection, call it here.
+		// For example, if using a standard library: 
+		// descDisp.innerHTML = marked.parse(descDisp.innerHTML);
+		renderMarkdown()
+	}
+
+	typeSelect.onchange = update;
+	update();
+}
+
+/**
+ * Softmax Lab: Visualizing how raw scores (logits) 
+ * compete for a slice of the probability pie.
+ */
+function initSoftmaxLab() {
+    const controlsContainer = document.getElementById('softmax-controls');
+    const mathBox = document.getElementById('softmax-math');
+    
+    let logits = [0.2, 0.8]; // Start-Werte aus deinem Beispiel
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+    function calculateSoftmax(arr) {
+        const maxLogit = Math.max(...arr);
+        const exps = arr.map(x => Math.exp(x)); // Hier rechnen wir e^x
+        const sumExps = exps.reduce((a, b) => a + b, 0);
+        return { 
+            probs: exps.map(x => x / sumExps), 
+            exps: exps, 
+            total: sumExps 
+        };
+    }
+
+    function renderInputs() {
+        controlsContainer.innerHTML = '';
+        logits.forEach((val, i) => {
+            const div = document.createElement('div');
+            div.style.marginBottom = '10px';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="color:${colors[i % colors.length]}; font-weight:bold;">Category ${String.fromCharCode(65 + i)}</label>
+                    ${logits.length > 2 ? `<button class="remove-btn" data-index="${i}" style="color:#ef4444; cursor:pointer; background:none; border:none;">&times;</button>` : ''}
+                </div>
+                <input type="number" class="softmax-input" data-index="${i}" value="${val}" step="0.1" style="width:100%; padding:5px; border-radius:4px; border:1px solid #ccc;">
+            `;
+            controlsContainer.appendChild(div);
+        });
+
+        document.querySelectorAll('.softmax-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                logits[e.target.dataset.index] = parseFloat(e.target.value) || 0;
+                update();
+            });
+        });
+
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                logits.splice(e.target.dataset.index, 1);
+                renderInputs();
+                update();
+            });
+        });
+    }
+
+    function update() {
+        const result = calculateSoftmax(logits);
+        const labels = logits.map((_, i) => `Category ${String.fromCharCode(65 + i)}`);
+
+        Plotly.newPlot('softmax-pie-plot', [{
+            values: result.probs.map(p => p * 100),
+            labels: labels,
+            type: 'pie',
+            hole: 0.4,
+            marker: { colors: colors },
+            textinfo: 'label+percent'
+        }], { height: 350, margin: { t: 40, b: 10, l: 10, r: 10 }, showlegend: false, paper_bgcolor: themeColor('#fff'), plot_bgcolor: themeColor('#fff'), hoverlabel: { bgcolor: themeColor('#1e293b'), bordercolor: 'transparent', font: { color: themeColor('#f8fafc'), size: 12 } } });
+
+        Plotly.newPlot('softmax-bar-plot', [{
+            x: logits,
+            y: labels,
+            type: 'bar',
+            orientation: 'h',
+            marker: { color: colors.slice(0, logits.length) }
+        }], { height: 350, margin: { t: 40, b: 40, l: 60, r: 20 }, xaxis: { title: 'Input Score' }, paper_bgcolor: themeColor('#fff'), plot_bgcolor: themeColor('#fff'), hoverlabel: { bgcolor: themeColor('#1e293b'), bordercolor: 'transparent', font: { color: themeColor('#f8fafc'), size: 12 } } });
+
+        // Detaillierte Formel-Anzeige
+        let mathHtml = `<div style="text-align:left;"><b>Calculation Path:</b><br>`;
+        logits.forEach((val, i) => {
+            mathHtml += `
+                <span style="color:${colors[i % colors.length]}">●</span> 
+                $e^{${val}} = ${result.exps[i].toFixed(2)}$ &nbsp;&nbsp;→&nbsp;&nbsp; 
+                $${result.exps[i].toFixed(2)} / ${result.total.toFixed(2)} = ${(result.probs[i]*100).toFixed(1)}\\%$<br>`;
+        });
+        mathHtml += `</div>`;
+        mathBox.innerHTML = mathHtml;
+	    render_temml();
+    }
+
+    document.getElementById('add-class-btn').addEventListener('click', () => {
+        if (logits.length < 7) {
+            logits.push(0.0);
+            renderInputs();
+            update();
+        }
+    });
+
+    renderInputs();
+    update();
+}
+
+// ============================================================
+// LAZY LOADING FOR ACTIVATION MODULE
+// ============================================================
+
+const _actLazyRegistry = [];
+let _actLazyObserver = null;
+
+function _actLazyRegister(elementId, initFn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    _actLazyRegistry.push({ el, initFn, initialized: false });
+}
+
+function _actLazyCreateObserver() {
+    if (_actLazyObserver) return;
+
+    _actLazyObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+
+            const match = _actLazyRegistry.find(r => r.el === entry.target);
+            if (match && !match.initialized) {
+                match.initialized = true;
+                _actLazyObserver.unobserve(match.el);
+                match.initFn();
+            }
+        });
+    }, {
+        rootMargin: rootMargin // uses the already-defined global const
+    });
+
+    _actLazyRegistry.forEach(r => {
+        if (!r.initialized) {
+            _actLazyObserver.observe(r.el);
+        }
+    });
+}
+
+// ============================================================
+// REPLACEMENT: loadActivationModule (drop-in replacement)
+// ============================================================
+
+async function loadActivationModule() {
+    updateLoadingStatus("Loading section about activation functions...");
+
+    // 1. Pure Activation Function Explorer (plot + selector + description)
+    _actLazyRegister('plot-pure-activation', () => {
+        // Inline the activation lab init WITHOUT the softmax call
+        const typeSelect = document.getElementById('pure-act-type');
+        const mathBox = document.getElementById('pure-math-box');
+        const titleDisp = document.getElementById('act-title');
+        const descDisp = document.getElementById('act-description');
+
+        const acts = {
+            relu: {
+                name: "ReLU (Rectified Linear Unit)",
+                fn: (x) => Math.max(0, x),
+                tex: "f(x) = \\max(0, x)",
+                use: "The **industry standard** for hidden layers in Deep Learning. It is computationally efficient and helps networks train faster.",
+                pro: "Solves the vanishing gradient problem for positive values and is extremely fast to compute.",
+                con: "**Dying ReLU problem:** If a neuron gets stuck in the negative range, it outputs 0 and its gradient becomes 0, effectively 'dying' forever."
+            },
+            gelu: {
+                name: "GELU (Gaussian Error Linear Unit)",
+                fn: (x) => 0.5 * x * (1 + erfApprox(x / Math.sqrt(2))),
+                tex: "f(x) = 0.5\\,x\\left(1 + \\text{erf}\\left(\\frac{x}{\\sqrt{2}}\\right)\\right)",
+                use: "The **standard activation of Transformers**, used in the FFN of GPT-style models. A smooth ReLU: everywhere differentiable, with a small gradient for negative inputs.",
+                pro: "Smooth and differentiable everywhere; no 'dying' neurons; the activation of choice in nanoGPT's Feed-Forward Network.",
+                con: "Slightly more expensive to compute than ReLU due to the error function."
+            },
+            silu: {
+                name: "SiLU / Swish (Sigmoid Linear Unit)",
+                fn: (x) => x / (1 + Math.exp(-x)),
+                tex: "f(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}",
+                use: "The **standard activation of the diffusion U-Net** (Stable Diffusion, DDPM), and of most modern vision CNNs. A self-gated, smoothed ReLU.",
+                pro: "Cheap to compute (one sigmoid, no erf); smooth and differentiable everywhere; non-zero gradient on the negative side; used in every ResBlock of Stable Diffusion alongside GroupNorm.",
+                con: "Output is unbounded below (~ -0.28 minimum), so activations can drift to small negatives and slow training slightly if not paired with normalization."
+            },
+            sigmoid: {
+                name: "Sigmoid / Logistic",
+                fn: (x) => 1 / (1 + Math.exp(-x)),
+                tex: "f(x) = \\frac{1}{1 + e^{-x}}",
+                use: "Primarily used in the **output layer for binary classification**. It maps any input to a probability between 0 and 1.",
+                pro: "Smooth gradient and clear probabilistic interpretation.",
+                con: "**Vanishing Gradients:** For very high or low inputs, the function becomes flat. The derivative becomes near-zero, stopping the network from learning."
+            },
+            tanh: {
+                name: "Hyperbolic Tangent (Tanh)",
+                fn: (x) => Math.tanh(x),
+                tex: "f(x) = \\tanh(x)",
+                use: "Often preferred over Sigmoid for hidden layers because the data becomes **zero-centered** (range -1 to 1).",
+                pro: "Stronger gradients than Sigmoid; centered output helps the next layer's learning process.",
+                con: "Still suffers from the vanishing gradient problem when values are far from zero."
+            },
+            leaky_relu: {
+                name: "Leaky ReLU",
+                fn: (x) => x >= 0 ? x : 0.1 * x,
+                tex: "f(x) = \\max(0.1x, x)",
+                use: "An attempt to fix the 'Dying ReLU' problem by allowing a small, non-zero gradient when the input is negative.",
+                pro: "Prevents neurons from 'dying' by ensuring they always contribute at least a small amount to the gradient.",
+                con: "The leak hyperparameter (0.1) may need tuning for specific tasks."
+            },
+            identity: {
+                name: "Identity / Linear",
+                fn: (x) => x,
+                tex: "f(x) = x",
+                use: "Used in the **output layer for regression tasks** where the output can be any real number.",
+                pro: "Does not bound the output; preserves the full range of calculated values.",
+                con: "A network with only linear activations is just a linear model, no matter how deep it is."
+            }
+        };
+
+        function update() {
+            const type = typeSelect.value;
+            const selected = acts[type];
+
+            const xValues = [], yValues = [];
+            for (let x = -5; x <= 5; x += 0.05) {
+                xValues.push(x);
+                yValues.push(selected.fn(x));
+            }
+
+            const data = [{
+                x: xValues, y: yValues,
+                line: { color: '#10b981', width: 3, shape: type === 'step' ? 'hv' : 'linear' }
+            }];
+
+            Plotly.newPlot('plot-pure-activation', data, {
+                margin: { t: 10, b: 30, l: 30, r: 10 },
+                xaxis: { title: 'Input (z)', range: [-5, 5] },
+                yaxis: { title: 'Output f(z)', range: [-1.2, 1.2] },
+                paper_bgcolor: themeColor('#fff'),
+                plot_bgcolor: themeColor('#fff'),
+                hoverlabel: {
+                    bgcolor: themeColor('#1e293b'),
+                    bordercolor: 'transparent',
+                    font: { color: themeColor('#f8fafc'), size: 12 }
+                }
+            });
+
+            mathBox.innerHTML = `$ ${selected.tex} $`;
+            render_temml();
+
+            titleDisp.innerText = selected.name;
+
+            descDisp.innerHTML = `
+            ${selected.use}
+
+* ✅ **Advantage:** ${selected.pro}
+* ❌ **Disadvantage:** ${selected.con}
+            `;
+            renderMarkdown();
+        }
+
+        typeSelect.onchange = update;
+        update();
+    });
+
+    // 2. Softmax Lab (pie chart + bar chart + controls)
+    _actLazyRegister('softmax-controls', () => {
+        initSoftmaxLab();
+    });
+
+    // Start observing
+    _actLazyCreateObserver();
+
+    // Re-render plots when the user toggles dark/light mode so themeColor()
+    // picks up the new palette on the next call.
+    if (window.__MN_DARK) {
+        window.__MN_DARK.onChange(() => {
+            _actLazyRegistry.forEach(r => { if (r.initialized) { try { r.initFn(); } catch (e) { /* ignore */ } } });
+        });
+    }
+
+    return Promise.resolve();
+}

@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Situs — How a Transformer Sees the World</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#060b18;color:#e2e8f0;line-height:1.65;overflow-x:hidden}
+.wrap{max-width:1140px;margin:0 auto;padding:16px}
+h1{font-size:2em;text-align:center;margin:30px 0 8px;background:linear-gradient(135deg,#818cf8,#c084fc,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:1.3em;margin:36px 0 10px;color:#a5b4fc;border-bottom:2px solid #151d30;padding-bottom:6px}
+p{font-size:.92em;color:#94a3b8;margin-bottom:10px}
+.hl{color:#fbbf24;font-weight:700}
+.con{color:#a78bfa;font-weight:700}
+.met{background:#111827;border-left:4px solid #818cf8;padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-style:italic;color:#cbd5e1;font-size:.9em}
+.card{background:#0f1629;border:1px solid #1a2340;border-radius:14px;padding:18px;margin:22px 0;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#818cf8,#c084fc,#f472b6)}
+.cw{position:relative;width:100%;margin:8px 0}
+canvas{display:block;border-radius:8px;background:#060b18;border:1px solid #151d30;width:100%}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:10px 0}
+.ctrl label{font-size:.78em;color:#94a3b8;display:flex;align-items:center;gap:4px}
+.ctrl input[type=range]{width:130px;accent-color:#818cf8}
+.ctrl input[type=checkbox]{accent-color:#818cf8}
+.ctrl select{background:#1a2340;color:#cbd5e1;border:1px solid #2a3555;border-radius:6px;padding:3px 8px;font-size:.78em}
+button{padding:6px 16px;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:.82em;transition:all .15s}
+button:hover{transform:translateY(-1px);filter:brightness(1.12)}
+.bp{background:#6366f1;color:#fff}.bs{background:#334155;color:#cbd5e1}.ba{background:#f59e0b;color:#1e293b}.bg{background:#10b981;color:#fff}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin:8px 0}
+.sc{background:#060b18;border:1px solid #1a2340;border-radius:8px;padding:8px;text-align:center}
+.sc .l{font-size:.6em;color:#64748b}.sc .v{font-size:1.2em;font-weight:700}.sc .s{font-size:.55em;color:#475569;margin-top:1px}
+.tabs{display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap}
+.tab{padding:4px 10px;border-radius:5px;font-size:.75em;background:#1a2340;color:#94a3b8;border:none;cursor:pointer;transition:all .15s}
+.tab.on{background:#6366f1;color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:768px){.two{grid-template-columns:1fr}}
+.info{background:#060b18;border:1px solid #1a2340;border-radius:8px;padding:10px;font-size:.8em;color:#94a3b8;line-height:1.55}
+.toc{background:#0f1629;border-radius:10px;padding:16px;margin:20px 0}
+.toc a{color:#818cf8;text-decoration:none;display:block;padding:2px 0;font-size:.85em}
+.toc a:hover{color:#c4b5fd}
+.fade{opacity:0;transform:translateY(16px);transition:all .5s ease}
+.fade.vis{opacity:1;transform:translateY(0)}
+.zoom-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(99,102,241,.85);color:#fff;padding:4px 14px;border-radius:20px;font-size:.72em;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🌐 The Situs — How a Transformer Sees the World</h1>
+<p style="text-align:center;color:#64748b;max-width:680px;margin:0 auto 20px">
+An interactive visual guide to the <em>Grothendieck situs conjecture</em>: a language model's world-knowledge as a <strong>sheaf on a topological site</strong>, progressively resolved from blurry global overview to sharp local detail.
+</p>
+
+<div class="toc">
+<strong style="color:#a5b4fc">📖 Contents</strong>
+<a href="#s1">1. The Core Idea — Click to Drill Deeper</a>
+<a href="#s2">2. The Holographic Embedding — Every Piece Contains the Whole</a>
+<a href="#s3">3. Attention Heads as Lenses</a>
+<a href="#s4">4. Feed-Forward — Expanding Local Geometry</a>
+<a href="#s5">5. The Full Pipeline — Route → Resolve → Glue</a>
+<a href="#s6">6. Hallucinations — Where the Map Lies</a>
+</div>
+
+<!-- ===== SECTION 1 ===== -->
+<h2 id="s1">1. The Core Idea — Click to Drill Deeper</h2>
+<div class="card fade">
+<p>Imagine the model's knowledge as a <span class="hl">stack of transparent layers</span>. The bottom is the blurriest — everything superimposed. Each layer above sharpens certain regions. <strong>Click</strong> to place your attention. <strong>Click again</strong> to drill deeper — each click sharpens that region further while everything else gets more pixelated. This is the <span class="hl">resolution–breadth tradeoff</span>.</p>
+<div class="met">This is the transformer pipeline. The embedding is the blurriest layer. Attention chooses where to point the lens. Feed-forward sharpens the detail. The final layer glues the sharpened patches into a readable answer.</div>
+<div class="cw" style="position:relative">
+  <canvas id="cHero" height="520"></canvas>
+  <div class="zoom-hint" id="heroHint">Click anywhere to focus attention — click again to drill deeper</div>
+</div>
+<div class="ctrl">
+  <label>Layer Depth: <input type="range" id="hDepth" min="0" max="110" value="0"><span id="hDepthV">0.0</span></label>
+  <label><input type="checkbox" id="hGrid" checked> Grid</label>
+  <label><input type="checkbox" id="hStack" checked> Stack View</label>
+  <button class="ba" onclick="HeroMod.resetZoom()">↺ Reset Zoom</button>
+  <button class="bp" onclick="HeroMod.autoZoom()">▶ Auto Drill</button>
+</div>
+<div class="tabs" id="hTabs"></div>
+<div class="sg" id="hStats"></div>
+<p style="text-align:center;font-size:.82em;color:#64748b">Click to focus. Each click = one more attention layer drilling into that region. Right-click to zoom out. The focused area becomes <strong>crystal clear</strong> while everything else pixelates.</p>
+</div>
+
+<!-- ===== SECTION 2 ===== -->
+<h2 id="s2">2. The Holographic Embedding — Every Piece Contains the Whole</h2>
+<div class="card fade">
+<p>The <span class="con">embedding layer</span> is the space of <strong>global sections</strong> — the coarsest image of the situs. Like a hologram, every piece contains the whole image, just at lower resolution.</p>
+<div class="met">Scratch half a photograph and half the image is gone forever. Scratch half a hologram and the <em>entire</em> image survives — just blurrier. The embedding works the same way: each dimension contributes to every concept.</div>
+<div class="two">
+  <div>
+    <p style="font-size:.8em;color:#60a5fa;font-weight:700">📷 Photograph (localized)</p>
+    <div class="cw"><canvas id="cPhoto" height="200"></canvas></div>
+  </div>
+  <div>
+    <p style="font-size:.8em;color:#34d399;font-weight:700">🌀 Hologram (distributed)</p>
+    <div class="cw"><canvas id="cHolo" height="200"></canvas></div>
+  </div>
+</div>
+<div class="ctrl">
+  <label>Damage: <input type="range" id="eDmg" min="0" max="15" value="0"><span id="eDmgV">0/16</span></label>
+  <button class="ba" onclick="HoloMod.randomDamage()">🎲 Random 50%</button>
+  <button class="bs" onclick="HoloMod.reset()">↺ Reset</button>
+</div>
+<div class="sg" id="eStats"></div>
+<p style="text-align:center;font-size:.82em;color:#64748b">Slide <strong>Damage</strong> to destroy tiles. The photograph loses regions permanently. The hologram degrades gracefully.</p>
+</div>
+
+<!-- ===== SECTION 3 ===== -->
+<h2 id="s3">3. Attention Heads as Lenses</h2>
+<div class="card fade">
+<p>Attention at each layer <span class="con">selects a covering</span>: which stalks to resolve. Each attention head is a separate lens. <strong>Drag the heads</strong> to see how they sharpen different regions of the image. Where heads overlap, resolution compounds. Where no head looks, the image stays pixelated.</p>
+<div class="cw" style="position:relative">
+  <canvas id="cHeads" height="460"></canvas>
+  <div class="zoom-hint" id="headsHint" style="opacity:1">Drag colored circles to reposition attention heads</div>
+</div>
+<div class="ctrl">
+  <label>Heads: <select id="aHeadN"><option value="1">1 head</option><option value="2">2 heads</option><option value="3" selected>3 heads</option><option value="4">4 heads</option><option value="6">6 heads</option></select></label>
+  <label>Entropy: <input type="range" id="aEnt" min="5" max="100" value="25"><span id="aEntV">Narrow</span></label>
+  <label>Resolution Budget: <input type="range" id="aResBudget" min="10" max="100" value="60"><span id="aResBudgetV">60</span></label>
+</div>
+<div class="sg" id="aStats"></div>
+</div>
+
+<!-- ===== SECTION 4 ===== -->
+<h2 id="s4">4. Feed-Forward — Expanding Local Geometry</h2>
+<div class="card fade">
+<p>The <span class="con">feed-forward sub-layer</span> locally expands geometry within each selected patch — stretching space so information is encoded in the <strong>Jacobian field</strong>, then compressing back. The warping is complex: multiple learned "weight centers" interact nonlinearly, creating interference patterns.</p>
+<div class="met">Take a rubber sheet and <strong>stretch</strong> it at multiple points simultaneously — each stretch center has a different strength and direction, and they interfere with each other. The resulting deformation pattern <em>is</em> the computation.</div>
+<div class="cw"><canvas id="cFFN" height="420"></canvas></div>
+<div class="ctrl">
+  <label>Expansion: <input type="range" id="fStr" min="0" max="100" value="0"><span id="fStrV">0%</span></label>
+  <label>Weight Centers: <select id="fCenters"><option value="1">1 center</option><option value="3" selected>3 centers</option><option value="5">5 centers</option><option value="8">8 centers</option></select></label>
+  <label>Nonlinearity: <input type="range" id="fNonlin" min="0" max="100" value="50"><span id="fNonlinV">50%</span></label>
+  <label><input type="checkbox" id="fJac" checked> Strain colors</label>
+  <label><input type="checkbox" id="fShowWeights" checked> Show weights</label>
+  <button class="ba" onclick="FFNMod.anim()">▶ Animate</button>
+  <button class="bs" onclick="FFNMod.reset()">↺ Reset</button>
+</div>
+<div class="sg" id="fStats"></div>
+</div>
+
+<!-- ===== SECTION 5 ===== -->
+<h2 id="s5">5. The Full Pipeline — Route → Resolve → Glue</h2>
+<div class="card fade">
+<div class="two" style="margin-bottom:12px">
+  <div class="info"><h3 style="color:#60a5fa;margin:0 0 4px;font-size:.95em">🔀 Early Layers: Routers</h3><p>Tear open and rearrange space to determine <em>where</em> to look. Connect <strong>words to words</strong>.</p></div>
+  <div class="info"><h3 style="color:#c084fc;margin:0 0 4px;font-size:.95em">🔬 Late Layers: Resolvers</h3><p>Connect <strong>concepts to concepts</strong>, expand local geometry at increasing resolution.</p></div>
+</div>
+<div class="cw"><canvas id="cPipe" height="440"></canvas></div>
+<div class="ctrl">
+  <label>Layer: <input type="range" id="pLayer" min="0" max="110" value="0"><span id="pLayerV">0.0</span></label>
+  <label>Focus: <input type="range" id="pFocus" min="5" max="100" value="30"><span id="pFocusV">Narrow</span></label>
+  <label><input type="checkbox" id="pGrid" checked> Grid</label>
+  <label><input type="checkbox" id="pLens"> Lens</label>
+  <label><input type="checkbox" id="pPatch" checked> Patches</label>
+  <button class="bp" onclick="PipeMod.anim()">▶ Full Pipeline</button>
+  <button class="bs" onclick="PipeMod.reset()">↺ Reset</button>
+</div>
+<div class="tabs" id="pTabs"></div>
+<div class="sg" id="pStats"></div>
+</div>
+
+<!-- ===== SECTION 6 ===== -->
+<h2 id="s6">6. Hallucinations — Where the Map Lies</h2>
+<div class="card fade">
+<p>At patch borders where training thins, the model <strong>confidently expands</strong> a region never properly learned — filling it with topologically plausible but <span style="color:#ef4444;font-weight:700">factually wrong</span> continuations.</p>
+<div class="met">Your satellite map has great data for Europe but sparse data for central Africa. Zoom in there and the system <em>invents</em> plausible terrain — rivers that don't exist. It's <strong>filling blanks with its best geometric guess</strong>.</div>
+<div class="cw"><canvas id="cHal" height="360"></canvas></div>
+<div class="ctrl">
+  <label>Coverage: <input type="range" id="xCov" min="10" max="100" value="70"><span id="xCovV">70%</span></label>
+</div>
+<div class="sg" id="xStats"></div>
+<p style="text-align:center;font-size:.82em;color:#64748b">Move mouse into <span style="color:#ef4444">red zones</span> — confidence stays high even where knowledge is thin.</p>
+</div>
+
+<div style="text-align:center;padding:24px 0;color:#475569;font-size:.8em">
+<p>Visualization for <em>"Transformer Layers as Fibre Bundle Morphisms"</em></p>
+<p>Conjecture: Embedding space as coarsest image of a Grothendieck situs</p>
+</div>
+</div>
+
+<script>
+
+const Bus = (() => {
+  const L = {};
+  return { on(e,f){(L[e]=L[e]||[]).push(f)}, emit(e,d){(L[e]||[]).forEach(f=>f(d))} };
+})();
+
+const State = { mouse:{x:.5,y:.5}, objectType:'smiley' };
+
+// ================================================================
+// CORE UTILITIES
+// ================================================================
+const U = (() => {
+  const TAU = Math.PI * 2, dpr = window.devicePixelRatio || 1;
+  const lerp = (a,b,t) => a+(b-a)*t;
+  const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+  const dst = (x1,y1,x2,y2) => Math.hypot(x2-x1,y2-y1);
+  const ease = t => t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  const hx = (hex,a) => {const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`};
+  const srand = s => () => {s=Math.sin(s*127.1+311.7)*43758.5453;return s-Math.floor(s)};
+  const PAL = ['#818cf8','#f472b6','#34d399','#fbbf24','#60a5fa','#f87171','#a78bfa','#2dd4bf'];
+
+  function mkCanvas(id, forceH) {
+    const c = document.getElementById(id);
+    const W = c.parentElement.clientWidth;
+    const H = forceH || Math.round(Math.min(420, W * 0.55));
+    c.style.width = W+'px'; c.style.height = H+'px';
+    c.width = W*dpr; c.height = H*dpr;
+    const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+    return {c, ctx, W, H};
+  }
+
+  function drawGrid(ctx, W, H, warp, step, col, lw) {
+    ctx.strokeStyle = col || 'rgba(100,116,139,0.1)'; ctx.lineWidth = lw || .6;
+    const sub = step/3;
+    for(let y=0;y<=H;y+=step){ctx.beginPath();for(let x=0;x<=W;x+=sub){const[wx,wy]=warp(x,y);x===0?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy)}ctx.stroke()}
+    for(let x=0;x<=W;x+=step){ctx.beginPath();for(let y=0;y<=H;y+=sub){const[wx,wy]=warp(x,y);y===0?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy)}ctx.stroke()}
+  }
+
+  function drawLensRing(ctx, cx, cy, r, s, col) {
+    col = col || '129,140,248';
+    for(let i=0;i<3;i++){const rr=r+i*r*.3,a=(.22-i*.06)*s;ctx.beginPath();ctx.arc(cx,cy,rr,0,TAU);ctx.strokeStyle=`rgba(${col},${a})`;ctx.lineWidth=2.2-i*.4;ctx.stroke()}
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,`rgba(${col},${.08*s})`);g.addColorStop(1,`rgba(${col},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.fill();
+  }
+
+  return {TAU,dpr,lerp,clamp,dst,ease,hx,srand,PAL,mkCanvas,drawGrid,drawLensRing};
+})();
+
+
+// ================================================================
+// HIGH-RES OBJECT GENERATOR
+// ================================================================
+const ObjGen = (() => {
+  const SZ = 48;
+
+  function sdfSmiley(nx, ny) {
+    const d = Math.hypot(nx, ny);
+    let face = Math.abs(d - 0.78) - 0.045;
+    let fill = d - 0.78;
+    let eyeL = Math.hypot(nx + 0.27, ny + 0.18) - 0.1;
+    let eyeR = Math.hypot(nx - 0.27, ny + 0.18) - 0.1;
+    let pupL = Math.hypot(nx + 0.27, ny + 0.2) - 0.04;
+    let pupR = Math.hypot(nx - 0.27, ny + 0.2) - 0.04;
+    const smileD = Math.hypot(nx, ny - 0.05);
+    let smile = Math.abs(smileD - 0.42) - 0.03;
+    if (ny < 0.12) smile = 1;
+    let v = 0;
+    if (fill < 0) v = 0.25;
+    if (face < 0) v = 1;
+    if (eyeL < 0) v = 0.85;
+    if (eyeR < 0) v = 0.85;
+    if (pupL < 0) v = 1;
+    if (pupR < 0) v = 1;
+    if (smile < 0) v = 0.9;
+    return v;
+  }
+
+  function sdfTorus3D(nx, ny, angle) {
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    const R = 0.5, r = 0.18;
+    let minD = 10;
+    for (let u = 0; u < U.TAU; u += 0.08) {
+      for (let v = 0; v < U.TAU; v += 0.15) {
+        const x3 = (R + r * Math.cos(v)) * Math.cos(u);
+        const y3 = (R + r * Math.cos(v)) * Math.sin(u);
+        const z3 = r * Math.sin(v);
+        const rx = x3 * ca + z3 * sa;
+        const ry = y3;
+        const d = Math.hypot(nx - rx, ny - ry);
+        if (d < minD) minD = d;
+      }
+    }
+    return Math.exp(-minD * minD / 0.003);
+  }
+
+  function sample(type, nx, ny, time) {
+    time = time || 0;
+    switch(type) {
+      case 'smiley': return sdfSmiley(nx, ny);
+      case 'torus': return sdfTorus3D(nx, ny, time * 0.5);
+      case 'clusters': {
+        const cs = [{x:-0.5,y:-0.45},{x:0.5,y:-0.35},{x:0,y:0.55},{x:-0.6,y:0.35}];
+        let v = 0;
+        cs.forEach(c => {
+          const d = Math.hypot(nx - c.x, ny - c.y);
+          const edge = Math.abs(d - 0.22) - 0.03;
+          if (edge < 0) v = Math.max(v, 0.9);
+          else v = Math.max(v, Math.exp(-edge * edge / 0.001));
+          if (d < 0.05) v = Math.max(v, 1);
+        });
+        return v;
+      }
+      case 'rings': {
+        const d1 = Math.abs(Math.hypot(nx + 0.4, ny) - 0.35);
+        const d2 = Math.abs(Math.hypot(nx - 0.4, ny) - 0.35);
+        const e1 = d1 - 0.04, e2 = d2 - 0.04;
+        let v = 0;
+        if (e1 < 0) v = Math.max(v, 1 - Math.abs(e1) * 8);
+        else v = Math.max(v, Math.exp(-e1 * e1 / 0.001));
+        if (e2 < 0) v = Math.max(v, 1 - Math.abs(e2) * 8);
+        else v = Math.max(v, Math.exp(-e2 * e2 / 0.001));
+        return U.clamp(v, 0, 1);
+      }
+    }
+    return 0;
+  }
+
+  function generate(type) {
+    const img = new Float64Array(SZ * SZ);
+    for (let y = 0; y < SZ; y++) for (let x = 0; x < SZ; x++) {
+      const nx = x / SZ * 2 - 1, ny = y / SZ * 2 - 1;
+      img[y * SZ + x] = sample(type, nx, ny, 0);
+    }
+    return img;
+  }
+
+  const N=16, Z=4, ZS=4;
+  const CM=[];
+  for(let k=0;k<N;k++){CM[k]=[];const a=k===0?Math.sqrt(1/N):Math.sqrt(2/N);for(let n=0;n<N;n++)CM[k][n]=a*Math.cos(Math.PI*(2*n+1)*k/(2*N))}
+  function dct1(x){const X=new Float64Array(N);for(let k=0;k<N;k++){let s=0;for(let n=0;n<N;n++)s+=x[n]*CM[k][n];X[k]=s}return X}
+  function idct1(X){const x=new Float64Array(N);for(let n=0;n<N;n++){let s=0;for(let k=0;k<N;k++)s+=X[k]*CM[k][n];x[n]=s}return x}
+  function dct2(im){const t=new Float64Array(N*N);for(let i=0;i<N;i++){const r=new Float64Array(N);for(let j=0;j<N;j++)r[j]=im[i*N+j];const d=dct1(r);for(let j=0;j<N;j++)t[i*N+j]=d[j]}const o=new Float64Array(N*N);for(let j=0;j<N;j++){const c=new Float64Array(N);for(let i=0;i<N;i++)c[i]=t[i*N+j];const d=dct1(c);for(let i=0;i<N;i++)o[i*N+j]=d[i]}return o}
+  function idct2(co){const t=new Float64Array(N*N);for(let j=0;j<N;j++){const c=new Float64Array(N);for(let i=0;i<N;i++)c[i]=co[i*N+j];const d=idct1(c);for(let i=0;i<N;i++)t[i*N+j]=d[i]}const o=new Float64Array(N*N);for(let i=0;i<N;i++){const r=new Float64Array(N);for(let j=0;j<N;j++)r[j]=t[i*N+j];const d=idct1(r);for(let j=0;j<N;j++)o[i*N+j]=d[j]}return o}
+  const SMILEY16=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,0,0,1,1,1,1,0,0,1,1,1,0,0,1,1,1,0,0,1,1,1,1,0,0,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,1,1,1,1,1,1,1,1,1,1,0,1,0,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,0,0,1,1,0,0,1,1,1,1,0,0,1,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0];
+
+  return {SZ, generate, sample, N, Z, ZS, dct2, idct2, SMILEY16};
+})();
+
+// ================================================================
+// HERO MODULE (Section 1) — Two-pass pixelated/smooth rendering
+// ================================================================
+const HeroMod = (() => {
+  let ctx, W, H, c;
+  let currentType = 'smiley';
+  let focusPoints = [];
+  let time = 0;
+  let animFrame = null;
+  let autoAnim = null;
+
+  let loCanvas, loCtx, hiCanvas, hiCtx;
+  const LO_RES = 56;
+  const HI_RES = 512;
+
+  const OBJECTS = ['smiley','torus','clusters','rings'];
+  const LABELS = ['😊 Smiley','🍩 Torus','🌵 Clusters','⭕ Rings'];
+
+  function init() {
+    ({c, ctx, W, H} = U.mkCanvas('cHero', 480));
+
+    loCanvas = document.createElement('canvas');
+    loCanvas.width = LO_RES; loCanvas.height = LO_RES;
+    loCtx = loCanvas.getContext('2d');
+
+    hiCanvas = document.createElement('canvas');
+    hiCanvas.width = HI_RES; hiCanvas.height = HI_RES;
+    hiCtx = hiCanvas.getContext('2d');
+
+    const tabEl = document.getElementById('hTabs');
+    let tabHtml = '';
+    OBJECTS.forEach((o, i) => {
+      tabHtml += `<button class="tab${o === currentType ? ' on' : ''}" data-m="${o}">${LABELS[i]}</button>`;
+    });
+    tabEl.innerHTML = tabHtml;
+    tabEl.querySelectorAll('.tab').forEach(btn => {
+      btn.onclick = () => {
+        currentType = btn.dataset.m;
+        State.objectType = currentType;
+        focusPoints = [];
+        tabEl.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        Bus.emit('objectChanged');
+        render();
+      };
+    });
+
+    c.addEventListener('click', e => {
+      const r = c.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width;
+      const my = (e.clientY - r.top) / r.height;
+      const nx = mx * 2 - 1, ny = my * 2 - 1;
+
+      let found = false;
+      for (const fp of focusPoints) {
+        if (U.dst(nx, ny, fp.nx, fp.ny) < 0.25) {
+          fp.strength = Math.min(fp.strength + 0.35, 1.0);
+          fp.radius = Math.max(fp.radius * 0.7, 0.08);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        focusPoints.push({ nx, ny, strength: 0.4, radius: 0.4, time: performance.now() });
+      }
+
+      for (const fp of focusPoints) {
+        if (!found || U.dst(nx, ny, fp.nx, fp.ny) >= 0.25) {
+          fp.strength = Math.max(fp.strength * 0.85, 0.05);
+        }
+      }
+
+      if (focusPoints.length > 6) focusPoints.shift();
+      const hint = document.getElementById('heroHint');
+      if (hint) hint.style.opacity = focusPoints.length > 1 ? '0' : '0.7';
+      render();
+    });
+
+    c.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (focusPoints.length > 0) focusPoints.pop();
+      render();
+    });
+
+    c.addEventListener('mousemove', e => {
+      const r = c.getBoundingClientRect();
+      State.mouse.x = (e.clientX - r.left) / r.width;
+      State.mouse.y = (e.clientY - r.top) / r.height;
+    });
+
+    ['hDepth','hGrid','hStack'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
+    });
+
+    function tick() {
+      time += 0.008;
+      if (currentType === 'torus') render();
+      animFrame = requestAnimationFrame(tick);
+    }
+    animFrame = requestAnimationFrame(tick);
+    render();
+  }
+
+  function renderToBuffer(bufCtx, res, warpNorm, layer) {
+    const id = bufCtx.createImageData(res, res);
+    const d = id.data;
+    const resolving = U.clamp((layer - 2) / 5, 0, 1);
+    const layerBoost = U.clamp(layer / 11, 0, 1);
+
+    for (let iy = 0; iy < res; iy++) {
+      for (let ix = 0; ix < res; ix++) {
+        const nx = ix / res * 2 - 1, ny = iy / res * 2 - 1;
+        const [wnx, wny] = warpNorm(nx, ny);
+        let val = ObjGen.sample(currentType, wnx, wny, time);
+
+        const bright = 0.5 + layerBoost * 0.5;
+        const v = val * bright;
+
+        let r, g, b;
+        if (val > 0.6) {
+          r = Math.floor(40 + v * 215); g = Math.floor(35 + v * 195); b = Math.floor(20 + v * 120);
+        } else if (val > 0.2) {
+          r = Math.floor(20 + v * 160); g = Math.floor(18 + v * 140); b = Math.floor(30 + v * 180);
+        } else {
+          r = Math.floor(8 + v * 60); g = Math.floor(8 + v * 50); b = Math.floor(15 + v * 80);
+        }
+
+        if (resolving > 0.1) {
+          const qi = (wnx > 0 ? 1 : 0) + (wny > 0 ? 2 : 0);
+          const pCols = [[129,140,248],[244,114,182],[52,211,153],[251,191,36]];
+          const pc = pCols[qi];
+          const tint = resolving * 0.12;
+          r = Math.floor(U.lerp(r, pc[0], tint));
+          g = Math.floor(U.lerp(g, pc[1], tint));
+          b = Math.floor(U.lerp(b, pc[2], tint));
+        }
+
+        const off = (iy * res + ix) * 4;
+        d[off]     = U.clamp(r, 0, 255);
+        d[off + 1] = U.clamp(g, 0, 255);
+        d[off + 2] = U.clamp(b, 0, 255);
+        d[off + 3] = 255;
+      }
+    }
+    bufCtx.putImageData(id, 0, 0);
+  }
+
+  function render() {
+    if (!ctx) return;
+    const layerRaw = +document.getElementById('hDepth').value;
+    const layer = layerRaw / 10;
+    const showGrid = document.getElementById('hGrid').checked;
+    const showStack = document.getElementById('hStack').checked;
+    document.getElementById('hDepthV').textContent = layer.toFixed(1);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060b18';
+    ctx.fillRect(0, 0, W, H);
+
+    const routing = U.clamp(1 - layer / 4, 0, 1);
+    const resolving = U.clamp((layer - 2) / 5, 0, 1);
+    const gluing = U.clamp((layer - 8) / 3, 0, 1);
+    const deform = layer === 0 ? 0 : (layer <= 3 ? layer * 0.07 : (layer <= 8 ? 0.21 + (layer-3)*0.035 : 0.385 - (layer-8)*0.11));
+
+    function warpNorm(nx, ny) {
+      if (layer < 0.1) return [nx, ny];
+      let wx = nx, wy = ny;
+      if (routing > 0) {
+        const d = Math.hypot(nx, ny);
+        const a = deform * routing * Math.exp(-d*d/0.8) * 1.5;
+        const cs = Math.cos(a), sn = Math.sin(a);
+        wx = nx*cs - ny*sn; wy = nx*sn + ny*cs;
+      }
+      if (resolving > 0) {
+        const centers = [{x:-0.5,y:-0.5},{x:0.5,y:-0.5},{x:-0.5,y:0.5},{x:0.5,y:0.5}];
+        for (const cc of centers) {
+          const dx = wx - cc.x, dy = wy - cc.y;
+          const d = Math.hypot(dx, dy);
+          const inf = deform * resolving * Math.exp(-d*d/0.5) * 0.3;
+          wx += dx * inf; wy += dy * inf;
+        }
+      }
+      if (gluing > 0) { wx = U.lerp(wx, nx, gluing * 0.7); wy = U.lerp(wy, ny, gluing * 0.7); }
+      return [wx, wy];
+    }
+
+    // ---- PASS 1: Low-res pixelated background ----
+    renderToBuffer(loCtx, LO_RES, warpNorm, layer);
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = focusPoints.length > 0 ? 0.35 : 0.85;
+    ctx.drawImage(loCanvas, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.imageSmoothingEnabled = true;
+
+    // ---- PASS 2: High-res smooth render clipped to focus regions ----
+    if (focusPoints.length > 0) {
+      renderToBuffer(hiCtx, HI_RES, warpNorm, layer);
+
+      for (const fp of focusPoints) {
+        const sx = (fp.nx + 1) / 2 * W;
+        const sy = (fp.ny + 1) / 2 * H;
+        const sr = fp.radius * Math.min(W, H) / 2;
+        const outerR = sr * 1.3;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sx, sy, outerR, 0, U.TAU);
+        ctx.clip();
+
+        ctx.globalAlpha = fp.strength;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(hiCanvas, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
+    // Grid overlay
+    if (showGrid && layer > 0.1) {
+      const gridStep = 30;
+      function warpScreen(x, y) {
+        const snx = x / W * 2 - 1, sny = y / H * 2 - 1;
+        const [wnx, wny] = warpNorm(snx, sny);
+        return [((wnx + 1) / 2) * W, ((wny + 1) / 2) * H];
+      }
+      U.drawGrid(ctx, W, H, warpScreen, gridStep, `rgba(100,116,139,${0.04 + deform * 0.1})`, 0.4);
+    }
+
+    // Draw focus point indicators
+    for (let fi = 0; fi < focusPoints.length; fi++) {
+      const fp = focusPoints[fi];
+      const sx = (fp.nx + 1) / 2 * W, sy = (fp.ny + 1) / 2 * H;
+      const sr = fp.radius * Math.min(W, H) / 2;
+      const age = (performance.now() - fp.time) / 1000;
+      const pulse = 0.6 + 0.4 * Math.sin(age * 2);
+
+      const grad = ctx.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 1.2);
+      grad.addColorStop(0, `rgba(129,140,248,${0.08 * fp.strength * pulse})`);
+      grad.addColorStop(1, 'rgba(129,140,248,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr * 1.2, 0, U.TAU);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, U.TAU);
+      ctx.strokeStyle = `rgba(129,140,248,${0.25 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.font = 'bold 9px system-ui';
+      ctx.fillStyle = `rgba(129,140,248,${0.6 * pulse})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.round(fp.strength * 100)}%`, sx, sy - sr - 4);
+    }
+
+    // Hover indicator when no focus
+    if (focusPoints.length === 0) {
+      const lx = State.mouse.x * W, ly = State.mouse.y * H;
+      U.drawLensRing(ctx, lx, ly, 50, 0.3);
+    }
+
+    // Stack view
+    if (showStack) {
+      const stackW = 55, stackH = 45, stackX = W - stackW - 10, gap = 5;
+      const nLayers = 6;
+      for (let li = 0; li < nLayers; li++) {
+        const sy = 30 + li * (stackH + gap);
+        const layerVal = li * 11 / (nLayers - 1);
+        const isCurrent = Math.abs(layerVal - layer) < 1.5;
+        ctx.fillStyle = isCurrent ? 'rgba(129,140,248,0.12)' : 'rgba(10,14,26,0.8)';
+        ctx.fillRect(stackX - 1, sy - 1, stackW + 2, stackH + 2);
+        const miniRes = 4 + li * 2;
+        const mCellW = stackW / miniRes, mCellH = stackH / miniRes;
+        for (let my = 0; my < miniRes; my++) {
+          for (let mx = 0; mx < miniRes; mx++) {
+            const mnx = mx / miniRes * 2 - 1, mny = my / miniRes * 2 - 1;
+            const v = ObjGen.sample(currentType, mnx, mny, time);
+            const clarity = 0.2 + (li / (nLayers-1)) * 0.8;
+            const br = Math.floor((20 + v * 200) * clarity);
+            ctx.fillStyle = `rgb(${br},${Math.floor(br*0.85)},${Math.floor(br*0.5)})`;
+            ctx.fillRect(stackX + mx * mCellW, sy + my * mCellH, mCellW + 0.5, mCellH + 0.5);
+          }
+        }
+        ctx.strokeStyle = isCurrent ? '#818cf8' : '#1a2340';
+        ctx.lineWidth = isCurrent ? 1.5 : 0.5;
+        ctx.strokeRect(stackX, sy, stackW, stackH);
+        ctx.font = '7px system-ui';
+        ctx.fillStyle = isCurrent ? '#fbbf24' : '#475569';
+        ctx.textAlign = 'right';
+        ctx.fillText(`L${Math.round(layerVal)}`, stackX - 3, sy + stackH / 2 + 3);
+      }
+      ctx.font = '8px system-ui';
+      ctx.fillStyle = '#818cf8';
+      ctx.textAlign = 'center';
+      ctx.fillText('Layer Stack', stackX + stackW / 2, 25);
+    }
+
+    // Phase label
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'left';
+    let phaseCol, phaseTxt;
+    if (layer < 0.5) { phaseCol = '#64748b'; phaseTxt = '🌑 Embedding: Blurriest global section'; }
+    else if (layer <= 3) { phaseCol = '#60a5fa'; phaseTxt = `🔀 Layer ${layer.toFixed(1)}: Routing`; }
+    else if (layer <= 8) { phaseCol = '#c084fc'; phaseTxt = `🔬 Layer ${layer.toFixed(1)}: Resolving`; }
+    else { phaseCol = '#34d399'; phaseTxt = `🧩 Layer ${layer.toFixed(1)}: Gluing`; }
+    ctx.fillStyle = phaseCol;
+    ctx.fillText(phaseTxt, 10, 20);
+
+    if (focusPoints.length > 0) {
+      ctx.font = 'bold 11px system-ui';
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'right';
+      const maxStr = Math.max(...focusPoints.map(f => f.strength));
+      ctx.fillText(`${focusPoints.length} focus point${focusPoints.length>1?'s':''} | Max: ${Math.round(maxStr*100)}% | Right-click to remove`, W - 10, 20);
+    }
+
+    const maxStr = focusPoints.length > 0 ? Math.max(...focusPoints.map(f => f.strength)) : 0;
+    document.getElementById('hStats').innerHTML = `
+      <div class="sc"><div class="l">LAYER</div><div class="v" style="color:#818cf8">${layer.toFixed(1)}</div></div>
+      <div class="sc"><div class="l">PHASE</div><div class="v" style="color:${phaseCol}">${layer<0.5?'Embed':layer<=3?'Route':layer<=8?'Resolve':'Glue'}</div></div>
+      <div class="sc"><div class="l">FOCUS PTS</div><div class="v" style="color:#fbbf24">${focusPoints.length}</div><div class="s">click to add</div></div>
+      <div class="sc"><div class="l">MAX SHARP</div><div class="v" style="color:#34d399">${Math.round(maxStr*100)}%</div><div class="s">${maxStr>0.8?'Crystal clear':maxStr>0.4?'Sharpening':'Blurry'}</div></div>
+      <div class="sc"><div class="l">OBJECT</div><div class="v" style="color:#f472b6">${currentType}</div></div>
+    `;
+  }
+
+  function resetZoom() {
+    focusPoints = [];
+    const hint = document.getElementById('heroHint');
+    if (hint) hint.style.opacity = '1';
+    render();
+  }
+
+  function autoZoom() {
+    if (autoAnim) return;
+    resetZoom();
+    const targets = [
+      {nx: -0.27, ny: -0.18, delay: 400},
+      {nx: -0.27, ny: -0.18, delay: 700},
+      {nx: -0.27, ny: -0.18, delay: 1000},
+    ];
+    let step = 0;
+    function next() {
+      if (step >= targets.length) { autoAnim = null; return; }
+      const t = targets[step];
+      let found = false;
+      for (const fp of focusPoints) {
+        if (U.dst(t.nx, t.ny, fp.nx, fp.ny) < 0.25) {
+          fp.strength = Math.min(fp.strength + 0.35, 1.0);
+          fp.radius = Math.max(fp.radius * 0.7, 0.08);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        focusPoints.push({nx: t.nx, ny: t.ny, strength: 0.4, radius: 0.4, time: performance.now()});
+      }
+      step++;
+      render();
+      autoAnim = setTimeout(next, targets[step-1].delay);
+    }
+    autoAnim = setTimeout(next, 300);
+  }
+
+  setTimeout(init, 100);
+  return { render, resetZoom, autoZoom };
+})();
+
+// ================================================================
+// HOLOGRAPHIC EMBEDDING (Section 2)
+// ================================================================
+const HoloMod = (() => {
+  let ctxP, ctxH, WP, HP, WH, HH, cP, cH;
+  const N = ObjGen.N;
+  let damaged = new Array(16).fill(false);
+  let ORI = [...ObjGen.SMILEY16];
+  let DC = null;
+
+  function init() {
+    ({c: cP, ctx: ctxP, W: WP, H: HP} = U.mkCanvas('cPhoto', 200));
+    ({c: cH, ctx: ctxH, W: WH, H: HH} = U.mkCanvas('cHolo', 200));
+    DC = ObjGen.dct2(ORI);
+
+    // Click on photo to toggle spatial tiles
+    cP.addEventListener('click', e => {
+      const r = cP.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width;
+      const my = (e.clientY - r.top) / r.height;
+      const ps = Math.min(WP, HP) / N;
+      const ox = (WP - ps*N) / 2 / WP;
+      const oy = (HP - ps*N) / 2 / HP;
+      const tileSize = (ps * 4) / WP;
+      const col = Math.floor((mx - ox) / tileSize);
+      const row = Math.floor((my - oy) / tileSize);
+      if (col >= 0 && col < 4 && row >= 0 && row < 4) {
+        const idx = row * 4 + col;
+        damaged[idx] = !damaged[idx];
+        syncSlider();
+        render();
+      }
+    });
+
+    // Click on hologram to toggle frequency tiles
+    cH.addEventListener('click', e => {
+      const r = cH.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width;
+      const my = (e.clientY - r.top) / r.height;
+      const ps = Math.min(WH, HH) / N;
+      const ox = (WH - ps*N) / 2 / WH;
+      const oy = (HH - ps*N) / 2 / HH;
+      const tileSize = (ps * 4) / WH;
+      const col = Math.floor((mx - ox) / tileSize);
+      const row = Math.floor((my - oy) / tileSize);
+      if (col >= 0 && col < 4 && row >= 0 && row < 4) {
+        const idx = row * 4 + col;
+        damaged[idx] = !damaged[idx];
+        syncSlider();
+        render();
+      }
+    });
+
+    document.getElementById('eDmg').addEventListener('input', () => {
+      const v = +document.getElementById('eDmg').value;
+      document.getElementById('eDmgV').textContent = v + '/16';
+      damaged = new Array(16).fill(false);
+      for (let i = 0; i < v; i++) damaged[i] = true;
+      render();
+    });
+    render();
+  }
+
+  function syncSlider() {
+    const count = damaged.filter(d => d).length;
+    document.getElementById('eDmg').value = count;
+    document.getElementById('eDmgV').textContent = count + '/16';
+  }
+
+  function randomDamage() {
+    const idx = Array.from({length:16}, (_,i) => i);
+    for (let i = 15; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [idx[i],idx[j]] = [idx[j],idx[i]]; }
+    damaged = new Array(16).fill(false);
+    for (let i = 0; i < 8; i++) damaged[idx[i]] = true;
+    syncSlider();
+    render();
+  }
+
+  function reset() {
+    damaged = new Array(16).fill(false);
+    syncSlider();
+    render();
+  }
+
+  function drawImg(ctx, img, W, H, showGrid) {
+    const ps = Math.min(W, H) / N;
+    const ox = (W - ps*N)/2, oy = (H - ps*N)/2;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const v = U.clamp(img[y*N+x], 0, 1);
+      const r = Math.floor(30 + v*220), g = Math.floor(25 + v*190), b = Math.floor(15 + v*100);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(ox + x*ps, oy + y*ps, ps+0.5, ps+0.5);
+    }
+    // Draw tile grid
+    if (showGrid) {
+      const ZS = 4;
+      ctx.strokeStyle = 'rgba(129,140,248,0.2)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 4; i++) {
+        ctx.beginPath(); ctx.moveTo(ox + i*ZS*ps, oy); ctx.lineTo(ox + i*ZS*ps, oy + N*ps); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ox, oy + i*ZS*ps); ctx.lineTo(ox + N*ps, oy + i*ZS*ps); ctx.stroke();
+      }
+    }
+  }
+
+  function render() {
+    if (!ctxP) return;
+    const Z = 4, ZS = 4;
+    ctxP.clearRect(0,0,WP,HP); ctxP.fillStyle='#060b18'; ctxP.fillRect(0,0,WP,HP);
+    const photoImg = new Float64Array(N*N);
+    for (let z = 0; z < 16; z++) {
+      if (damaged[z]) continue;
+      const zr = Math.floor(z/Z), zc = z%Z;
+      for (let i = zr*ZS; i < (zr+1)*ZS; i++)
+        for (let j = zc*ZS; j < (zc+1)*ZS; j++)
+          photoImg[i*N+j] = ORI[i*N+j];
+    }
+    drawImg(ctxP, photoImg, WP, HP, true);
+
+    // Draw X marks on damaged tiles
+    const ps = Math.min(WP, HP) / N;
+    const ox = (WP - ps*N)/2, oy = (HP - ps*N)/2;
+    for (let z = 0; z < 16; z++) {
+      if (!damaged[z]) continue;
+      const zr = Math.floor(z/Z), zc = z%Z;
+      const bx = ox + zc*ZS*ps, by = oy + zr*ZS*ps, bw = ZS*ps;
+      ctxP.fillStyle = 'rgba(239,68,68,0.15)';
+      ctxP.fillRect(bx, by, bw, bw);
+      ctxP.strokeStyle = '#ef4444'; ctxP.lineWidth = 2;
+      ctxP.beginPath(); ctxP.moveTo(bx+4,by+4); ctxP.lineTo(bx+bw-4,by+bw-4); ctxP.stroke();
+      ctxP.beginPath(); ctxP.moveTo(bx+bw-4,by+4); ctxP.lineTo(bx+4,by+bw-4); ctxP.stroke();
+    }
+    // Click hint
+    ctxP.font = '8px system-ui';
+    ctxP.fillStyle = '#64748b';
+    ctxP.textAlign = 'center';
+    ctxP.fillText('Click tiles to toggle', WP/2, HP - 4);
+
+    ctxH.clearRect(0,0,WH,HH); ctxH.fillStyle='#060b18'; ctxH.fillRect(0,0,WH,HH);
+    const holoCo = new Float64Array(N*N);
+    for (let z = 0; z < 16; z++) {
+      if (damaged[z]) continue;
+      const zr = Math.floor(z/Z), zc = z%Z;
+      for (let i = zr*ZS; i < (zr+1)*ZS; i++)
+        for (let j = zc*ZS; j < (zc+1)*ZS; j++)
+          holoCo[i*N+j] = DC[i*N+j];
+    }
+    const holoImg = ObjGen.idct2(holoCo);
+    drawImg(ctxH, holoImg, WH, HH, true);
+
+    // Draw X marks on holo too
+    const ps2 = Math.min(WH, HH) / N;
+    const ox2 = (WH - ps2*N)/2, oy2 = (HH - ps2*N)/2;
+    for (let z = 0; z < 16; z++) {
+      if (!damaged[z]) continue;
+      const zr = Math.floor(z/Z), zc = z%Z;
+      const bx = ox2 + zc*ZS*ps2, by = oy2 + zr*ZS*ps2, bw = ZS*ps2;
+      ctxH.fillStyle = 'rgba(239,68,68,0.1)';
+      ctxH.fillRect(bx, by, bw, bw);
+      ctxH.strokeStyle = 'rgba(239,68,68,0.4)'; ctxH.lineWidth = 1;
+      ctxH.beginPath(); ctxH.moveTo(bx+3,by+3); ctxH.lineTo(bx+bw-3,by+bw-3); ctxH.stroke();
+      ctxH.beginPath(); ctxH.moveTo(bx+bw-3,by+3); ctxH.lineTo(bx+3,by+bw-3); ctxH.stroke();
+    }
+    ctxH.font = '8px system-ui';
+    ctxH.fillStyle = '#64748b';
+    ctxH.textAlign = 'center';
+    ctxH.fillText('Click tiles to toggle', WH/2, HH - 4);
+
+    const alive = damaged.filter(d => !d).length;
+    const pct = Math.round(100 * alive / 16);
+    let pCorrect = 0;
+    for (let i = 0; i < N*N; i++) if (Math.abs(photoImg[i] - ORI[i]) < 0.01) pCorrect++;
+    const pQ = Math.round(100 * pCorrect / (N*N));
+    let hMSE = 0;
+    for (let i = 0; i < N*N; i++) hMSE += (holoImg[i] - ORI[i]) ** 2;
+    hMSE /= N*N;
+    const hQ = hMSE === 0 ? 100 : Math.max(0, Math.round(100*(1-Math.sqrt(hMSE))));
+
+    document.getElementById('eStats').innerHTML = `
+      <div class="sc"><div class="l">TILES ALIVE</div><div class="v" style="color:${pct>50?'#34d399':'#ef4444'}">${alive}/16</div></div>
+      <div class="sc"><div class="l">PHOTO QUALITY</div><div class="v" style="color:${pQ>50?'#34d399':'#ef4444'}">${pQ}%</div><div class="s">pixels intact</div></div>
+      <div class="sc"><div class="l">HOLO QUALITY</div><div class="v" style="color:${hQ>50?'#34d399':'#ef4444'}">${hQ}%</div><div class="s">graceful blur</div></div>
+      <div class="sc"><div class="l">KEY INSIGHT</div><div class="v" style="color:#fbbf24;font-size:.7em">${pct<70?'Photo loses regions; Holo blurs everywhere':'Both intact'}</div></div>
+    `;
+  }
+
+  setTimeout(init, 200);
+  return { randomDamage, reset };
+})();
+
+// ================================================================
+// ATTENTION HEADS — Real image sharpening with draggable lenses
+// ================================================================
+const HeadsMod = (() => {
+  let ctx, W, H, c;
+  let heads = [];
+  let dragIdx = -1;
+  const HEAD_COLS_RGB = [[129,140,248],[244,114,182],[52,211,153],[251,191,36],[96,165,250],[248,113,113]];
+  const HEAD_COLS_STR = HEAD_COLS_RGB.map(c => c.join(','));
+
+  let loCanvas, loCtx, hiCanvas, hiCtx;
+  const LO_RES = 56;
+  const HI_RES = 512;
+
+  function init() {
+    ({c, ctx, W, H} = U.mkCanvas('cHeads', 460));
+
+    loCanvas = document.createElement('canvas');
+    loCanvas.width = LO_RES; loCanvas.height = LO_RES;
+    loCtx = loCanvas.getContext('2d');
+
+    hiCanvas = document.createElement('canvas');
+    hiCanvas.width = HI_RES; hiCanvas.height = HI_RES;
+    hiCtx = hiCanvas.getContext('2d');
+
+    resetHeads();
+
+    c.addEventListener('mousedown', e => {
+      const r = c.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width * W;
+      const my = (e.clientY - r.top) / r.height * H;
+      for (let i = heads.length - 1; i >= 0; i--) {
+        if (U.dst(mx, my, heads[i].x, heads[i].y) < heads[i].r + 15) { dragIdx = i; break; }
+      }
+    });
+    c.addEventListener('mousemove', e => {
+      if (dragIdx < 0) return;
+      const r = c.getBoundingClientRect();
+      heads[dragIdx].x = (e.clientX - r.left) / r.width * W;
+      heads[dragIdx].y = (e.clientY - r.top) / r.height * H;
+      render();
+    });
+    c.addEventListener('mouseup', () => { dragIdx = -1; });
+    c.addEventListener('mouseleave', () => { dragIdx = -1; });
+
+    ['aHeadN','aEnt','aResBudget'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => { resetHeads(); render(); });
+        el.addEventListener('change', () => { resetHeads(); render(); });
+      }
+    });
+    render();
+  }
+
+  function resetHeads() {
+    const n = +document.getElementById('aHeadN').value;
+    if (heads.length === n) return;
+    heads = [];
+    for (let i = 0; i < n; i++) {
+      const angle = (i / n) * U.TAU + 0.5;
+      heads.push({
+        x: W * 0.5 + Math.cos(angle) * W * 0.22,
+        y: H * 0.45 + Math.sin(angle) * H * 0.22,
+        r: 50, col: HEAD_COLS_STR[i % HEAD_COLS_STR.length],
+        rgb: HEAD_COLS_RGB[i % HEAD_COLS_RGB.length]
+      });
+    }
+  }
+
+  function renderSdfToBuffer(bufCtx, res) {
+    const id = bufCtx.createImageData(res, res);
+    const d = id.data;
+    for (let iy = 0; iy < res; iy++) {
+      for (let ix = 0; ix < res; ix++) {
+        const nx = ix / res * 2 - 1, ny = iy / res * 2 - 1;
+        let val = ObjGen.sample(State.objectType, nx, ny, 0);
+        const brightness = val;
+        const r = Math.floor(brightness * 245);
+        const g = Math.floor(brightness * 225);
+        const b = Math.floor(brightness * 205);
+        const off = (iy * res + ix) * 4;
+        d[off] = U.clamp(r, 0, 255);
+        d[off+1] = U.clamp(g, 0, 255);
+        d[off+2] = U.clamp(b, 0, 255);
+        d[off+3] = 255;
+      }
+    }
+    bufCtx.putImageData(id, 0, 0);
+  }
+
+  function render() {
+    if (!ctx) return;
+    const entropy = +document.getElementById('aEnt').value / 100;
+    const resBudget = +document.getElementById('aResBudget').value / 100;
+    document.getElementById('aEntV').textContent = entropy < 0.3 ? 'Narrow' : entropy < 0.7 ? 'Medium' : 'Broad';
+    document.getElementById('aResBudgetV').textContent = Math.round(resBudget * 100);
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060b18';
+    ctx.fillRect(0, 0, W, H);
+
+    const perHeadR = U.lerp(30, 140, entropy);
+    const perHeadBudget = resBudget / Math.max(1, heads.length);
+
+    // ---- PASS 1: Low-res pixelated background ----
+    renderSdfToBuffer(loCtx, LO_RES);
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = heads.length > 0 ? 0.3 : 0.8;
+    ctx.drawImage(loCanvas, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.imageSmoothingEnabled = true;
+
+    // ---- PASS 2: High-res smooth render clipped to head regions ----
+    renderSdfToBuffer(hiCtx, HI_RES);
+
+    for (let hi = 0; hi < heads.length; hi++) {
+      const h = heads[hi];
+      const outerR = perHeadR * 1.3;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, outerR, 0, U.TAU);
+      ctx.clip();
+
+      // Radial alpha for feathered edge
+      ctx.globalAlpha = perHeadBudget;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(hiCanvas, 0, 0, W, H);
+
+      // Apply color tint overlay for this head
+      const grad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, outerR);
+      grad.addColorStop(0, `rgba(${h.col},${0.08 * perHeadBudget})`);
+      grad.addColorStop(0.7, `rgba(${h.col},${0.04 * perHeadBudget})`);
+      grad.addColorStop(1, `rgba(${h.col},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Draw head lenses
+    for (let hi = 0; hi < heads.length; hi++) {
+      const h = heads[hi];
+      U.drawLensRing(ctx, h.x, h.y, perHeadR, 0.65, h.col);
+      ctx.beginPath(); ctx.arc(h.x, h.y, 7, 0, U.TAU);
+      ctx.fillStyle = `rgba(${h.col},0.85)`; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = 'bold 10px system-ui';
+      ctx.fillStyle = `rgba(${h.col},0.9)`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`Head ${hi}`, h.x, h.y - perHeadR - 5);
+      ctx.font = '8px system-ui'; ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`${Math.round(perHeadBudget * 100)}% budget`, h.x, h.y + perHeadR + 12);
+    }
+
+    ctx.font = 'bold 11px system-ui'; ctx.fillStyle = '#818cf8'; ctx.textAlign = 'center';
+    ctx.fillText(`${heads.length} Attention Head${heads.length>1?'s':''} — Drag to reposition`, W/2, 16);
+
+    const barW = 200, barH = 6, barX = W/2 - barW/2, barY = H - 18;
+    ctx.fillStyle = '#1a2340'; ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#818cf8'; ctx.fillRect(barX, barY, barW * entropy, barH);
+    ctx.font = '8px system-ui'; ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'left'; ctx.fillText('Sharp/Few', barX, barY - 2);
+    ctx.textAlign = 'right'; ctx.fillText('Blurry/Many', barX + barW, barY - 2);
+
+    document.getElementById('aStats').innerHTML = `
+      <div class="sc"><div class="l">HEADS</div><div class="v" style="color:#818cf8">${heads.length}</div></div>
+      <div class="sc"><div class="l">ENTROPY</div><div class="v" style="color:#fbbf24">${entropy.toFixed(2)}</div></div>
+      <div class="sc"><div class="l">BUDGET/HEAD</div><div class="v" style="color:#f472b6">${Math.round(perHeadBudget*100)}%</div></div>
+      <div class="sc"><div class="l">TRADEOFF</div><div class="v" style="color:#a78bfa">${entropy<0.3?'Detail':entropy>0.7?'Breadth':'Balanced'}</div></div>
+    `;
+  }
+
+  setTimeout(init, 400);
+  return {};
+})();
+
+// ================================================================
+// FFN MODULE — Complex multi-center warping
+// ================================================================
+const FFNMod = (() => {
+  let ctx, W, H;
+  let animating = false;
+  let weightCenters = [];
+
+  function generateWeights(n) {
+    const rng = U.srand(77);
+    weightCenters = [];
+    for (let i = 0; i < n; i++) {
+      weightCenters.push({
+        x: 0.05 + rng() * 0.9,
+        y: 0.05 + rng() * 0.9,
+        strength: 0.3 + rng() * 0.7,
+        sign: rng() > 0.5 ? 1 : -1,
+        freq: 1 + rng() * 3,
+        phase: rng() * U.TAU,
+        col: U.PAL[i % U.PAL.length]
+      });
+    }
+  }
+
+  function init() {
+    ({ctx, W, H} = U.mkCanvas('cFFN', 420));
+    generateWeights(3);
+
+    ['fStr','fJac','fNonlin','fShowWeights'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
+    });
+    document.getElementById('fCenters').addEventListener('change', () => {
+      generateWeights(+document.getElementById('fCenters').value);
+      render();
+    });
+
+    const c = document.getElementById('cFFN');
+    c.addEventListener('click', e => {
+      const r = c.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width;
+      const my = (e.clientY - r.top) / r.height;
+      let bestI = 0, bestD = Infinity;
+      weightCenters.forEach((wc, i) => {
+        const d = U.dst(mx, my, wc.x, wc.y);
+        if (d < bestD) { bestD = d; bestI = i; }
+      });
+      weightCenters[bestI].x = mx;
+      weightCenters[bestI].y = my;
+      render();
+    });
+    render();
+  }
+
+  function render() {
+    if (!ctx) return;
+    const strength = +document.getElementById('fStr').value / 100;
+    const showJac = document.getElementById('fJac').checked;
+    const nonlin = +document.getElementById('fNonlin').value / 100;
+    const showWeights = document.getElementById('fShowWeights').checked;
+    document.getElementById('fStrV').textContent = Math.round(strength * 100) + '%';
+    document.getElementById('fNonlinV').textContent = Math.round(nonlin * 100) + '%';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060b18';
+    ctx.fillRect(0, 0, W, H);
+
+    function warp(x, y) {
+      if (strength < 0.001) return [x, y];
+      let wx = x, wy = y;
+      const nx = x / W, ny = y / H;
+      for (const wc of weightCenters) {
+        const dx = nx - wc.x, dy = ny - wc.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        const R = 0.25;
+        const gauss = Math.exp(-d*d / (2*R*R));
+        let nlFactor = gauss;
+        if (nonlin > 0) {
+          const relu = Math.max(0, 1 - d / R);
+          const interference = Math.sin(d * wc.freq * 20 + wc.phase) * 0.3;
+          nlFactor = U.lerp(gauss, relu * (1 + interference * nonlin), nonlin);
+        }
+        const push = strength * wc.strength * wc.sign * nlFactor;
+        if (d > 0.001) {
+          wx += (dx / d) * push * W * 0.18;
+          wy += (dy / d) * push * H * 0.18;
+        }
+        if (nonlin > 0.2) {
+          const swirl = strength * nonlin * gauss * wc.sign * 0.3;
+          wx += -dy / Math.max(d, 0.01) * swirl * W * 0.1;
+          wy += dx / Math.max(d, 0.01) * swirl * H * 0.1;
+        }
+      }
+      if (weightCenters.length > 1 && nonlin > 0.3) {
+        for (let i = 0; i < weightCenters.length; i++) {
+          for (let j = i+1; j < weightCenters.length; j++) {
+            const ci = weightCenters[i], cj = weightCenters[j];
+            const midX = (ci.x + cj.x) / 2, midY = (ci.y + cj.y) / 2;
+            const dMid = U.dst(nx, ny, midX, midY);
+            const interDist = U.dst(ci.x, ci.y, cj.x, cj.y);
+            const interStrength = Math.exp(-dMid * dMid / (interDist * interDist * 0.3 + 0.001));
+            const interPush = strength * nonlin * interStrength * 0.1;
+            wx += Math.sin(nx * 30 + cj.phase) * interPush * W * 0.05;
+            wy += Math.cos(ny * 30 + ci.phase) * interPush * H * 0.05;
+          }
+        }
+      }
+      return [wx, wy];
+    }
+
+    // Strain coloring (Jacobian determinant)
+    if (showJac) {
+      const gs = 5;
+      for (let y = 0; y < H; y += gs) {
+        for (let x = 0; x < W; x += gs) {
+          const [wx, wy] = warp(x, y);
+          const [wrx, wry] = warp(x + 1, y);
+          const [wux, wuy] = warp(x, y + 1);
+          const det = Math.abs((wrx - wx) * (wuy - wy) - (wux - wx) * (wry - wy));
+          let r = 0, g = 0, b = 0;
+          if (det > 1.1) {
+            const t = U.clamp((det - 1) / 3, 0, 1);
+            r = Math.floor(230 * t); g = Math.floor(55 * t); b = Math.floor(75 * t);
+          } else if (det < 0.9) {
+            const t = U.clamp((1 - det) / 0.5, 0, 1);
+            g = Math.floor(90 * t); b = Math.floor(180 * t);
+          }
+          if (r + g + b > 3) {
+            ctx.fillStyle = `rgba(${r},${g},${b},0.22)`;
+            ctx.fillRect(x, y, gs, gs);
+          }
+        }
+      }
+    }
+
+    // Grid
+    U.drawGrid(ctx, W, H, warp, 30, `rgba(100,116,139,${0.1 + strength * 0.15})`, 0.6);
+
+    // Draw weight centers
+    if (showWeights) {
+      for (const wc of weightCenters) {
+        const wcx = wc.x * W, wcy = wc.y * H;
+        const R = 0.25 * Math.min(W, H);
+        const grad = ctx.createRadialGradient(wcx, wcy, 0, wcx, wcy, R * strength);
+        grad.addColorStop(0, U.hx(wc.col, 0.12 * strength));
+        grad.addColorStop(1, U.hx(wc.col, 0));
+        ctx.beginPath();
+        ctx.arc(wcx, wcy, R * Math.max(strength, 0.05), 0, U.TAU);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(wcx, wcy, 5, 0, U.TAU);
+        ctx.fillStyle = wc.col;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = 'bold 12px system-ui';
+        ctx.fillStyle = wc.sign > 0 ? '#34d399' : '#f87171';
+        ctx.textAlign = 'center';
+        ctx.fillText(wc.sign > 0 ? '+' : '−', wcx, wcy - 10);
+
+        ctx.font = '8px system-ui';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`w=${wc.strength.toFixed(2)}`, wcx, wcy + 14);
+      }
+    }
+
+    ctx.font = 'bold 11px system-ui';
+    ctx.fillStyle = '#818cf8';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Feed-Forward: ${weightCenters.length} weight centers — ${Math.round(strength*100)}% expansion — ${Math.round(nonlin*100)}% nonlinearity`, W/2, 16);
+
+    if (showJac) {
+      ctx.font = '9px system-ui';
+      ctx.fillStyle = '#e94960'; ctx.textAlign = 'left';
+      ctx.fillText('■ Expansion (det > 1)', 8, H - 22);
+      ctx.fillStyle = '#0077b6';
+      ctx.fillText('■ Contraction (det < 1)', 8, H - 8);
+    }
+
+    ctx.font = '8px system-ui';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'center';
+    ctx.fillText('Click to move nearest weight center', W/2, H - 4);
+
+    // Stats
+    let maxDet = 1, minDet = 1;
+    const testPts = 20;
+    for (let i = 0; i < testPts; i++) {
+      for (let j = 0; j < testPts; j++) {
+        const x = (i / testPts) * W, y = (j / testPts) * H;
+        const [wx, wy] = warp(x, y);
+        const [wrx, wry] = warp(x+1, y);
+        const [wux, wuy] = warp(x, y+1);
+        const det = Math.abs((wrx-wx)*(wuy-wy)-(wux-wx)*(wry-wy));
+        if (det > maxDet) maxDet = det;
+        if (det < minDet) minDet = det;
+      }
+    }
+
+    document.getElementById('fStats').innerHTML = `
+      <div class="sc"><div class="l">EXPANSION</div><div class="v" style="color:#e94960">${maxDet.toFixed(2)}×</div><div class="s">max stretch</div></div>
+      <div class="sc"><div class="l">CONTRACTION</div><div class="v" style="color:#0077b6">${minDet.toFixed(2)}×</div><div class="s">max squeeze</div></div>
+      <div class="sc"><div class="l">WEIGHT CENTERS</div><div class="v" style="color:#fbbf24">${weightCenters.length}</div></div>
+      <div class="sc"><div class="l">INNER DIM</div><div class="v" style="color:#818cf8">${Math.round(768 + strength * 2304)}</div><div class="s">d_ff ≈ 4d</div></div>
+      <div class="sc"><div class="l">NONLINEARITY</div><div class="v" style="color:#a78bfa">${Math.round(nonlin*100)}%</div><div class="s">ReLU + interference</div></div>
+    `;
+  }
+
+  function anim() {
+    if (animating) return;
+    animating = true;
+    const slider = document.getElementById('fStr');
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / 2500, 1);
+      slider.value = Math.round(U.ease(t) * 100);
+      render();
+      if (t < 1) requestAnimationFrame(step);
+      else animating = false;
+    }
+    slider.value = 0;
+    requestAnimationFrame(step);
+  }
+
+  function reset() {
+    animating = false;
+    document.getElementById('fStr').value = 0;
+    render();
+  }
+
+  setTimeout(init, 500);
+  return { anim, reset };
+})();
+
+// ================================================================
+// PIPELINE MODULE (Section 5)
+// ================================================================
+const PipeMod = (() => {
+  let ctx, W, H, c;
+  let focusPoints = [];
+  let animFrame = null;
+  let mouseX = 0.5, mouseY = 0.5;
+  let mode = 'smiley';
+  let time = 0;
+
+  let loCanvas, loCtx, hiCanvas, hiCtx;
+  const LO_RES = 56;
+  const HI_RES = 512;
+
+  const OBJECTS = ['smiley','torus','clusters','rings'];
+  const LABELS = ['😊 Smiley','🍩 Torus','🌵 Clusters','⭕ Rings'];
+
+  function init() {
+    ({c, ctx, W, H} = U.mkCanvas('cPipe', 440));
+
+    loCanvas = document.createElement('canvas');
+    loCanvas.width = LO_RES; loCanvas.height = LO_RES;
+    loCtx = loCanvas.getContext('2d');
+
+    hiCanvas = document.createElement('canvas');
+    hiCanvas.width = HI_RES; hiCanvas.height = HI_RES;
+    hiCtx = hiCanvas.getContext('2d');
+
+    const tabEl = document.getElementById('pTabs');
+    let html = '';
+    OBJECTS.forEach((o, i) => {
+      html += `<button class="tab${o === mode ? ' on' : ''}" data-m="${o}">${LABELS[i]}</button>`;
+    });
+    tabEl.innerHTML = html;
+    tabEl.querySelectorAll('.tab').forEach(btn => {
+      btn.onclick = () => {
+        mode = btn.dataset.m;
+        focusPoints = [];
+        tabEl.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        render();
+      };
+    });
+
+    c.addEventListener('click', e => {
+      const r = c.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width;
+      const my = (e.clientY - r.top) / r.height;
+      const nx = mx * 2 - 1, ny = my * 2 - 1;
+
+      let found = false;
+      for (const fp of focusPoints) {
+        if (U.dst(nx, ny, fp.nx, fp.ny) < 0.25) {
+          fp.strength = Math.min(fp.strength + 0.3, 1.0);
+          fp.radius = Math.max(fp.radius * 0.75, 0.1);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        focusPoints.push({ nx, ny, strength: 0.4, radius: 0.35, time: performance.now() });
+      }
+      for (const fp of focusPoints) {
+        if (!found || U.dst(nx, ny, fp.nx, fp.ny) >= 0.25) {
+          fp.strength = Math.max(fp.strength * 0.85, 0.05);
+        }
+      }
+      if (focusPoints.length > 5) focusPoints.shift();
+      render();
+    });
+
+    c.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (focusPoints.length > 0) focusPoints.pop();
+      render();
+    });
+
+    c.addEventListener('mousemove', e => {
+      const r = c.getBoundingClientRect();
+      mouseX = (e.clientX - r.left) / r.width;
+      mouseY = (e.clientY - r.top) / r.height;
+      if (document.getElementById('pLens').checked) render();
+    });
+
+    ['pLayer','pGrid','pLens','pPatch','pFocus'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
+    });
+
+    function tick() {
+      time += 0.008;
+      if (mode === 'torus') render();
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    render();
+  }
+
+  function renderSdfToBuffer(bufCtx, res, warpNorm, layer) {
+    const id = bufCtx.createImageData(res, res);
+    const d = id.data;
+    const showPatch = document.getElementById('pPatch').checked;
+    const resolving = U.clamp((layer - 2) / 5, 0, 1);
+    const layerBoost = U.clamp(layer / 11, 0, 1);
+
+    for (let iy = 0; iy < res; iy++) {
+      for (let ix = 0; ix < res; ix++) {
+        const nx = ix / res * 2 - 1, ny = iy / res * 2 - 1;
+        const [wnx, wny] = warpNorm(nx, ny);
+        let val = ObjGen.sample(mode, wnx, wny, time);
+
+        const bright = 0.5 + layerBoost * 0.5;
+        const v = val * bright;
+
+        let r, g, b;
+        if (val > 0.6) {
+          r = Math.floor(40 + v * 215); g = Math.floor(35 + v * 195); b = Math.floor(20 + v * 120);
+        } else if (val > 0.2) {
+          r = Math.floor(20 + v * 160); g = Math.floor(18 + v * 140); b = Math.floor(30 + v * 180);
+        } else {
+          r = Math.floor(8 + v * 60); g = Math.floor(8 + v * 50); b = Math.floor(15 + v * 80);
+        }
+
+        if (showPatch && resolving > 0.1) {
+          const qi = (wnx > 0 ? 1 : 0) + (wny > 0 ? 2 : 0);
+          const pCols = [[129,140,248],[244,114,182],[52,211,153],[251,191,36]];
+          const pc = pCols[qi];
+          const tint = resolving * 0.15;
+          r = Math.floor(U.lerp(r, pc[0], tint));
+          g = Math.floor(U.lerp(g, pc[1], tint));
+          b = Math.floor(U.lerp(b, pc[2], tint));
+        }
+
+        const off = (iy * res + ix) * 4;
+        d[off]     = U.clamp(r, 0, 255);
+        d[off + 1] = U.clamp(g, 0, 255);
+        d[off + 2] = U.clamp(b, 0, 255);
+        d[off + 3] = 255;
+      }
+    }
+    bufCtx.putImageData(id, 0, 0);
+  }
+
+  function render() {
+    if (!ctx) return;
+    const layerRaw = +document.getElementById('pLayer').value;
+    const layer = layerRaw / 10;
+    const showGrid = document.getElementById('pGrid').checked;
+    const showLens = document.getElementById('pLens').checked;
+    const showPatch = document.getElementById('pPatch').checked;
+
+    document.getElementById('pLayerV').textContent = layer.toFixed(1);
+
+    const focusEl = document.getElementById('pFocus');
+    const focus = focusEl ? (+focusEl.value / 100) : 0.3;
+    const focusVEl = document.getElementById('pFocusV');
+    if (focusVEl) focusVEl.textContent = focus < 0.3 ? 'Narrow' : focus < 0.7 ? 'Medium' : 'Broad';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060b18';
+    ctx.fillRect(0, 0, W, H);
+
+    const routing = U.clamp(1 - layer / 4, 0, 1);
+    const resolving = U.clamp((layer - 2) / 5, 0, 1);
+    const gluing = U.clamp((layer - 8) / 3, 0, 1);
+    const deform = layer === 0 ? 0 : (layer <= 3 ? layer * 0.07 : (layer <= 8 ? 0.21 + (layer-3)*0.035 : 0.385 - (layer-8)*0.11));
+
+    function warpNorm(nx, ny) {
+      if (layer < 0.1) return [nx, ny];
+      let wx = nx, wy = ny;
+      if (routing > 0) {
+        const d = Math.hypot(nx, ny);
+        const a = deform * routing * Math.exp(-d*d/0.8) * 1.5;
+        const cs = Math.cos(a), sn = Math.sin(a);
+        wx = nx*cs - ny*sn; wy = nx*sn + ny*cs;
+      }
+      if (resolving > 0) {
+        const centers = [{x:-0.5,y:-0.5},{x:0.5,y:-0.5},{x:-0.5,y:0.5},{x:0.5,y:0.5}];
+        for (const cc of centers) {
+          const dx = wx - cc.x, dy = wy - cc.y;
+          const d = Math.hypot(dx, dy);
+          const inf = deform * resolving * Math.exp(-d*d/0.5) * 0.3;
+          wx += dx * inf; wy += dy * inf;
+        }
+      }
+      if (gluing > 0) { wx = U.lerp(wx, nx, gluing * 0.7); wy = U.lerp(wy, ny, gluing * 0.7); }
+      return [wx, wy];
+    }
+
+    const lx = mouseX * W, ly = mouseY * H;
+    const lensR = U.lerp(40, 160, focus);
+    const hasFocus = focusPoints.length > 0 || showLens;
+
+    // ---- PASS 1: Low-res pixelated background ----
+    renderSdfToBuffer(loCtx, LO_RES, warpNorm, layer);
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = hasFocus ? 0.35 : 0.85;
+    ctx.drawImage(loCanvas, 0, 0, W, H);
+    ctx.globalAlpha = 1;
+    ctx.imageSmoothingEnabled = true;
+
+    // ---- PASS 2: High-res smooth render clipped to focus regions ----
+    if (hasFocus) {
+      renderSdfToBuffer(hiCtx, HI_RES, warpNorm, layer);
+
+      // Draw focus point regions
+      for (const fp of focusPoints) {
+        const sx = (fp.nx + 1) / 2 * W;
+        const sy = (fp.ny + 1) / 2 * H;
+        const sr = fp.radius * Math.min(W, H) / 2;
+        const outerR = sr * 1.3;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sx, sy, outerR, 0, U.TAU);
+        ctx.clip();
+
+        ctx.globalAlpha = fp.strength;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(hiCanvas, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
+      // Draw lens region
+      if (showLens) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(lx, ly, lensR, 0, U.TAU);
+        ctx.clip();
+
+        ctx.globalAlpha = 0.7;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(hiCanvas, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
+    // Grid overlay
+    if (showGrid && layer > 0.1) {
+      const gridStep = 28;
+      function warpScreen(x, y) {
+        const snx2 = x / W * 2 - 1, sny2 = y / H * 2 - 1;
+        const [wnx2, wny2] = warpNorm(snx2, sny2);
+        return [((wnx2 + 1) / 2) * W, ((wny2 + 1) / 2) * H];
+      }
+      U.drawGrid(ctx, W, H, warpScreen, gridStep, `rgba(100,116,139,${0.04 + deform * 0.1})`, 0.4);
+    }
+
+    // Lens overlay ring
+    if (showLens) U.drawLensRing(ctx, lx, ly, lensR, 0.6);
+
+    // Focus point indicators
+    for (const fp of focusPoints) {
+      const sx = (fp.nx + 1) / 2 * W, sy = (fp.ny + 1) / 2 * H;
+      const sr = fp.radius * Math.min(W, H) / 2;
+      const age = (performance.now() - fp.time) / 1000;
+      const pulse = 0.6 + 0.4 * Math.sin(age * 2);
+
+      const grad = ctx.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 1.2);
+      grad.addColorStop(0, `rgba(129,140,248,${0.08 * fp.strength * pulse})`);
+      grad.addColorStop(1, 'rgba(129,140,248,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr * 1.2, 0, U.TAU);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, U.TAU);
+      ctx.strokeStyle = `rgba(129,140,248,${0.2 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.font = 'bold 8px system-ui';
+      ctx.fillStyle = `rgba(129,140,248,${0.5 * pulse})`;
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.round(fp.strength * 100)}%`, sx, sy - sr - 3);
+    }
+
+    // Phase label
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    let phaseCol, phaseTxt;
+    if (layer < 0.5) { phaseCol = '#64748b'; phaseTxt = '🌑 Embedding: Global section (blurriest)'; }
+    else if (layer <= 3) { phaseCol = '#60a5fa'; phaseTxt = `🔀 Layer ${layer.toFixed(1)}: Routing — words to words`; }
+    else if (layer <= 8) { phaseCol = '#c084fc'; phaseTxt = `🔬 Layer ${layer.toFixed(1)}: Resolving — concepts to concepts`; }
+    else { phaseCol = '#34d399'; phaseTxt = `🧩 Layer ${layer.toFixed(1)}: Gluing — reassembling`; }
+    ctx.fillStyle = phaseCol;
+    ctx.fillText(phaseTxt, W / 2, 18);
+
+    if (focusPoints.length > 0) {
+      ctx.font = '9px system-ui';
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'right';
+      ctx.fillText('Click to focus | Right-click to remove', W - 8, 18);
+    }
+
+    document.getElementById('pStats').innerHTML = `
+      <div class="sc"><div class="l">LAYER</div><div class="v" style="color:#818cf8">${layer.toFixed(1)}</div></div>
+      <div class="sc"><div class="l">PHASE</div><div class="v" style="color:${phaseCol}">${layer < 0.5 ? 'Embed' : layer <= 3 ? 'Route' : layer <= 8 ? 'Resolve' : 'Glue'}</div></div>
+      <div class="sc"><div class="l">DEFORMATION</div><div class="v" style="color:#fbbf24">${Math.round(deform * 100)}%</div></div>
+      <div class="sc"><div class="l">FOCUS PTS</div><div class="v" style="color:#34d399">${focusPoints.length}</div></div>
+      <div class="sc"><div class="l">OBJECT</div><div class="v" style="color:#f472b6">${mode}</div></div>
+    `;
+  }
+
+  function anim() {
+    if (animFrame) return;
+    const slider = document.getElementById('pLayer');
+    slider.value = 0;
+    focusPoints = [];
+    render();
+    const dur = 8000, start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / dur, 1);
+      slider.value = Math.round(t * 110);
+      if (Math.abs(t - 0.15) < 0.01) focusPoints.push({nx: -0.3, ny: -0.2, strength: 0.5, radius: 0.35, time: now});
+      if (Math.abs(t - 0.35) < 0.01) focusPoints.push({nx: 0.3, ny: 0.2, strength: 0.5, radius: 0.35, time: now});
+      if (Math.abs(t - 0.55) < 0.01) {
+        for (const fp of focusPoints) { fp.strength = Math.min(fp.strength + 0.3, 1); fp.radius *= 0.7; }
+      }
+      render();
+      if (t < 1) animFrame = requestAnimationFrame(step);
+      else animFrame = null;
+    }
+    animFrame = requestAnimationFrame(step);
+  }
+
+  function reset() {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    document.getElementById('pLayer').value = 0;
+    focusPoints = [];
+    render();
+  }
+
+  setTimeout(init, 600);
+  return { anim, reset };
+})();
+
+// ================================================================
+// HALLUCINATION MODULE (Section 6)
+// ================================================================
+const HalMod = (() => {
+  let ctx, W, H, c;
+  let qx = 0.75, qy = 0.3;
+
+  const regions = [
+    { x: 0.25, y: 0.5, r: 0.2, label: 'Europe' },
+    { x: 0.45, y: 0.35, r: 0.15, label: 'Science' },
+    { x: 0.35, y: 0.7, r: 0.12, label: 'History' },
+    { x: 0.6, y: 0.6, r: 0.1, label: 'Music' },
+  ];
+
+  function init() {
+    ({c, ctx, W, H} = U.mkCanvas('cHal', 360));
+    document.getElementById('xCov').addEventListener('input', render);
+    c.addEventListener('mousemove', e => {
+      const r = c.getBoundingClientRect();
+      qx = (e.clientX - r.left) / r.width;
+      qy = (e.clientY - r.top) / r.height;
+      render();
+    });
+    render();
+  }
+
+  function render() {
+    if (!ctx) return;
+    const coverage = +document.getElementById('xCov').value / 100;
+    document.getElementById('xCovV').textContent = Math.round(coverage * 100) + '%';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#060b18';
+    ctx.fillRect(0, 0, W, H);
+
+    const step = 4;
+    for (let y = 0; y < H; y += step) {
+      for (let x = 0; x < W; x += step) {
+        const nx = x / W, ny = y / H;
+        let maxCov = 0;
+        for (const rg of regions) {
+          const d = U.dst(nx, ny, rg.x, rg.y);
+          maxCov = Math.max(maxCov, Math.exp(-d * d / (2 * rg.r * rg.r * coverage)));
+        }
+        if (maxCov > 0.05) {
+          ctx.fillStyle = `rgba(0,${Math.floor(maxCov * 160)},0,${maxCov * 0.25})`;
+        } else {
+          ctx.fillStyle = 'rgba(180,25,25,0.06)';
+        }
+        ctx.fillRect(x, y, step, step);
+      }
+    }
+
+    for (const rg of regions) {
+      const rx = rg.x * W, ry = rg.y * H, rr = rg.r * Math.min(W, H) * coverage;
+      ctx.beginPath();
+      ctx.arc(rx, ry, rr, 0, U.TAU);
+      ctx.strokeStyle = 'rgba(52,211,153,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '10px system-ui';
+      ctx.fillStyle = '#34d399';
+      ctx.textAlign = 'center';
+      ctx.fillText(rg.label, rx, ry);
+    }
+
+    let qCov = 0;
+    for (const rg of regions) {
+      const d = U.dst(qx, qy, rg.x, rg.y);
+      qCov = Math.max(qCov, Math.exp(-d * d / (2 * rg.r * rg.r * coverage)));
+    }
+    const conf = 0.72 + qCov * 0.23;
+    const qCol = qCov > 0.5 ? '#34d399' : qCov > 0.2 ? '#fbbf24' : '#ef4444';
+
+    const qpx = qx * W, qpy = qy * H;
+    ctx.beginPath(); ctx.arc(qpx, qpy, 10, 0, U.TAU);
+    ctx.fillStyle = U.hx(qCol, 0.25); ctx.fill();
+    ctx.beginPath(); ctx.arc(qpx, qpy, 5, 0, U.TAU);
+    ctx.fillStyle = qCol; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = 'bold 10px system-ui'; ctx.fillStyle = '#e2e8f0';
+    ctx.textAlign = 'center'; ctx.fillText('Query', qpx, qpy - 14);
+
+    const barW = 140, barH = 10, barX = W - barW - 16, barY = 16;
+    ctx.fillStyle = '#1a2340'; ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = qCol; ctx.fillRect(barX, barY, barW * conf, barH);
+    ctx.font = '9px system-ui'; ctx.fillStyle = '#e2e8f0'; ctx.textAlign = 'left';
+    ctx.fillText(`Confidence: ${Math.round(conf * 100)}%`, barX, barY - 3);
+
+    ctx.fillStyle = '#1a2340'; ctx.fillRect(barX, barY + 22, barW, barH);
+    ctx.fillStyle = qCov > 0.5 ? '#34d399' : qCov > 0.2 ? '#fbbf24' : '#ef4444';
+    ctx.fillRect(barX, barY + 22, barW * qCov, barH);
+    ctx.fillText(`Coverage: ${Math.round(qCov * 100)}%`, barX, barY + 19);
+
+    if (qCov < 0.3 && conf > 0.7) {
+      ctx.font = 'bold 12px system-ui'; ctx.fillStyle = '#ef4444';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠️ HALLUCINATION RISK: High confidence, low coverage!', W / 2, H - 12);
+    }
+
+    const isHal = qCov < 0.3;
+    document.getElementById('xStats').innerHTML = `
+      <div class="sc"><div class="l">COVERAGE</div><div class="v" style="color:${qCol}">${Math.round(qCov*100)}%</div></div>
+      <div class="sc"><div class="l">CONFIDENCE</div><div class="v" style="color:#818cf8">${Math.round(conf*100)}%</div></div>
+      <div class="sc"><div class="l">GAP</div><div class="v" style="color:${isHal?'#ef4444':'#34d399'}">${Math.round((conf-qCov)*100)}%</div></div>
+      <div class="sc"><div class="l">STATUS</div><div class="v" style="color:${isHal?'#ef4444':'#34d399'}">${isHal?'⚠️ Hallucinating':'✅ Grounded'}</div></div>
+    `;
+  }
+
+  setTimeout(init, 800);
+  return {};
+})();
+
+
+// ================================================================
+// SCROLL FADE-IN
+// ================================================================
+const fadeObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade').forEach(el => fadeObs.observe(el));
+
+// ================================================================
+// RESIZE HANDLER
+// ================================================================
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { Bus.emit('resize'); }, 300);
+});
+
+// ================================================================
+// KEYBOARD SHORTCUTS
+// ================================================================
+document.addEventListener('keydown', e => {
+  if (e.key === ' ') { e.preventDefault(); PipeMod.anim(); }
+});
+
+</script>
+</body>
+</html>
